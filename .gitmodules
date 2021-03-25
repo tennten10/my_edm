@@ -7,3 +7,6 @@
 [submodule "include/lvgl"]
 	path = include/lvgl
 	url = http://github.com/lvgl/lvgl.git
+[submodule "include/lvgl_esp32_drivers"]
+	path = include/lvgl_esp32_drivers
+	url = https://github.com/lvgl/lvgl_esp32_drivers.git
