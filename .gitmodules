@@ -1,12 +1,12 @@
-[submodule "include/esp-nimble-cpp"]
-	path = include/esp-nimble-cpp
+[submodule "lib/esp-nimble-cpp"]
+	path = lib/esp-nimble-cpp
 	url = https://github.com/h2zero/esp-nimble-cpp.git
-[submodule "include/eigen"]
-	path = include/eigen
+[submodule "lib/eigen"]
+	path = lib/eigen
 	url = https://gitlab.com/libeigen/eigen.git
-[submodule "include/lvgl"]
+[submodule "lib/lvgl"]
 	path = include/lvgl
 	url = http://github.com/lvgl/lvgl.git
-[submodule "include/lvgl_esp32_drivers"]
-	path = include/lvgl_esp32_drivers
+[submodule "lib/lvgl_esp32_drivers"]
+	path = lib/lvgl_esp32_drivers
 	url = https://github.com/lvgl/lvgl_esp32_drivers.git
