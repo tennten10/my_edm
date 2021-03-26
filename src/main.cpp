@@ -24,7 +24,7 @@
 #include "driver/gpio.h"
 #include "driver/rtc_io.h"
 #include "esp32/ulp.h"
-#include "ulp_main.h"
+//#include "ulp_main.h"
 
 
 extern "C" {
@@ -66,11 +66,11 @@ static void init_ulp_program(){
      *
      * Note that the ULP reads only the lower 16 bits of these variables.
      */
-    //ulp_debounce_counter = 3;
-    //ulp_debounce_max_count = 3;
-    //ulp_next_edge = 0;
-    //ulp_io_number = rtcio_num; /* map from GPIO# to RTC_IO# */
-    //ulp_edge_count_to_wake_up = 10;
+    ulp_debounce_counter = 3;
+    ulp_debounce_max_count = 3;
+    ulp_next_edge = 0;
+    ulp_io_number = rtcio_num; /* map from GPIO# to RTC_IO# */
+    ulp_edge_count_to_wake_up = 10;
 
     /* Initialize selected GPIO as RTC IO, enable input, disable pullup and pulldown */
     rtc_gpio_init(gpio_num);
@@ -122,7 +122,7 @@ static void printPulseCount(){
     //nvs_close(handle);
     //printf("Wrote updated pulse count to NVS: %5d\n", pulse_count);
 }
-}
+
 
 void goToSleep(){
   // create shutdown function
@@ -212,7 +212,17 @@ void decrementUnits(){
 
 
 void app_main() {
-  // setup
+    // change pin modes if it woke up from ULP vs power up
+    esp_sleep_wakeup_cause_t cause = esp_sleep_get_wakeup_cause();
+    if (cause != ESP_SLEEP_WAKEUP_ULP) {
+        printf("Not ULP wakeup, initializing ULP\n");
+        init_ulp_program();
+    } else {
+        printf("ULP wakeup, saving pulse count\n");
+        printPulseCount();
+    }
+    
+    // setup
     systemMutex = xSemaphoreCreateMutex();
     pageMutex = xSemaphoreCreateMutex();
 
