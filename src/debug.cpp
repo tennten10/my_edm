@@ -118,7 +118,7 @@ void debugPrint(const char* str)
         break;
     }
 }
-/*void debugPrint(std::string str)
+void debugPrint(std::string str)
 {
     switch (eDebugState)
     {
@@ -141,6 +141,7 @@ void debugPrint(const char* str)
         break;
     }
 }
+
 void debugPrint(std::string * str)
 {
     switch (eDebugState)
@@ -163,7 +164,7 @@ void debugPrint(std::string * str)
     default:
         break;
     }
-}*/
+}
 void debugPrint(double str)
 {
     char temp[32]; // malloc(sizeof(char) * (32 + 1));// = NULL;
@@ -185,6 +186,7 @@ void debugPrint(double str)
         break;
     }
 }
+
 void debugPrint(int i)
 {
     char temp[16];// = NULL;

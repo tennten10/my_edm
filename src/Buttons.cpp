@@ -8,14 +8,11 @@
 #include "freertos/queue.h"
 #include <string>
 
-//uncomment next line if buttons don't have RC filter or have debounce issues
-//#define SOFTWAREDEBOUNCE
-
 #define GPIO_INPUT_PIN_SEL ((1ULL<<but1) | (1ULL<<but2) | (1ULL<<but3) | (1ULL<<but4))
 
-bool debounce = false;
-uint8_t longPressTime = (uint8_t) 1500;
-QueueHandle_t buttonQueue;
+//bool ButtonsX::debounce = false;
+//uint8_t ButtonsX::longPressTime = (uint8_t) 1500;
+//QueueHandle_t ButtonsX::buttonQueue;
 extern TickType_t xBlockTime;
 uint8_t debounceCount = 10;
 
@@ -366,16 +363,21 @@ std::string ButtonsX::getEvents(){
 void ButtonsX::sleepPreparation() 
 {
     //vDeleteTask(buttonHandler_TH){}
+    debugPrintln("button inside sleep prep");
 }
 
-void ButtonsX::Main()
+void ButtonsX::Main() // loop
 {
     gpio_config_t io_conf;
     io_conf.pin_bit_mask = GPIO_INPUT_PIN_SEL;
     io_conf.mode = GPIO_MODE_INPUT;
     io_conf.pull_up_en = (gpio_pullup_t) 1;
     gpio_config(&io_conf);
-    
+    buttonQueue = xQueueCreate(20, sizeof(uint32_t));
+    debugPrintln("Button thread created...");
+    if(debounce){
+        debugPrintln("Using Software Debounce");
+    }
     for (;;)
     {
         readButtons(debounce);
@@ -384,8 +386,8 @@ void ButtonsX::Main()
     }
 }
 
-void ButtonsX::setup()
-{
+//void ButtonsX::setup()
+//{
     //
     //gpio_config(constgpio_config_t *pGPIOConfig);
     //gpio_get_level(pin);
@@ -400,10 +402,6 @@ void ButtonsX::setup()
     //gpio_pullup_en(but4);
 
 
-    buttonQueue = xQueueCreate(20, sizeof(uint32_t));
-    debugPrintln("Button thread created...");
-    if(debounce){
-        debugPrintln("Using Software Debounce");
-    }
-}
+
+//}
 

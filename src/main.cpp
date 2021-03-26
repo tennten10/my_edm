@@ -24,7 +24,7 @@
 #include "driver/gpio.h"
 #include "driver/rtc_io.h"
 #include "esp32/ulp.h"
-//#include "ulp_main.h"
+#include "ulp_main.h"
 
 
 extern "C" {
@@ -130,6 +130,7 @@ void goToSleep(){
   //esp_sleep_enable_ext0_wakeup(GPIO_NUM_13, 0); // 1 = HIGH, 0 = LOW // but1
   //rtc_gpio_pullup_en(GPIO_NUM_13);
   debugPrintln("sleeping...");
+  vTaskDelay(10);
   init_ulp_program();
   esp_deep_sleep_start();
   

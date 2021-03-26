@@ -42,13 +42,13 @@ public:
   }
   void Main()
   {
-    static_cast<T &>(*this).Main();
+    static_cast<T&>(*this).Main();
   }
 
 private:
   static void task(void *_params)
   {
-    ThreadX *p = static_cast<ThreadX *>(_params);
+    ThreadX *p = static_cast<ThreadX*>(_params);
     p->Main();
   }
 
@@ -58,24 +58,26 @@ private:
 class ButtonsX : public ThreadX<ButtonsX>
 {
 public:
-  explicit ButtonsX(bool _debounce) : ThreadX{5000, 1, "Button Handler"},
+  explicit ButtonsX(bool _debounce) : ThreadX{5000, 1, "ButtonHandler"},
                                                 debounce{_debounce}
   {
-    setup();
+    //setup();
+    //debugPrintln("creating buttons");
+    //Main();
   }
   void Main();
   void sleepPreparation();
   std::string getEvents();
-  void setup();
+
 
 private:
-  //CHIP_ADC_CHANNEL channel;
-  bool debounce;
+  
+  bool debounce = false;
   Button button1;
   Button button2;
   Button button3;
   Button button4;
-  uint8_t longPressTime;
+  uint8_t longPressTime = (uint8_t)1500;
   void readButtons(bool _debounce);
   void verifyButtons();
   QueueHandle_t buttonQueue;
