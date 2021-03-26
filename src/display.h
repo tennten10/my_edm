@@ -1,6 +1,6 @@
-#include "Globals.h"
-#include <TFT_eSPI.h>
-#include <SPI.h>
+#include "globals.h"
+//#include <TFT_eSPI.h>
+//#include <SPI.h>
 
 //TFT_eSPI tft;
 //PAGE ePage;

@@ -11,11 +11,11 @@
 //#include <Adafruit_ST7789.h> // Hardware-specific library for ST7789
 
 #include <string>
-#include "lvgl.h"
+
 
 #include "lvgl/src/lvgl.h"
 #include "lvgl_esp32_drivers/lvgl_tft/st7735s.h"
-//#include "lv_conf_.h"
+
 // <SPI.h>
 //#include "AWS_OTA.h"
 
@@ -23,10 +23,15 @@
 // #ifdef DISPLAY_320x240_SPI_FULL
 //   TFT_eSPI tft = TFT_eSPI();
 // #endif
-// #ifdef DISPLAY_120x80_I2C
-//   //Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_MOSI, TFT_SCLK, TFT_RST);
+#ifdef DISPLAY_120x80_I2C
+//   
+  //void st7735s_init(void);
+//void st7735s_flush(lv_disp_drv_t * drv, const lv_area_t * area, lv_color_t * color_map);
+//void st7735s_enable_backlight(bool backlight);
+//void st7735s_sleep_in(void);
+//void st7735s_sleep_out(void);
 //   GFXcanvas1 canvas(160, 80);
-// #endif
+ #endif
 
 // TaskHandle_t displayHandler_TH;
 // extern QueueHandle_t weightQueue;

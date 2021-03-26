@@ -40,7 +40,8 @@ void DebugSerialHandler_(void *pvParameters)
         {
             xQueueReceive(serialQueue, &event, xBlockTime);
 
-            ESP_LOGI(TAG, "%s", event);
+            //ESP_LOGV(TAG, "%s", event);
+            printf("%s", event);
         }
         vTaskDelay(5);
     }

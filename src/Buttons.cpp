@@ -11,34 +11,18 @@
 //uncomment next line if buttons don't have RC filter or have debounce issues
 //#define SOFTWAREDEBOUNCE
 
+#define GPIO_INPUT_PIN_SEL ((1ULL<<but1) | (1ULL<<but2) | (1ULL<<but3) | (1ULL<<but4))
 
 bool debounce = false;
-//Button button1;
-//Button button2;
-//Button button3;
-//Button button4;
 uint8_t longPressTime = (uint8_t) 1500;
 QueueHandle_t buttonQueue;
 extern TickType_t xBlockTime;
 uint8_t debounceCount = 10;
 
-// defined in header now
-// struct Button
-// {
-//     long buttonTimer = 0;
-//     int debounceCounter = 0;
-//     bool buttonStatus = false;
-//     bool shortPress = false;
-//     bool longPress = false;
-//     bool executeFlag = false;
-//     bool block = false;
-//     volatile char cmd = 'N';
-// };
-
 void    ButtonsX::readButtons(bool _debounce)
 {
 
-    if(_debounce){
+    
     // read all 4 buttons?
     // look for state change
     // record the time
@@ -50,11 +34,17 @@ void    ButtonsX::readButtons(bool _debounce)
         
         
         //NOTE: button logic is flipped. since pulled up, LOW is active, etc.
-        static bool read1 = !gpio_get_level(but1); //digitalRead(but1);
-        static bool read2 = !gpio_get_level(but2); //digitalRead(but2);
-        static bool read3 = !gpio_get_level(but3); //digitalRead(but3);
-        static bool read4 = !gpio_get_level(but4); //digitalRead(but4);
+        bool read1 = gpio_get_level(but1); 
+        bool read2 = gpio_get_level(but2); 
+        bool read3 = gpio_get_level(but3); 
+        bool read4 = gpio_get_level(but4); 
+        read1 = !read1;
+        read2 = !read2;
+        read3 = !read3;
+        read4 = !read4;
         
+
+    if(_debounce){
         /*
     * Debounce the switches and record change time
     */
@@ -121,11 +111,16 @@ void    ButtonsX::readButtons(bool _debounce)
             button4.buttonStatus = !button4.buttonStatus;
             button4.buttonTimer = nTime;
         }
+    } else{
+        button1.buttonStatus = read1;
+        button2.buttonStatus = read2;
+        button3.buttonStatus = read3;
+        button4.buttonStatus = read4;
     }
 
-    /* 
+  /* 
    * Determine long/short press
-  */
+   */
     static long longTime = esp_timer_get_time()/1000;
     if (button1.buttonStatus && !button1.block)
     {
@@ -135,14 +130,14 @@ void    ButtonsX::readButtons(bool _debounce)
             {
                 button1.longPress = true;
                 button1.shortPress = false;
-                //debugPrintln("button 1 long press trig");
+                debugPrintln("button 1 long press trig");
             }
             else
             {
                 // long press = true. do nothing?
                 button1.executeFlag = true;
                 button1.block = true;
-                //debugPrintln("button 1 long press");
+                debugPrintln("button 1 long press");
             }
         }
         else
@@ -282,6 +277,7 @@ void ButtonsX::verifyButtons()
 {
     if (button1.executeFlag || button2.executeFlag || button3.executeFlag || button4.executeFlag)
     {
+        debugPrintln("Building execute strings");
         if (button1.longPress)
         {
             button1.cmd = 'L';
@@ -298,7 +294,6 @@ void ButtonsX::verifyButtons()
         }
         if (button2.longPress)
         {
-            //
             button2.cmd = 'L';
             debugPrintln("B2 long");
             button2.longPress = false;
@@ -306,7 +301,6 @@ void ButtonsX::verifyButtons()
         }
         else if (button2.shortPress)
         {
-            //
             button2.cmd = 'S';
             debugPrintln("B2 short");
             button2.shortPress = false;
@@ -314,7 +308,6 @@ void ButtonsX::verifyButtons()
         }
         if (button3.longPress)
         {
-            //
             button3.cmd = 'L';
             debugPrintln("B3 long");
             button3.longPress = false;
@@ -322,7 +315,6 @@ void ButtonsX::verifyButtons()
         }
         else if (button3.shortPress)
         {
-            //
             button3.cmd = 'S';
             debugPrintln("B3 short");
             button3.shortPress = false;
@@ -344,10 +336,11 @@ void ButtonsX::verifyButtons()
             button4.shortPress = false;
             button4.executeFlag = false;
         }
-        char doo[] = {button1.cmd, button2.cmd, button3.cmd, button4.cmd};
-        //queue.push(doo);
+        char doo[] = {button1.cmd, button2.cmd, button3.cmd, button4.cmd, '\0'};
+        
         xQueueSend(buttonQueue, &doo, xBlockTime);
         debugPrintln(doo);
+        debugPrintln("Buttons added to queue");
         button1.cmd = 'N';
         button2.cmd = 'N';
         button3.cmd = 'N';
@@ -356,9 +349,15 @@ void ButtonsX::verifyButtons()
 }
 
 std::string ButtonsX::getEvents(){
+    char temp[5]={};
     std::string t ="";
     if(uxQueueMessagesWaiting(buttonQueue)){
-        xQueueReceive(buttonQueue, &t, (TickType_t)20);
+        vTaskDelay(5);
+        xQueueReceive(buttonQueue, &temp, (TickType_t)20);
+        debugPrintln("Getting buttons from queue");
+        debugPrintln(temp);
+        t = std::string(temp);
+        debugPrintln(t);
         return t;
     }
     return t;
@@ -371,6 +370,12 @@ void ButtonsX::sleepPreparation()
 
 void ButtonsX::Main()
 {
+    gpio_config_t io_conf;
+    io_conf.pin_bit_mask = GPIO_INPUT_PIN_SEL;
+    io_conf.mode = GPIO_MODE_INPUT;
+    io_conf.pull_up_en = (gpio_pullup_t) 1;
+    gpio_config(&io_conf);
+    
     for (;;)
     {
         readButtons(debounce);
@@ -378,39 +383,27 @@ void ButtonsX::Main()
         vTaskDelay(10);
     }
 }
+
 void ButtonsX::setup()
 {
     //
     //gpio_config(constgpio_config_t *pGPIOConfig);
     //gpio_get_level(pin);
 
-    gpio_pullup_en(but1);
-    gpio_set_direction(but1, GPIO_MODE_INPUT);
-    gpio_pullup_en(but2);
-    gpio_set_direction(but2, GPIO_MODE_INPUT);
-    gpio_pullup_en(but3);
-    gpio_set_direction(but3, GPIO_MODE_INPUT);
-    gpio_pullup_en(but4);
-    gpio_set_direction(but4, GPIO_MODE_INPUT);
-    
-    //pinMode(but1, INPUT_PULLUP);
-    //pinMode(but2, INPUT_PULLUP);
-    //pinMode(but3, INPUT_PULLUP);
-    //pinMode(but4, INPUT_PULLUP);
-    // TODO: Find a way for the task function to be compatible with the class 
-    // xTaskCreate(
-    //     buttonHandler_,   /* Task function. */
-    //     "Button Handler", /* String with name of task. */
-    //     10000,            /* Stack size in words, not bytes. */
-    //     NULL,             /* Parameter passed as input of the task */
-    //     0,                /* Priority of the task. */
-    //     &buttonHandler_TH /* Task handle. */
-    // );
-    // debugPrintln("Button thread created...");
+    //gpio_set_direction(but1, GPIO_MODE_INPUT);
+    //gpio_pullup_en(but1);
+    //gpio_set_direction(but2, GPIO_MODE_INPUT);
+    //gpio_pullup_en(but2);
+    //gpio_set_direction(but3, GPIO_MODE_INPUT);
+    //gpio_pullup_en(but3);
+    //gpio_set_direction(but4, GPIO_MODE_INPUT);
+    //gpio_pullup_en(but4);
+
 
     buttonQueue = xQueueCreate(20, sizeof(uint32_t));
-#ifdef SOFTWAREDEBOUNCE
-    debugPrintln("Using Software Debounce");
-#endif
+    debugPrintln("Button thread created...");
+    if(debounce){
+        debugPrintln("Using Software Debounce");
+    }
 }
 
