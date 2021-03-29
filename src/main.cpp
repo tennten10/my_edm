@@ -43,7 +43,7 @@ SemaphoreHandle_t pageMutex; // this was extern before...
 System _sys = {"10011001", "0.1", g, 80};
 STATE eState = STANDARD;
 volatile PAGE ePage;
-
+ButtonsX buttons{true};
 extern const uint8_t ulp_main_bin_start[] asm("_binary_ulp_main_bin_start");
 extern const uint8_t ulp_main_bin_end[]   asm("_binary_ulp_main_bin_end");
 
@@ -129,7 +129,7 @@ void goToSleep(){
   // Deep sleep turned off until chip is on board
   //esp_sleep_enable_ext0_wakeup(GPIO_NUM_13, 0); // 1 = HIGH, 0 = LOW // but1
   //rtc_gpio_pullup_en(GPIO_NUM_13);
-  debugPrintln("sleeping...");
+  //debugPrintln("sleeping...");
   vTaskDelay(10);
   init_ulp_program();
   esp_deep_sleep_start();
@@ -212,7 +212,7 @@ void decrementUnits(){
 }
 
 
-void app_main() {
+void app_main(void) {
     // change pin modes if it woke up from ULP vs power up
     esp_sleep_wakeup_cause_t cause = esp_sleep_get_wakeup_cause();
     if (cause != ESP_SLEEP_WAKEUP_ULP) {
@@ -240,18 +240,18 @@ void app_main() {
     //BLEsetup();
 
     // initializes button class
-    ButtonsX buttons{true};    
+        
     
     std::string event;
     
     // loop
     for (;;)
     {
-        event = buttons.getEvents();
-        if (event.compare("") != 0) 
+        event = buttons.getEvents();//ButX_c_getEvents( *buttons ); //"NSNN" ;//buttons.getEvents();
+        if (!(event.compare("") == 0)) 
         {
-            debugPrint("a: ");
-            debugPrintln(event);
+            //debugPrint("a: ");
+            //debugPrintln(event);
 
             if (eState == STANDARD)
             {
@@ -262,7 +262,7 @@ void app_main() {
                     if (event.compare("SNNN") == 0)
                     {
                         //TODO: TARE FUNCTION
-                        tare();
+                        //tare();
                     }
                     if (event.compare("LNNN") == 0)
                     {

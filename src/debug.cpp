@@ -4,9 +4,9 @@
 #include "esp_log.h"
 //#include "driver/uart.h"
 //#include <cstring>
-#include <string.h>
+//#include <string.h>
 #include <string>
-#include <stdio.h>
+#include <cstdio>
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
@@ -30,6 +30,11 @@ QueueHandle_t serialQueue;
 extern TickType_t xBlockTime;
 
 static const char *TAG = "MyModule";
+
+#ifdef __cplusplus
+extern "C"{
+#endif
+
 
 void DebugSerialHandler_(void *pvParameters)
 {
@@ -149,7 +154,7 @@ void debugPrint(std::string * str)
     case debugSERIAL:
         //Serial.print(str);
         static char doo[64];
-        strcpy(doo, str.c_str());
+        strcpy(doo, str->c_str());
         xQueueSend(serialQueue, &doo, xBlockTime);
         strcpy(doo, "");
         break;
@@ -256,7 +261,27 @@ void debugPrint(std::string * str)
         break;
     }
 }
-
+void debugPrint(char * const str){
+    switch (eDebugState)
+    {
+    case debugSERIAL:
+        char doo[sizeof(str)+2];
+        strcpy(doo, str);
+        xQueueSend(serialQueue, &doo, xBlockTime);
+        strcpy(doo, "");
+        break;
+    //case debugBT:
+    //SerialBT.println(str);
+    //break;
+    case debugTELNET:
+        //TelnetStream2.println(str);
+        break;
+    case PRODUCTION:
+        break;
+    default:
+        break;
+    }
+}
 
 void debugPrintln(double str)
 {
@@ -325,3 +350,29 @@ void debugPrintln(const char* str)
         break;
     }
 }
+void debugPrintln(char * const str){
+    switch (eDebugState)
+    {
+    case debugSERIAL:
+        char doo[sizeof(str)+2];
+        strcpy(doo, str);
+        strcat(doo, "\n");
+        xQueueSend(serialQueue, &doo, xBlockTime);
+        strcpy(doo, "");
+        break;
+    //case debugBT:
+    //SerialBT.println(str);
+    //break;
+    case debugTELNET:
+        //TelnetStream2.println(str);
+        break;
+    case PRODUCTION:
+        break;
+    default:
+        break;
+    }
+}
+
+#ifdef __cplusplus
+}
+#endif

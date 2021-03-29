@@ -8,15 +8,15 @@
 #include "freertos/queue.h"
 #include <string>
 
-#define GPIO_INPUT_PIN_SEL ((1ULL<<but1) | (1ULL<<but2) | (1ULL<<but3) | (1ULL<<but4))
+//#define GPIO_INPUT_PIN_SEL ((1ULL<<but1) | (1ULL<<but2) | (1ULL<<but3) | (1ULL<<but4))
 
 //bool ButtonsX::debounce = false;
 //uint8_t ButtonsX::longPressTime = (uint8_t) 1500;
 //QueueHandle_t ButtonsX::buttonQueue;
-extern TickType_t xBlockTime;
-uint8_t debounceCount = 10;
+//extern TickType_t xBlockTime;
+//uint8_t debounceCount = 10;
 
-void    ButtonsX::readButtons(bool _debounce)
+/*void    ButtonsX::readButtons(bool _debounce)
 {
 
     
@@ -42,12 +42,12 @@ void    ButtonsX::readButtons(bool _debounce)
         
 
     if(_debounce){
-        /*
+    /*
     * Debounce the switches and record change time
     */
 
 
-        static long nTime = esp_timer_get_time()/1000;
+        /*static long nTime = esp_timer_get_time()/1000;
 
         if ((read1 == button1.buttonStatus) && (button1.debounceCounter > 0))
         {
@@ -118,7 +118,7 @@ void    ButtonsX::readButtons(bool _debounce)
   /* 
    * Determine long/short press
    */
-    static long longTime = esp_timer_get_time()/1000;
+    /*static long longTime = esp_timer_get_time()/1000;
     if (button1.buttonStatus && !button1.block)
     {
         if (longTime - button1.buttonTimer > longPressTime)
@@ -263,14 +263,14 @@ void    ButtonsX::readButtons(bool _debounce)
         {
             button4.block = false;
         }
-    }
+    }*/
 
     /* 
    *  
    */
-}
+//}
 
-void ButtonsX::verifyButtons()
+/*void ButtonsX::verifyButtons()
 {
     if (button1.executeFlag || button2.executeFlag || button3.executeFlag || button4.executeFlag)
     {
@@ -343,9 +343,9 @@ void ButtonsX::verifyButtons()
         button3.cmd = 'N';
         button4.cmd = 'N';
     }
-}
+}*/
 
-std::string ButtonsX::getEvents(){
+/*std::string ButtonsX::getEvents(){
     char temp[5]={};
     std::string t ="";
     if(uxQueueMessagesWaiting(buttonQueue)){
@@ -358,7 +358,7 @@ std::string ButtonsX::getEvents(){
         return t;
     }
     return t;
-}
+}*/
 
 void ButtonsX::sleepPreparation() 
 {
@@ -366,7 +366,7 @@ void ButtonsX::sleepPreparation()
     debugPrintln("button inside sleep prep");
 }
 
-void ButtonsX::Main() // loop
+/*void ButtonsX::Main() // loop
 {
     gpio_config_t io_conf;
     io_conf.pin_bit_mask = GPIO_INPUT_PIN_SEL;
@@ -384,24 +384,15 @@ void ButtonsX::Main() // loop
         verifyButtons();
         vTaskDelay(10);
     }
+}*/
+
+// Wrapper Functions to use in C...
+extern "C" int ButX_c_init(){
+    // do something
 }
 
-//void ButtonsX::setup()
-//{
-    //
-    //gpio_config(constgpio_config_t *pGPIOConfig);
-    //gpio_get_level(pin);
+extern "C" std::string ButX_c_getEvents(ButtonsX * b){
+    return b->getEvents();
+}
 
-    //gpio_set_direction(but1, GPIO_MODE_INPUT);
-    //gpio_pullup_en(but1);
-    //gpio_set_direction(but2, GPIO_MODE_INPUT);
-    //gpio_pullup_en(but2);
-    //gpio_set_direction(but3, GPIO_MODE_INPUT);
-    //gpio_pullup_en(but3);
-    //gpio_set_direction(but4, GPIO_MODE_INPUT);
-    //gpio_pullup_en(but4);
-
-
-
-//}
 
