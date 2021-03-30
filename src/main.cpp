@@ -43,7 +43,7 @@ SemaphoreHandle_t pageMutex; // this was extern before...
 System _sys = {"10011001", "0.1", g, 80};
 STATE eState = STANDARD;
 volatile PAGE ePage;
-ButtonsX buttons{true};
+
 extern const uint8_t ulp_main_bin_start[] asm("_binary_ulp_main_bin_start");
 extern const uint8_t ulp_main_bin_end[]   asm("_binary_ulp_main_bin_end");
 
@@ -214,10 +214,12 @@ void decrementUnits(){
 
 void app_main(void) {
     // change pin modes if it woke up from ULP vs power up
+    debugSetup();
+    
     esp_sleep_wakeup_cause_t cause = esp_sleep_get_wakeup_cause();
     if (cause != ESP_SLEEP_WAKEUP_ULP) {
-        printf("Not ULP wakeup, initializing ULP\n");
-        init_ulp_program();
+        printf("Not ULP wakeup, initializing main prog\n");
+        //init_ulp_program();
     } else {
         printf("ULP wakeup, saving pulse count\n");
         printPulseCount();
@@ -239,9 +241,8 @@ void app_main(void) {
     
     //BLEsetup();
 
-    // initializes button class
         
-    
+    ButtonsX buttons{true};
     std::string event;
     
     // loop
@@ -250,8 +251,9 @@ void app_main(void) {
         event = buttons.getEvents();//ButX_c_getEvents( *buttons ); //"NSNN" ;//buttons.getEvents();
         if (!(event.compare("") == 0)) 
         {
-            //debugPrint("a: ");
-            //debugPrintln(event);
+            debugPrint("a: ");
+            debugPrintln(event);
+            printf("%s", event.c_str());
 
             if (eState == STANDARD)
             {

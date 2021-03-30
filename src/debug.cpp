@@ -1,9 +1,9 @@
 #include "a_config.h"
-#include "Globals.h"
+#include "globals.h"
 //#include "TelnetServer.h"
 #include "esp_log.h"
 //#include "driver/uart.h"
-//#include <cstring>
+#include <cstring>
 //#include <string.h>
 #include <string>
 #include <cstdio>
