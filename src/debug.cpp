@@ -31,9 +31,9 @@ extern TickType_t xBlockTime;
 
 static const char *TAG = "MyModule";
 
-#ifdef __cplusplus
-extern "C"{
-#endif
+//#ifdef __cplusplus
+//extern "C"{
+//#endif
 
 
 void DebugSerialHandler_(void *pvParameters)
@@ -237,7 +237,7 @@ void debugPrintln(std::string str)
         break;
     }
 }
-void debugPrint(std::string * str)
+void debugPrintln(std::string * str)
 {
     switch (eDebugState)
     {
@@ -373,6 +373,6 @@ void debugPrintln(char * const str){
     }
 }
 
-#ifdef __cplusplus
-}
-#endif
+//#ifdef __cplusplus
+//}
+//#endif

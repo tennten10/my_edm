@@ -389,6 +389,7 @@ void ButtonsX::Main() // loop
 // Wrapper Functions to use in C...
 extern "C" int ButX_c_init(){
     // do something
+    return 1;
 }
 
 extern "C" std::string ButX_c_getEvents(ButtonsX * b){
