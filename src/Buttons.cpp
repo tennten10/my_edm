@@ -19,34 +19,28 @@ uint8_t debounceCount = 10;
 
 #define QUEUE_LENGTH    20
 #define ITEM_SIZE       sizeof( char )
-
 /* The variable used to hold the queue's data structure. */
 static StaticQueue_t xStaticQueue;
-
 /* The array to use as the queue's storage area.  This must be at least
 uxQueueLength * uxItemSize bytes. */
 uint8_t ucQueueStorageArea[ QUEUE_LENGTH * ITEM_SIZE ];
 
-void    ButtonsX::readButtons(bool _debounce)
-{
+long longTime = 0; 
 
-    
+
+void    ButtonsX::readButtons(bool _debounce)
+{   
     // read all 4 buttons?
     // look for state change
     // record the time
-    // do stuff based on that info
-        //static bool but1_state = button1.buttonStatus;
-        //static bool but2_state = button2.buttonStatus;
-        //static bool but3_state = button3.buttonStatus;
-        //static bool but4_state = button4.buttonStatus;
-        
-        
+    // debounce and short/long press based on that info
+      
         //NOTE: button logic is flipped. since pulled up, LOW is active, etc.
-        bool read1 = gpio_get_level(but1); 
+        bool read1 = gpio_get_level(but1);  // low is pressed
         bool read2 = gpio_get_level(but2); 
         bool read3 = gpio_get_level(but3); 
         bool read4 = gpio_get_level(but4); 
-        read1 = !read1;
+        read1 = !read1; // high is pressed
         read2 = !read2;
         read3 = !read3;
         read4 = !read4;
@@ -59,12 +53,12 @@ void    ButtonsX::readButtons(bool _debounce)
 
 
         static long nTime = esp_timer_get_time()/1000;
-
-        if ((read1 == button1.buttonStatus) && (button1.debounceCounter > 0))
+        
+        if ((read1 == button1.buttonStatus) && (button1.debounceCounter > 0)) // this means stable
         {
             button1.debounceCounter--;
         }
-        if (read1 != button1.buttonStatus)
+        if (read1 != button1.buttonStatus) // and this means changed
         {
             button1.debounceCounter++;
         }
@@ -129,7 +123,24 @@ void    ButtonsX::readButtons(bool _debounce)
   /* 
    * Determine long/short press
    */
-    static long longTime = esp_timer_get_time()/1000;
+    //
+    //  Single button loop to make it easier to dubug
+    //  known -> buttonStatus
+    // get current time
+    // if button is pressed                           (and not blocked)
+    // check how long the button is pressed for
+    // if it is long pressed, 
+    // if it is not already flagged as long pressed
+    // change the flag to long press, and change the short press to false
+    // 
+    // if long flag already active, 
+    // flag for execution and block from changing values until then
+    
+
+    //long press works now... but not short press
+
+    longTime = esp_timer_get_time()/1000;
+
     if (button1.buttonStatus && !button1.block)
     {
         if (longTime - button1.buttonTimer > longPressTime)
@@ -142,7 +153,7 @@ void    ButtonsX::readButtons(bool _debounce)
             }
             else
             {
-                // long press = true. do nothing?
+                // longPress == true
                 button1.executeFlag = true;
                 button1.block = true;
                 debugPrintln("button 1 long press");
@@ -159,7 +170,7 @@ void    ButtonsX::readButtons(bool _debounce)
         if (button1.shortPress)
         {
             button1.executeFlag = true;
-            //debugPrintln("button 1 shorty execute");
+            debugPrintln("button 1 shorty execute");
         }
         if (button1.block)
         {
@@ -357,15 +368,14 @@ void ButtonsX::verifyButtons()
 }
 
 std::string ButtonsX::getEvents(){
+    debugPrintln("getButtons:   ... ");
     char temp[5]={};
     std::string t ="";
     if(uxQueueMessagesWaiting(buttonQueue)){
         vTaskDelay(5);
         xQueueReceive(buttonQueue, &temp, (TickType_t)20);
         debugPrintln("Getting buttons from queue");
-        debugPrintln(temp);
         t = std::string(temp);
-        debugPrintln(t);
         return t;
     }
     return t;

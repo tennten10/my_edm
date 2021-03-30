@@ -47,13 +47,19 @@ volatile PAGE ePage;
 extern const uint8_t ulp_main_bin_start[] asm("_binary_ulp_main_bin_start");
 extern const uint8_t ulp_main_bin_end[]   asm("_binary_ulp_main_bin_end");
 
+void ulp_deinit(){
+    gpio_num_t gpio_num = but1;
+    rtc_gpio_hold_dis(gpio_num);
+    rtc_gpio_deinit(gpio_num);    
+}
+
 static void init_ulp_program(){
     esp_err_t err = ulp_load_binary(0, ulp_main_bin_start,
             (ulp_main_bin_end - ulp_main_bin_start) / sizeof(uint32_t));
     ESP_ERROR_CHECK(err);
 
     /* GPIO used for pulse counting. */
-    gpio_num_t gpio_num = GPIO_NUM_0;
+    gpio_num_t gpio_num = but1;
     int rtcio_num = rtc_io_number_get(gpio_num);
     assert(rtc_gpio_is_valid_gpio(gpio_num) && "GPIO used for pulse counting must be an RTC IO");
 
@@ -213,24 +219,25 @@ void decrementUnits(){
 
 
 void app_main() {
-    // change pin modes if it woke up from ULP vs power up
+    
+    // Setup
     systemMutex = xSemaphoreCreateMutex();
     pageMutex = xSemaphoreCreateMutex();
     debugSetup();
-    
+
+    // change pin modes if it woke up from ULP vs power up
     esp_sleep_wakeup_cause_t cause = esp_sleep_get_wakeup_cause();
     if (cause != ESP_SLEEP_WAKEUP_ULP) {
         printf("Not ULP wakeup, initializing main prog\n");
-        vTaskDelay(500);}
-        //init_ulp_program();
-    //} else {
-    //    printf("ULP wakeup, saving pulse count\n");
-    //    printPulseCount();
-    //}
-    
-    // setup
-    printf("Step 2 of nothing...\n");
-    vTaskDelay(500);
+        vTaskDelay(500);
+        
+    } else {
+        printf("ULP wakeup, saving pulse count\n");
+        printPulseCount();
+        ulp_deinit();
+    }
+
+
     
 
     xTaskCreate(    
@@ -242,18 +249,13 @@ void app_main() {
         &battery_TH              /* Task handle. */  
         );  
     
-    printf("Step 3 of nothing...\n");
-    vTaskDelay(500);
-
-    debugPrintln("dubugPrint: Battery thread created");
     //BLEsetup();
 
         
-    ButtonsX buttons{true};
-    debugPrintln("after buttons");
+    ButtonsX buttons{false};
     std::string event;
     vTaskDelay(100);
-    debugPrintln("Before button loop...");
+    debugPrintln("Before main loop...");
     // loop
     for (;;)
     {
