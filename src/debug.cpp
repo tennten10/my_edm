@@ -11,6 +11,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "freertos/task.h"
+#include "freertos/semphr.h"
 
 // debugState is defined in a_config for ease of use. 
 // Is enum so it can be changed as a program variable rather than needing to be compiled again
@@ -28,6 +29,7 @@
 TaskHandle_t SerialMonitor_TH;
 QueueHandle_t serialQueue;
 extern TickType_t xBlockTime;
+xSemaphoreHandle debugMutex;
 
 static const char *TAG = "MyModule";
 
@@ -35,37 +37,44 @@ static const char *TAG = "MyModule";
 //extern "C"{
 //#endif
 
-
-void DebugSerialHandler_(void *pvParameters)
+/*void DebugSerialHandler_(void *pvParameters)
 {
     char event[200];
     for (;;)
     {
-        if (uxQueueMessagesWaiting(serialQueue) > 0)
-        {
-            xQueueReceive(serialQueue, &event, xBlockTime);
+        //if (uxQueueMessagesWaiting(serialQueue) > 0)
+        //{
+        //     xQueueReceive(serialQueue, &event, xBlockTime);
 
-            //ESP_LOGV(TAG, "%s", event);
-            printf("%s", event);
-        }
-        vTaskDelay(5);
+        //     //ESP_LOGV(TAG, "%s", event);
+        //     printf("%s", event);
+        // }
+        vTaskDelay(10);
     }
-}
+}*/
+
 void debugSetup()
 {
+   
+    
     switch (eDebugState)
     {
     case debugSERIAL:
-        ESP_LOGD(TAG, "Booting Serial Monitor...");
+
+        debugMutex = xSemaphoreCreateMutex();
+        printf("debugMutex mutex created \n");
+        /*//ESP_LOGD(TAG, "Booting Serial Monitor...");
         serialQueue = xQueueCreate(75, 200);
+        printf("creatied serialQueue. starting debugSerial Task\n");
         xTaskCreate(
-            DebugSerialHandler_,    /* Task function. */
-            "Serial Print Handler", /* String with name of task. */
-            20000,                  /* Stack size in words, not bytes. */
-            NULL,                   /* Parameter passed as input of the task */
-            1,                      /* Priority of the task. */
-            &SerialMonitor_TH       /* Task handle. */
-        );
+            DebugSerialHandler_,    / Task function. */
+            //"Serial Print Handler", /* String with name of task. */
+            //20000,                  /* Stack size in words, not bytes. */
+            ///NULL,                   /* Parameter passed as input of the task */
+            //1,                      /* Priority of the task. */
+            //&SerialMonitor_TH       /* Task handle. */
+        //);
+        
         break;
     //case debugBT:
     //SerialBT.println("Booting...");
@@ -101,6 +110,7 @@ void debugClose()
         break;
     }
 }
+
 void debugPrint(const char* str)
 {
     switch (eDebugState)
@@ -108,7 +118,9 @@ void debugPrint(const char* str)
     case debugSERIAL:
         static char doo[64];
         strcpy(doo, str);
-        xQueueSend(serialQueue, &doo, xBlockTime);
+        xSemaphoreTake(debugMutex, (TickType_t)20);
+        printf("%s", doo);
+        xSemaphoreGive(debugMutex);
         strcpy(doo, "");
         break;
     //case debugBT:
@@ -129,10 +141,12 @@ void debugPrint(std::string str)
     {
     case debugSERIAL:
         //Serial.print(str);
-        static char doo[64];
-        strcpy(doo, str.c_str());
-        xQueueSend(serialQueue, &doo, xBlockTime);
-        strcpy(doo, "");
+        //static char doo[64];
+        //strcpy(doo, str.c_str());
+        xSemaphoreTake(debugMutex, (TickType_t)20);
+        printf("%s", str.c_str());
+        xSemaphoreGive(debugMutex);
+        //strcpy(doo, "");
         break;
     //case debugBT:
     //SerialBT.print(str);
@@ -153,10 +167,12 @@ void debugPrint(std::string * str)
     {
     case debugSERIAL:
         //Serial.print(str);
-        static char doo[64];
-        strcpy(doo, str->c_str());
-        xQueueSend(serialQueue, &doo, xBlockTime);
-        strcpy(doo, "");
+        //static char doo[64];
+        //strcpy(doo, str->c_str());
+        xSemaphoreTake(debugMutex, (TickType_t)20);
+        printf("%s", str->c_str());
+        xSemaphoreGive(debugMutex);        
+        //strcpy(doo, "");
         break;
     //case debugBT:
     //SerialBT.print(str);
@@ -170,15 +186,16 @@ void debugPrint(std::string * str)
         break;
     }
 }
+
 void debugPrint(double str)
-{
-    char temp[32]; // malloc(sizeof(char) * (32 + 1));// = NULL;
-    sprintf(temp, "%f", str);
-    
+{   
     switch (eDebugState)
     {
     case debugSERIAL:
-        xQueueSend(serialQueue, &temp, xBlockTime);
+        
+        xSemaphoreTake(debugMutex, (TickType_t)20);
+        printf("%f", str);
+        xSemaphoreGive(debugMutex);
         break;
     //case debugBT:
 
@@ -194,13 +211,13 @@ void debugPrint(double str)
 
 void debugPrint(int i)
 {
-    char temp[16];// = NULL;
-    sprintf(temp, "%d", i);
-    
+
     switch (eDebugState)
     {
     case debugSERIAL:
-        xQueueSend(serialQueue, &temp, xBlockTime);
+        xSemaphoreTake(debugMutex, (TickType_t)20);
+        printf("%d", i);
+        xSemaphoreGive(debugMutex);        
         break;
     //case debugBT:
 
@@ -219,11 +236,11 @@ void debugPrintln(std::string str)
     switch (eDebugState)
     {
     case debugSERIAL:
-        static char doo[64];
-        strcpy(doo, str.c_str());
-        strcat(doo, "\n");
-        xQueueSend(serialQueue, &doo, xBlockTime);
-        strcpy(doo, "");
+        
+        xSemaphoreTake(debugMutex, (TickType_t)20);
+        printf("%s\n", str.c_str());
+        xSemaphoreGive(debugMutex);
+        
         break;
     //case debugBT:
     //SerialBT.println(str);
@@ -243,11 +260,9 @@ void debugPrintln(std::string * str)
     {
     case debugSERIAL:
         //Serial.print(str);
-        static char doo[64];
-        strcpy(doo, str->c_str());
-        strcat(doo, "\n");
-        xQueueSend(serialQueue, &doo, xBlockTime);
-        strcpy(doo, "");
+        xSemaphoreTake(debugMutex, (TickType_t)20);
+        printf("%s\n", str->c_str());
+        xSemaphoreGive(debugMutex);
         break;
     //case debugBT:
     //SerialBT.print(str);
@@ -265,10 +280,9 @@ void debugPrint(char * const str){
     switch (eDebugState)
     {
     case debugSERIAL:
-        char doo[sizeof(str)+2];
-        strcpy(doo, str);
-        xQueueSend(serialQueue, &doo, xBlockTime);
-        strcpy(doo, "");
+        xSemaphoreTake(debugMutex, (TickType_t)20);
+        printf("%s", str );
+        xSemaphoreGive(debugMutex);   
         break;
     //case debugBT:
     //SerialBT.println(str);
@@ -285,13 +299,12 @@ void debugPrint(char * const str){
 
 void debugPrintln(double str)
 {
-    char temp[16];
-    sprintf(temp, "%f\n", str);
     switch (eDebugState)
     {
     case debugSERIAL:
-        xQueueSend(serialQueue, &temp, xBlockTime);
-        break;
+        xSemaphoreTake(debugMutex, (TickType_t)20);
+        printf("%f\n", str);
+        xSemaphoreGive(debugMutex);        break;
     case debugBT:
         //SerialBT.println(temp);
         break;
@@ -307,14 +320,13 @@ void debugPrintln(double str)
 
 void debugPrintln(int i)
 {
-    char temp[16];// = NULL;
-    sprintf(temp, "%d\n", i);
-    
+
     switch (eDebugState)
     {
     case debugSERIAL:
-        xQueueSend(serialQueue, &temp, xBlockTime);
-        break;
+        xSemaphoreTake(debugMutex, (TickType_t)20);
+        printf("%d\n", i);
+        xSemaphoreGive(debugMutex);        break;
     //case debugBT:
 
     case debugTELNET:
@@ -331,34 +343,33 @@ void debugPrintln(const char* str)
 {
     switch (eDebugState)
     {
-    case debugSERIAL:
-        static char doo[64];
-        strcpy(doo, str);
-        strcat(doo, "\n");
-        xQueueSend(serialQueue, &doo, xBlockTime);
-        strcpy(doo, "");
-        break;
-    //case debugBT:
-    //SerialBT.println(str);
-    //break;
-    case debugTELNET:
-        //TelnetStream2.println(str);
-        break;
-    case PRODUCTION:
-        break;
-    default:
-        break;
+        case debugSERIAL:
+            
+            xSemaphoreTake(debugMutex, (TickType_t)20);
+            printf("%s\n", str);
+            xSemaphoreGive(debugMutex);
+         
+            break;
+        //case debugBT:
+            //SerialBT.println(str);
+            //break;
+        case debugTELNET:
+            //TelnetStream2.println(str);
+            break;
+        case PRODUCTION:
+            break;
+        default:
+            break;
     }
 }
+
 void debugPrintln(char * const str){
     switch (eDebugState)
     {
     case debugSERIAL:
-        char doo[sizeof(str)+2];
-        strcpy(doo, str);
-        strcat(doo, "\n");
-        xQueueSend(serialQueue, &doo, xBlockTime);
-        strcpy(doo, "");
+        xSemaphoreTake(debugMutex, (TickType_t)20);
+        printf("%s\n", str);
+        xSemaphoreGive(debugMutex);
         break;
     //case debugBT:
     //SerialBT.println(str);

@@ -16,6 +16,17 @@
 extern TickType_t xBlockTime;
 uint8_t debounceCount = 10;
 
+
+#define QUEUE_LENGTH    20
+#define ITEM_SIZE       sizeof( char )
+
+/* The variable used to hold the queue's data structure. */
+static StaticQueue_t xStaticQueue;
+
+/* The array to use as the queue's storage area.  This must be at least
+uxQueueLength * uxItemSize bytes. */
+uint8_t ucQueueStorageArea[ QUEUE_LENGTH * ITEM_SIZE ];
+
 void    ButtonsX::readButtons(bool _debounce)
 {
 
@@ -373,7 +384,11 @@ void ButtonsX::Main() // loop
     io_conf.mode = GPIO_MODE_INPUT;
     io_conf.pull_up_en = (gpio_pullup_t) 1;
     gpio_config(&io_conf);
-    buttonQueue = xQueueCreate(20, sizeof(uint32_t));
+    buttonQueue = xQueueCreateStatic(QUEUE_LENGTH,  // note: had to change FreeRTOSConfig.h to use this. See website for documentation
+                                 ITEM_SIZE,
+                                 ucQueueStorageArea,
+                                 &xStaticQueue);
+    configASSERT(buttonQueue);
     debugPrintln("Button thread created...");
     if(debounce){
         debugPrintln("Using Software Debounce");

@@ -28,14 +28,14 @@
 
 
 extern "C" {
-    void app_main(void);
+    void app_main();
 }
 /* Function Prototypes, if necessary */
  
 /**/
 
 TaskHandle_t battery_TH;
-extern QueueHandle_t buttonQueue;
+//extern QueueHandle_t buttonQueue;
 TickType_t xBlockTime = pdMS_TO_TICKS(200);
 SemaphoreHandle_t systemMutex;
 SemaphoreHandle_t pageMutex; // this was extern before...
@@ -212,22 +212,26 @@ void decrementUnits(){
 }
 
 
-void app_main(void) {
+void app_main() {
     // change pin modes if it woke up from ULP vs power up
+    systemMutex = xSemaphoreCreateMutex();
+    pageMutex = xSemaphoreCreateMutex();
     debugSetup();
     
     esp_sleep_wakeup_cause_t cause = esp_sleep_get_wakeup_cause();
     if (cause != ESP_SLEEP_WAKEUP_ULP) {
         printf("Not ULP wakeup, initializing main prog\n");
+        vTaskDelay(500);}
         //init_ulp_program();
-    } else {
-        printf("ULP wakeup, saving pulse count\n");
-        printPulseCount();
-    }
+    //} else {
+    //    printf("ULP wakeup, saving pulse count\n");
+    //    printPulseCount();
+    //}
     
     // setup
-    systemMutex = xSemaphoreCreateMutex();
-    pageMutex = xSemaphoreCreateMutex();
+    printf("Step 2 of nothing...\n");
+    vTaskDelay(500);
+    
 
     xTaskCreate(    
         batteryHandler_,          /* Task function. */
@@ -238,13 +242,18 @@ void app_main(void) {
         &battery_TH              /* Task handle. */  
         );  
     
-    
+    printf("Step 3 of nothing...\n");
+    vTaskDelay(500);
+
+    debugPrintln("dubugPrint: Battery thread created");
     //BLEsetup();
 
         
     ButtonsX buttons{true};
+    debugPrintln("after buttons");
     std::string event;
-    
+    vTaskDelay(100);
+    debugPrintln("Before button loop...");
     // loop
     for (;;)
     {
