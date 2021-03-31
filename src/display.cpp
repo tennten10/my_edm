@@ -1,8 +1,14 @@
-#include "globals.h"
 #include "a_config.h"
-//#include <SPI.h>
+#include "globals.h"
 #include "debug.h"
 #include "PinDefs.h"
+
+#include "freertos/FreeRTOS.h"
+#include "freertos/queue.h"
+#include "freertos/semphr.h"
+#include "freertos/task.h"
+#include <string>
+
 //#include "IOTComms.h"
 //#include "FreeFonts.h"
 //#include <TFT_eSPI.h>
@@ -10,13 +16,11 @@
 //#include <Adafruit_ST7735.h> // Hardware-specific library for ST7735
 //#include <Adafruit_ST7789.h> // Hardware-specific library for ST7789
 
-#include <string>
-
 
 #include "lvgl/src/lvgl.h"
 #include "lvgl_esp32_drivers/lvgl_tft/st7735s.h"
 
-// <SPI.h>
+
 //#include "AWS_OTA.h"
 
 // // Globals
@@ -33,10 +37,11 @@
 //   GFXcanvas1 canvas(160, 80);
  #endif
 
-// TaskHandle_t displayHandler_TH;
-// extern QueueHandle_t weightQueue;
-// extern TickType_t xBlockTime;
-// extern SemaphoreHandle_t systemMutex;
+TaskHandle_t displayHandler_TH;
+extern QueueHandle_t weightQueue;
+extern TickType_t xBlockTime;
+extern SemaphoreHandle_t systemMutex;
+SemaphoreHandle_t displayMutex;
 
 // extern struct System sys;
 // static char currentWeight[32]= "0.0";
@@ -361,52 +366,54 @@
 //   }
 // }
 
-// void displaySetup(){
-//   #ifdef DISPLAY_320x240_SPI_FULL
-//     tft.init();
-//     tft.setRotation(1);
-//     tft.fillScreen(TFT_BLACK);
-//     tft.fillScreen(TFT_WHITE);
-//     tft.setTextColor(TFT_WHITE, TFT_BLACK);
-//     //tft.setTextSize(8);
-//   #endif
-//   #ifdef DISPLAY_120x80_I2C
-//     lv.init();
+void displaySetup(){
+  #ifdef DISPLAY_320x240_SPI_FULL
+    tft.init();
+    tft.setRotation(1);
+    tft.fillScreen(TFT_BLACK);
+    tft.fillScreen(TFT_WHITE);
+    tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    //tft.setTextSize(8);
+  #endif
+  #ifdef DISPLAY_120x80_I2C
+    lv_init();
+    lv
 
-//     //change everything over...
-//     tft.initR(INITR_MINI160x80);  // Init ST7735S mini display
-//     tft.setRotation(1);
-//     tft.fillScreen(ST77XX_BLACK);
-//     tft.setCursor(0, 0);
-//     tft.setTextColor(ST77XX_WHITE);
-//     tft.setTextSize(3);
-//     tft.setTextWrap(true);
-//     tft.print("Booting please wait...");
-//     delay(1000);
-//   #endif
-//   xTaskCreate(    
-//         displayHandler_,          /* Task function. */
-//         "Display Handler",        /* String with name of task. */
-//         20000,            /* Stack size in words, not bytes. */
-//         NULL,             /* Parameter passed as input of the task */
-//         0,                /* Priority of the task. */
-//         &displayHandler_TH              /* Task handle. */  
-//         );  
-//   debugPrintln("Display thread created...");
+    //change everything over...
+    tft.initR(INITR_MINI160x80);  // Init ST7735S mini display
+    tft.setRotation(1);
+    tft.fillScreen(ST77XX_BLACK);
+    tft.setCursor(0, 0);
+    tft.setTextColor(ST77XX_WHITE);
+    tft.setTextSize(3);
+    tft.setTextWrap(true);
+    tft.print("Booting please wait...");
+    delay(1000);
+  #endif
+  xTaskCreate(    
+        displayHandler_,          /* Task function. */
+        "Display Handler",        /* String with name of task. */
+        20000,            /* Stack size in words, not bytes. */
+        NULL,             /* Parameter passed as input of the task */
+        0,                /* Priority of the task. */
+        &displayHandler_TH              /* Task handle. */  
+        );  
+  debugPrintln("Display thread created...");
 
-//   ledcSetup(0, 500, 8);
-//   ledcAttachPin(ledB, 0);
-//   ledcWrite(0, 100);
-//   /*#ifdef DISPLAY_320x240_SPI_FULL
-//   ledcAttachPin(ledB, 0);
-//   ledcWrite(0, 100);
-//   #endif
-//   #ifdef DISPLAY_320x240_SPI_PARTIAL
-//   ledcAttachPin(ledB, 0);
-//   ledcWrite(0, 100);
-//   #endif
-//   #ifdef DISPLAY_120x80_I2C
-//   ledcAttachPin(ledB, 0);
-//   ledcWrite(0, 100);
-//   #endif*/
-// }
+  ledcSetup(0, 500, 8);
+  ledcAttachPin(ledB, 0);
+  ledcWrite(0, 100);
+
+  /*#ifdef DISPLAY_320x240_SPI_FULL
+  ledcAttachPin(ledB, 0);
+  ledcWrite(0, 100);
+  #endif
+  #ifdef DISPLAY_320x240_SPI_PARTIAL
+  ledcAttachPin(ledB, 0);
+  ledcWrite(0, 100);
+  #endif
+  #ifdef DISPLAY_120x80_I2C
+  ledcAttachPin(ledB, 0);
+  ledcWrite(0, 100);
+  #endif*/
+}

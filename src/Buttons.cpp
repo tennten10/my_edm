@@ -15,6 +15,8 @@
 //QueueHandle_t ButtonsX::buttonQueue;
 extern TickType_t xBlockTime;
 uint8_t debounceCount = 10;
+long nTime = 0;
+long longTime = 0; 
 
 
 #define QUEUE_LENGTH    20
@@ -25,12 +27,9 @@ static StaticQueue_t xStaticQueue;
 uxQueueLength * uxItemSize bytes. */
 uint8_t ucQueueStorageArea[ QUEUE_LENGTH * ITEM_SIZE ];
 
-long longTime = 0; 
-
-
-void    ButtonsX::readButtons(bool _debounce)
+void ButtonsX::readButtons(bool _debounce)
 {   
-    // read all 4 buttons?
+    // read all 4 buttons
     // look for state change
     // record the time
     // debounce and short/long press based on that info
@@ -52,7 +51,7 @@ void    ButtonsX::readButtons(bool _debounce)
     */
 
 
-        static long nTime = esp_timer_get_time()/1000;
+        nTime = esp_timer_get_time()/1000;
         
         if ((read1 == button1.buttonStatus) && (button1.debounceCounter > 0)) // this means stable
         {
@@ -140,7 +139,7 @@ void    ButtonsX::readButtons(bool _debounce)
     //long press works now... but not short press
 
     longTime = esp_timer_get_time()/1000;
-
+    debugPrintln(std::to_string(longTime));
     if (button1.buttonStatus && !button1.block)
     {
         if (longTime - button1.buttonTimer > longPressTime)
@@ -286,10 +285,7 @@ void    ButtonsX::readButtons(bool _debounce)
             button4.block = false;
         }
     }
-
-    /* 
-   *  
-   */
+    
 }
 
 void ButtonsX::verifyButtons()

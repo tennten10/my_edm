@@ -219,7 +219,6 @@ void decrementUnits(){
 
 
 void app_main() {
-    
     // Setup
     systemMutex = xSemaphoreCreateMutex();
     pageMutex = xSemaphoreCreateMutex();
@@ -237,9 +236,6 @@ void app_main() {
         ulp_deinit();
     }
 
-
-    
-
     xTaskCreate(    
         batteryHandler_,          /* Task function. */
         "Battery Handler",        /* String with name of task. */
@@ -249,10 +245,10 @@ void app_main() {
         &battery_TH              /* Task handle. */  
         );  
     
+    strainGaugeSetup();
     //BLEsetup();
 
-        
-    ButtonsX buttons{false};
+    ButtonsX buttons{true};
     std::string event;
     vTaskDelay(100);
     debugPrintln("Before main loop...");
