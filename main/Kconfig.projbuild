@@ -1,0 +1,56 @@
+# Kconfig file for SUDOCHEF board prototypes
+
+menu "AAA SUDOBOARD menu"
+
+    config TESTOPTION_YAY
+        bool "Enable test option"
+
+    choice SB_DESIGN
+        prompt "Select predefined display configuration"
+        default SB_PREDEFINED_NONE
+        help
+            Select predefined SudoBoard display configuration
+
+        config SB_PREDEFINED_NONE
+            bool "None"
+
+        config SB_V1_HALF_ILI9341
+            bool "V1 Half ILI9341"
+        
+        config SB_V3_ST7735S
+            bool "V3 Projector ST7735S" 
+            # select LV_TFT_DISPLAY_CONTROLLER_ILI9341
+            # select LV_TFT_DISPLAY_PROTOCOL_SPI
+        config SB_V6_FULL_ILI9341
+            bool "V6 Full ILI9341"
+            select LV_TFT_DISPLAY_CONTROLLER_ILI9341
+            # select LV_TFT_DISPLAY_PROTOCOL_SPI
+
+    endchoice
+
+    choice SB_SIZE
+        prompt "Select which size variant"
+        default SB_SIZE_SMALL
+
+        config SB_SIZE_SMALL
+            bool "Small (8x13)"
+        config SB_SIZE_MEDIUM
+            bool "Medium (11x18)"
+        config SB_SIZE_LARGE
+            bool "Large (16x24)"
+    endchoice
+
+    choice SB_DEBUG
+        prompt "Select which debug communication type will be used"
+        default SB_DEBUG_NONE
+
+        config SB_DEBUG_NONE
+            bool "None (production mode)"
+        config SB_DEBUG_SERIAL
+            bool "Serial (TX/RX)"
+        config SB_DEBUG_BT
+            bool "Bluetooth Serial"
+        config SB_DEBUG_TELNET
+            bool "Telnet Stream"
+    endchoice
+endmenu
