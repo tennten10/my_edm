@@ -1,11 +1,11 @@
 
 // uncomment one of the below. small = 11x16, large = 18x24
-#define SMALL
+//#define SMALL
 //#define LARGE
 
 //uncomment one of the below 
 //#define V1_BASE
-#define V3_FLIP
+//#define V3_FLIP
 //#define V6_SIMPLE
 
 // Display style options:
@@ -27,7 +27,33 @@ SB_V6_FULL_ILI9341
 
 //Uncommenting one of these will initialize the program to one of these states. 
 // TODO: Make functions to change the operations while the program is running
-#define SERIAL_DEBUG
+//#define SERIAL_DEBUG
 // #define BT_DEBUG
 // #define TELNET_DEBUG
 
+#ifndef A_CONFIG_H
+#define A_CONFIG_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include "sdkconfig.h"
+
+
+#if defined CONFIG_SB_V1_HALF_ILI9341
+#include "configs/PinDefs_V1.h"
+#elif defined CONFIG_SB_V3_ST7735S
+#include "configs/PinDefs_V3.h"
+#elif defined CONFIG_SB_V6_FULL_ILI9341
+#include "configs/PinDefs_V6.h"
+#elif defined CONFIG_LV_TFT_DISPLAY_CONTROLLER_ST7735S
+#include "st7735s.h"
+#endif
+
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif
+
+#endif /*DISP_DRIVER_H*/

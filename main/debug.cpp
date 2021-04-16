@@ -1,6 +1,6 @@
 #include "a_config.h"
 #include "globals.h"
-#include "PinDefs.h"
+//#include "PinDefs.h"
 //#include "TelnetServer.h"
 #include "esp_log.h"
 //#include "driver/uart.h"

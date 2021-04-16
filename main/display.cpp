@@ -12,7 +12,7 @@
 #include "a_config.h"
 #include "globals.h"
 #include "debug.h"
-#include "PinDefs.h"
+//include "PinDefs.h"
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -73,7 +73,7 @@ extern QueueHandle_t weightQueue;
 extern TickType_t xBlockTime;
 
 SemaphoreHandle_t displayMutex;
-SemaphoreHandle_t pageMutex;
+extern SemaphoreHandle_t pageMutex;
 extern SemaphoreHandle_t systemMutex;
 extern struct System _sys;
 static char currentWeight[32] = "0.0";
@@ -192,6 +192,7 @@ static void guiTask(void *pvParameter)
   lv_disp_drv_t disp_drv;
   lv_disp_drv_init(&disp_drv);
   disp_drv.flush_cb = disp_driver_flush;
+  
 
   /* When using a monochrome display we need to register the callbacks:
      * - rounder_cb

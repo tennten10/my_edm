@@ -1,7 +1,9 @@
 #ifndef PIN_DEFS_H
 #define PIN_DEFS_H
 
-#include "a_config.h"
+#ifdef __cplusplus
+extern "C"{
+#endif
 
 // Make sure to modify the TFT_eSPI setup document for each display type
 // Pin Definitions
@@ -33,59 +35,26 @@
  * IO6     LCD_SCK
  * IO39     SG1
  */
+#define SG1 39 // also called sensor_vn
+#define SG2 34
+#define SG3 35
+#define SG4 32
 
-#if defined(CONFIG_SB_V1_HALF_ILI9341)
-  #define SG1   0
-  #define SG2   2
-  #define SG3   4
-  #define SG4   15
-  
-  #define but1  12
-  #define but2  13
-  #define but3  19
-  #define but4  21
-  
-  #define batV  25
-#elif defined(CONFIG_SB_V3_ST7735S){
+#define but1 13
+#define but2 14
+#define but3 19
+#define but4 21
 
-    #define SG1     ADC1_CHANNEL_3 // 39  // also called sensor_vn
-    #define SG2     ADC1_CHANNEL_6 // 34  
-    #define SG3     ADC1_CHANNEL_7 // 35
-    #define SG4     ADC1_CHANNEL_4 // 32
-    
-    #define but1    GPIO_NUM_13    
-    #define but2    GPIO_NUM_14
-    #define but3    GPIO_NUM_19
-    #define but4    GPIO_NUM_21
-    
-    #define ledB    GPIO_NUM_26 // 26  // can also used for lcd backlight pwm
-    #define ledG    25
-    #define ledR    23
-    
-    #define batV    ADC1_CHANNEL_5 //GPIO_NUM_33 
+#define ledB 26 // can also used for lcd backlight pwm
+#define ledG 25
+#define ledR 23
 
-    #define enable_165  27
-    #define onLED   22
-#elif defined(CONFIG_SB_V6_ILI9341)
-  #define SG1     39  // also called sensor_vn
-  #define SG2     34  
-  #define SG3     35
-  #define SG4     32
-  
-  #define but1    13    
-  #define but2    14
-  #define but3    19
-  #define but4    21
-  
-  #define ledB    26  // can also used for lcd backlight pwm
-  #define ledG    25
-  #define ledR    23
-  
-  #define batV    33
+#define batV 33
 
-  #define enable_165  27
-  #define onLED   22
-#endif
+#define enable_165 27
+#define onLED 22
+//#elif defined(CONFIG_LV_TFT_DISPLAY_CONTROLLER_ST7735S)
+//  #define ledB "this works"
 
 // #ifdef DISPLAY_120x80_I2C
 //   #define LCD_CS  18
@@ -101,7 +70,7 @@
 //   //#define TFT_DC    16   // Data Command control pin
 //   //#define TFT_RST   17
 // #endif
-
-
-
+#ifdef __cplusplus
+}
+#endif
 #endif
