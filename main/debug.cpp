@@ -17,7 +17,7 @@
 // debugState is defined in a_config for ease of use. 
 // Is enum so it can be changed as a program variable rather than needing to be compiled again
 // Not that anymore ^ defined from Kconfig files and menuconfig options
-#ifdef CONFIG_SB_DEGUB_SERIAL
+#ifdef CONFIG_SB_DEBUG_SERIAL
     DEBUG eDebugState = debugSERIAL;
 #else
 #ifdef CONFIG_SB_DEBUG_BT
@@ -61,7 +61,6 @@ static const char *TAG = "MyModule";
 void debugSetup()
 {
    
-    
     switch (eDebugState)
     {
     case debugSERIAL:

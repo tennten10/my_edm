@@ -22,6 +22,7 @@
 
 #include "display.h"
 #include "globals.h"
+#include "debug.h"
 
 TickType_t xBlockTime = pdMS_TO_TICKS(200);
 SemaphoreHandle_t systemMutex;
@@ -38,12 +39,14 @@ extern "C"{
     void app_main();
 };
 void app_main() {
-
+    systemMutex = xSemaphoreCreateMutex();
+    pageMutex = xSemaphoreCreateMutex();
+    debugSetup();
     displaySetup();
     
     for(;;){
         printf("do nothing\n");
-        vTaskDelay(100);
+        vTaskDelay(500);
     }
 }
 
