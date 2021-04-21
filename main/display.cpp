@@ -84,6 +84,12 @@ LV_IMG_DECLARE(img_low_battery);
 LV_IMG_DECLARE(img_logo_black);
 LV_IMG_DECLARE(img_logo_white);
 
+// Global style variables
+static lv_style_t weightStyle;
+static lv_style_t unitStyle;
+static lv_style_t logoStyle;
+static lv_style_t backgroundStyle;
+
 /**********************
  *   
  **********************/
@@ -185,6 +191,8 @@ static void displayTask(void *pvParameter)
   ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args, &periodic_timer));
   ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer, LV_TICK_PERIOD_MS * 1000));
 
+  //init my style types
+  styleInit();
 
   // draw my starting screen
   displayLogo();
@@ -244,6 +252,42 @@ void displayLoopConditions(long &t, int &q, int &q_last)
   pageEventCheck(t, q, q_last);
 }
 
+void styleInit(){
+  lv_style_init(&weightStyle);
+  lv_style_init(&unitStyle);
+  lv_style_init(&logoStyle);
+  lv_style_init(&backgroundStyle);
+  #ifdef CONFIG_SB_V1_HALF_ILI9341
+  lv_style_
+  lv_obj_align(label1, NULL, LV_ALIGN_CENTER, 0, 0);
+  
+    lv_style_set_text_font(&style, LV_STATE_DEFAULT, &lv_font_montserrat_14);
+    lv_style_set_text_color(&style, LV_STATE_DEFAULT, LV_COLOR_WHITE);
+    lv_style_set_bg_color(&style, LV_STATE_DEFAULT, LV_COLOR_BLACK);
+
+  #endif
+  #ifdef CONFIG_SB_V3_ST7735S
+  lv_style_set_bg_color(&weightStyle, LV_STATE_DEFAULT, LV_COLOR_BLACK);
+  lv_style_set_text_font(&weightStyle, LV_STATE_DEFAULT, &lv_font_montserrat_30);
+  lv_style_set_text_color(&weightStyle, LV_STATE_DEFAULT, LV_COLOR_WHITE);
+  lv_style_set_bg_opa(&weightStyle, LV_STATE_DEFAULT, 100);
+
+
+  lv_style_set_text_font(&unitStyle, LV_STATE_DEFAULT, &lv_font_montserrat_40);
+  lv_style_set_text_color(&unitStyle, LV_STATE_DEFAULT, LV_COLOR_WHITE);
+  lv_style_set_bg_color(&unitStyle, LV_STATE_DEFAULT, LV_COLOR_BLACK);
+
+  lv_style_set_text_font(&logoStyle, LV_STATE_DEFAULT, &lv_font_montserrat_14);
+  lv_style_set_text_color(&logoStyle, LV_STATE_DEFAULT, LV_COLOR_WHITE);
+  lv_style_set_bg_color(&logoStyle, LV_STATE_DEFAULT, LV_COLOR_BLACK);
+
+  lv_style_set_bg_color(&backgroundStyle, LV_STATE_DEFAULT, LV_COLOR_BLACK);
+  #endif
+  #ifdef CONFIG_SB_V6_FULL_ILI9341
+  #endif
+  
+}
+
 void pageTestRoutine(long t){
   int show = 5000; // 5 seconds
   bool flag1 = 1, flag2 = 1, flag3 = 1, flag4 = 1;
@@ -262,70 +306,74 @@ void pageTestRoutine(long t){
       lv_task_handler();
       xSemaphoreGive(xGuiSemaphore);
     }
-    lv_task_handler();
+    //lv_task_handler();
 
     if(esp_timer_get_time()/1000 - t < show && flag1){
       debugPrintln("weight test 2 char");
-      displayWeight("1.2"); // and for each character length
+      displayWeight((char*)"1.298"); // and for each character length
       flag1 = false;
-    }else if(esp_timer_get_time()/1000 - t < 2*show && flag2){
+    }else if(esp_timer_get_time()/1000 - t > 2*show && flag2){
       debugPrintln("weight test 3 char");
-      displayWeight("10.8");
+      displayWeight((char*)"10.18");
       flag2 = false;
-    }else if(esp_timer_get_time()/1000 - t < 3*show && flag3){
+    }else if(esp_timer_get_time()/1000 - t > 3*show && flag3){
       debugPrintln("weight test 4 char");
-      displayWeight("300.2");
+      displayWeight((char*)"300.2");
       flag3 = false;
-    }else if(esp_timer_get_time()/1000 - t < 4*show && flag4){
+    }else if(esp_timer_get_time()/1000 - t > 4*show && flag4){
       debugPrintln("weight test 4+ char");
-      displayWeight("800.1");
+      displayWeight((char*)"800.15");
       flag4 = false;
-    }else if(esp_timer_get_time()/1000 - t < 5*show && flag5){
+    }else if(esp_timer_get_time()/1000 - t > 5*show && flag5){
       debugPrintln("Units test g");
       xSemaphoreTake(systemMutex,(TickType_t)10);
       _sys.eUnits = g;
       xSemaphoreGive(systemMutex);
       displayUnits();
       flag5 = false;
-    }else if(esp_timer_get_time()/1000 - t < 6*show && flag6){
+    }else if(esp_timer_get_time()/1000 - t > 6*show && flag6){
       debugPrintln("Units test kg");
       xSemaphoreTake(systemMutex,(TickType_t)10);
       _sys.eUnits = kg;
       xSemaphoreGive(systemMutex);
       displayUnits();
       flag6 = false;
-    }else if(esp_timer_get_time()/1000 - t < 7*show && flag7){
-      printf("Units test oz\n");
+    }else if(esp_timer_get_time()/1000 - t > 7*show && flag7){
+      debugPrintln("Units test oz\n");
       xSemaphoreTake(systemMutex,(TickType_t)10);
       _sys.eUnits = oz;
       xSemaphoreGive(systemMutex);
       displayUnits();
       flag7 = false;
-    }else if(esp_timer_get_time()/1000 - t < 8*show && flag8){
-      printf("Units test lb\n");
+    }else if(esp_timer_get_time()/1000 - t > 8*show && flag8){
+      debugPrintln("Units test lb\n");
       xSemaphoreTake(systemMutex,(TickType_t)10);
       _sys.eUnits = lb;
       xSemaphoreGive(systemMutex);
       displayUnits();
       flag8 = false;
-    }else if(esp_timer_get_time()/1000 - t < 9*show && flag9){
-      printf("Info test\n");
+    }else if(esp_timer_get_time()/1000 - t > 9*show && flag9){
+      debugPrintln("Info test\n");
       displayDeviceInfo();  //
       flag9 = false;
-    }else if(esp_timer_get_time()/1000 - t < 10*show && flag10){
+    }else if(esp_timer_get_time()/1000 - t > 10*show && flag10){
+      debugPrintln("Battery Image Test");
       displayBattery(); //
       flag10 = false;
-    }else if(esp_timer_get_time()/1000 - t < 11*show && flag11){
+    }else if(esp_timer_get_time()/1000 - t > 11*show && flag11){
+      debugPrintln("Low Battery Test");
       displayLowBattery(); //
       flag11 = false;
-    }else if(esp_timer_get_time()/1000 - t < 12*show && flag12){
+    }else if(esp_timer_get_time()/1000 - t > 12*show && flag12){
+      debugPrintln("Display Off");
       displayOff(); // ready
       flag12 = false;
-    }else if(esp_timer_get_time()/1000 - t < 13*show && flag13){
+    }else if(esp_timer_get_time()/1000 - t > 13*show && flag13){
+      debugPrintln("Display logo and resetting...");
       displayOn();
       displayLogo(); // ready
       flag13 = false;
-    }else{
+    }else if(!flag13){
       // displaySettings(); // Need to figure out what I want on this menu first
     
       // displayUpdateScreen(int pct); // add this later?
@@ -533,81 +581,82 @@ void resizeWeight(char *w)
 
 void displayWeight(char *weight)
 {
-  debugPrintln("disp __ weight");
   char now[32];
   strcpy(now, weight);
-  //resizeWeight(now);
-  lv_obj_t *scr = lv_disp_get_scr_act(NULL);
-  lv_obj_t *label1 = lv_label_create(scr, NULL);
-  lv_obj_align(label1, NULL, LV_ALIGN_CENTER, 0, 0);
-  static lv_style_t style;
-  lv_style_init(&style);
+  
+  lv_obj_t *bkgrnd = lv_obj_create(lv_scr_act(), NULL);
+  lv_obj_t *label1 = lv_label_create(bkgrnd, NULL);
+  //lv_obj_align(label1, NULL, LV_ALIGN_CENTER, 0, 0);
   
 #ifdef CONFIG_SB_V1_HALF_ILI9341
 
+	
 #endif
 #ifdef CONFIG_SB_V3_ST7735S
 
 if (strlen(now) > 4)
   { // TODO: Start on this after lunch. Set formatting sizes for weightstream and test on display. 
-    debugPrintln("size 3 Font");
-    lv_obj_clean(lv_scr_act());
-    lv_label_set_text_fmt(label1, "%s", now);
-    lv_obj_align(label1, NULL, LV_ALIGN_CENTER, 0, 0);
-  
-    lv_style_set_text_font(&style, LV_STATE_DEFAULT, &lv_font_montserrat_8);
-    lv_style_set_text_color(&style, LV_STATE_DEFAULT, LV_COLOR_WHITE);
-  
-    //lv_obj_set_style_local_bg_color(label1, LV_CONT_PART_MAIN, LV_STATE_DEFAULT, LV_COLOR_BLACK);
+    debugPrintln("4+chars");
+    //lv_obj_clean(lv_scr_act());
+    lv_obj_set_width(bkgrnd,LV_HOR_RES);
+	  lv_obj_set_height(bkgrnd,LV_VER_RES);
 
-    debugPrintln("size 3 Font");
+    lv_label_set_text_fmt(label1, "%s", now);
+    lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0 );
+    lv_obj_align(label1, NULL, LV_ALIGN_CENTER, 0, 0);
+    //lv_obj_set_style_local_text_font(label1, LV_OBJ_PART_ALL, LV_STATE_DEFAULT, &lv_font_montserrat_8);
+    
+    //lv_style_set_text_font(&style, LV_STATE_DEFAULT, &lv_font_montserrat_14);
+    //lv_style_set_text_color(&style, LV_STATE_DEFAULT, LV_COLOR_WHITE);
+    //lv_style_set_bg_color(&style, LV_STATE_DEFAULT, LV_COLOR_BLACK);
+
+    debugPrintln("4+chars");
   }
   else if (strlen(now) > 3)
   {
-    debugPrintln("size 3' Font");
-    //lv_obj_clean(lv_scr_act());
+    debugPrintln("4 chars");
+    // lv_obj_clean(lv_scr_act());
     lv_label_set_text_fmt(label1, "%s", now);
     lv_obj_align(label1, NULL, LV_ALIGN_CENTER, 0, 0);
-  
-    lv_style_set_text_font(&style, LV_STATE_DEFAULT, &lv_font_montserrat_8);
-    lv_style_set_text_color(&style, LV_STATE_DEFAULT, LV_COLOR_WHITE);
-  
-    // lv_obj_set_style_local_bg_color(label1, LV_CONT_PART_MAIN, LV_STATE_DEFAULT, LV_COLOR_BLACK);
-    debugPrintln("size 3' Font");
+    //lv_style_set_bg_color(&style, LV_STATE_DEFAULT, LV_COLOR_MAROON);
+    //lv_style_set_text_font(&style, LV_STATE_DEFAULT, &lv_font_montserrat_16);
+    //lv_style_set_text_color(&style, LV_STATE_DEFAULT, LV_COLOR_WHITE);
+    
+    lv_obj_refresh_style(label1, LV_OBJ_PART_ALL, LV_STYLE_PROP_ALL);
+    debugPrintln("4 chars");
   }
   else if (strlen(now) > 2)
   {
-    debugPrintln("size 4 Font");
-    lv_obj_clean(lv_scr_act());
+    debugPrintln("3 chars");
+    // lv_obj_clean(lv_scr_act());
+    //lv_style_set_text_font(&style, LV_STATE_DEFAULT, &lv_font_montserrat_16);
+    //lv_style_set_text_color(&style, LV_STATE_DEFAULT, LV_COLOR_WHITE);
     lv_label_set_text_fmt(label1, "%s", now);
     lv_obj_align(label1, NULL, LV_ALIGN_CENTER, 0, 0);
-  
-    lv_style_set_text_font(&style, LV_STATE_DEFAULT, &lv_font_montserrat_14);
-    lv_style_set_text_color(&style, LV_STATE_DEFAULT, LV_COLOR_WHITE);
-  
-    // lv_obj_set_style_local_bg_color(label1, LV_CONT_PART_MAIN, LV_STATE_DEFAULT, LV_COLOR_BLACK);
-    debugPrintln("size 4 Font");
+    //lv_style_set_bg_color(&style, LV_STATE_DEFAULT, LV_COLOR_BLACK);
+    
+    debugPrintln("3 chars");
   }
   else
   {
-    debugPrintln("size 4 default Font");
-    lv_obj_clean(lv_scr_act());
+    debugPrintln("default Font");
+    // lv_obj_clean(lv_scr_act()); instead of cleaning, try to draw black rectangle
+    
+
     lv_label_set_text_fmt(label1, "%s", now);
     lv_obj_align(label1, NULL, LV_ALIGN_CENTER, 0, 0);
   
-    lv_style_set_text_font(&style, LV_STATE_DEFAULT, &lv_font_montserrat_14);
-    lv_style_set_text_color(&style, LV_STATE_DEFAULT, LV_COLOR_WHITE);
-  
-    //lv_obj_set_style_local_bg_color(label1, LV_CONT_PART_MAIN, LV_STATE_DEFAULT, LV_COLOR_BLACK);
-    debugPrintln("size 4 default Font");
+    //lv_style_set_text_font(&style, LV_STATE_DEFAULT, &lv_font_montserrat_16);
+    //lv_style_set_text_color(&style, LV_STATE_DEFAULT, LV_COLOR_WHITE);
+    //lv_style_set_bg_color(&style, LV_STATE_DEFAULT, LV_COLOR_BLACK);
+    
+    
+
+    debugPrintln("default font");
   }
-  //tft.setTextDatum(MC_DATUM);
-  //tft.setFreeFont(FF22);
-  //tft.setFont(6);
-  //tft.setTextSize(8);
-  //tft.drawFloat(now, 1, 80, 120, 4);
-  //tft.fillScreen(TFT_BLACK);
-  //tft.drawString(now, 80, 120);
+  lv_obj_add_style(bkgrnd, LV_OBJ_PART_ALL, &backgroundStyle);
+  lv_obj_add_style(label1, LV_OBJ_PART_MAIN, &weightStyle);
+
 #endif
 #ifdef CONFIG_SB_V6_FULL_ILI9341
 
@@ -729,7 +778,7 @@ void displayDeviceInfo()
   strcpy(ver,_sys.VER);
   xSemaphoreGive(systemMutex);
 
-  lv_obj_t * label1 = lv_label_create(lv_scr_act(), NULL);
+  lv_obj_t * label3 = lv_label_create(lv_scr_act(), NULL);
   static lv_style_t style;
   lv_style_init(&style);
   debugPrintln("after setting style values");
@@ -738,21 +787,24 @@ void displayDeviceInfo()
 #endif
 #ifdef CONFIG_SB_V3_ST7735S
   lv_obj_clean(lv_scr_act());
+  //printf(sn);
+  //printf(ver);
   debugPrintln("after clearing screen");
   //lv_label_set_text()
   //while (!(pdTRUE == xSemaphoreTake(xGuiSemaphore, portMAX_DELAY)))
   //{
   //    debugPrintln("loop");
   //}
-  char str[56] = "";
-  sprintf(str, "SUDOCHEF BOARD SN: %s VER: %s", sn, ver);
-  // lv_label_set_text_fmt(label1, "SUDOCHEF BOARD SN: %s VER: %s", std::string(sn), std::string(ver));
-  lv_label_set_text(label1, (const char*)str);
+  
+  //snprintf(str, 64 ,"SUDOCHEF BOARD SN:  VER: "); //, sn, ver);
+  lv_label_set_text_fmt(label3, "%s", ver); // , 5, 10); //"sn", "ver");
+  //lv_label_set_text(label1, str);
   //xSemaphoreGive(xGuiSemaphore);
+  
   
   debugPrintln("after setting label text values");
   //lv_obj_set_style_local_bg_color(label1, LV_CONT_PART_MAIN, LV_STATE_DEFAULT, LV_COLOR_BLACK);
-  lv_obj_align(label1, NULL, LV_ALIGN_CENTER, 0, 0);
+  lv_obj_align(label3, NULL, LV_ALIGN_CENTER, 0, 0);
   
   lv_style_set_text_font(&style, LV_STATE_DEFAULT, &lv_font_montserrat_8);
   lv_style_set_text_color(&style, LV_STATE_DEFAULT, LV_COLOR_WHITE);

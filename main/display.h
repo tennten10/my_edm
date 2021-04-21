@@ -8,6 +8,7 @@
 void displaySetup(); // yep
 //void displayWeight(float weight);
 void displayWeight(char* weight);
+//void displayWeight(const char)
 void displayUnits();
 void displaySettings();
 void displayDeviceInfo(); // 
@@ -22,6 +23,7 @@ void pageEventCheck(long &t, int &q, int &q_last);
 void pageTestRoutine(long t);
 //void displayTask(void * pvParameters);
 void menu();
+void styleInit();
 
 
 //#ifdef __cplusplus
