@@ -85,10 +85,12 @@ LV_IMG_DECLARE(img_logo_black);
 LV_IMG_DECLARE(img_logo_white);
 
 // Global style variables
-static lv_style_t weightStyle;
-static lv_style_t unitStyle;
-static lv_style_t logoStyle;
-static lv_style_t backgroundStyle;
+lv_style_t weightStyle;
+lv_style_t unitStyle;
+lv_style_t logoStyle;
+lv_style_t backgroundStyle;
+
+lv_color_t cbuf[LV_CANVAS_BUF_SIZE_TRUE_COLOR( SB_HORIZ, SB_VERT)]; 
 
 /**********************
  *   
@@ -196,14 +198,14 @@ static void displayTask(void *pvParameter)
 
   // draw my starting screen
   displayLogo();
-  vTaskDelay(1000);
+  //vTaskDelay(1000);
 
   long t = esp_timer_get_time() / 1000;
   int q = 0;
   int q_last = 0;
-  displayWeight(currentWeight);
+  //displayWeight(currentWeight);
 
-  pageTestRoutine((long)(esp_timer_get_time()/1000));
+  //pageTestRoutine((long)(esp_timer_get_time()/1000));
 
   while (1)
   {
@@ -213,7 +215,7 @@ static void displayTask(void *pvParameter)
     /* Try to take the semaphore, call lvgl related function on success */
     if (pdTRUE == xSemaphoreTake(xGuiSemaphore, portMAX_DELAY))
     {
-      displayLoopConditions(t, q, q_last);
+      //displayLoopConditions(t, q, q_last);
       lv_task_handler();
       xSemaphoreGive(xGuiSemaphore);
     }
@@ -282,6 +284,7 @@ void styleInit(){
   lv_style_set_bg_color(&logoStyle, LV_STATE_DEFAULT, LV_COLOR_BLACK);
 
   lv_style_set_bg_color(&backgroundStyle, LV_STATE_DEFAULT, LV_COLOR_BLACK);
+  lv_style_set_border_opa(&backgroundStyle, LV_STATE_DEFAULT, 0);
   #endif
   #ifdef CONFIG_SB_V6_FULL_ILI9341
   #endif
@@ -583,7 +586,11 @@ void displayWeight(char *weight)
 {
   char now[32];
   strcpy(now, weight);
-  
+  static lv_obj_t * canvas = lv_canvas_create(lv_scr_act(), NULL);
+  lv_canvas_set_buffer(canvas, cbuf, SB_HORIZ, SB_VERT, LV_IMG_CF_TRUE_COLOR);
+  lv_obj_align(canvas, NULL, LV_ALIGN_CENTER, 0, 0);
+  lv_canvas_fill_bg(canvas, LV_COLOR_BLACK, LV_OPA_COVER);
+
   lv_obj_t *bkgrnd = lv_obj_create(lv_scr_act(), NULL);
   lv_obj_t *label1 = lv_label_create(bkgrnd, NULL);
   //lv_obj_align(label1, NULL, LV_ALIGN_CENTER, 0, 0);
@@ -598,17 +605,18 @@ if (strlen(now) > 4)
   { // TODO: Start on this after lunch. Set formatting sizes for weightstream and test on display. 
     debugPrintln("4+chars");
     //lv_obj_clean(lv_scr_act());
-    lv_obj_set_width(bkgrnd,LV_HOR_RES);
-	  lv_obj_set_height(bkgrnd,LV_VER_RES);
+    //lv_obj_set_width(bkgrnd,LV_HOR_RES);
+	  //lv_obj_set_height(bkgrnd,LV_VER_RES);
 
-    lv_label_set_text_fmt(label1, "%s", now);
-    lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0 );
-    lv_obj_align(label1, NULL, LV_ALIGN_CENTER, 0, 0);
-    //lv_obj_set_style_local_text_font(label1, LV_OBJ_PART_ALL, LV_STATE_DEFAULT, &lv_font_montserrat_8);
-    
-    //lv_style_set_text_font(&style, LV_STATE_DEFAULT, &lv_font_montserrat_14);
-    //lv_style_set_text_color(&style, LV_STATE_DEFAULT, LV_COLOR_WHITE);
-    //lv_style_set_bg_color(&style, LV_STATE_DEFAULT, LV_COLOR_BLACK);
+    //lv_label_set_text_fmt(label1, "%s", now);
+    //lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0 );
+    //lv_obj_align(label1, NULL, LV_ALIGN_CENTER, 0, 0);
+    lv_draw_label_dsc_t label1_dsc;
+    lv_draw_label_dsc_init(&label1_dsc);
+    label1_dsc.font = &lv_font_montserrat_30;
+    label1_dsc.color = LV_COLOR_WHITE;
+
+    lv_canvas_draw_text(canvas, 0,0,150,&label1_dsc, "Text here?", LV_LABEL_ALIGN_LEFT);
 
     debugPrintln("4+chars");
   }
@@ -845,9 +853,9 @@ void displayLogo()
 
   // to resize if necessary
 
-  lv_obj_set_size(img, 60, 60);
-  /*lv_img_set_zoom(img, 512);
-    lv_img_set_pivot(img, 0, 0);  //To zoom from the left top corner
+  //lv_obj_set_size(img, 60, 60);
+  lv_img_set_zoom(img, 128);
+  /*  lv_img_set_pivot(img, 0, 0);  //To zoom from the left top corner
     lv_img_set_offset_x(img, -20); //Select the second image */
 }
 
