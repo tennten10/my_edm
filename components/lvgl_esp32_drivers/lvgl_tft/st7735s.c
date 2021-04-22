@@ -38,11 +38,11 @@ static void st7735s_send_cmd(uint8_t cmd);
 static void st7735s_send_data(void * data, uint16_t length);
 static void st7735s_send_color(void * data, uint16_t length);
 static void st7735s_set_orientation(uint8_t orientation);
-static void i2c_master_init();
-static void axp192_write_byte(uint8_t addr, uint8_t data);
-static void axp192_init();
-static void axp192_sleep_in();
-static void axp192_sleep_out();
+//static void i2c_master_init();
+//static void axp192_write_byte(uint8_t addr, uint8_t data);
+//static void axp192_init();
+//static void axp192_sleep_in();
+//static void axp192_sleep_out();
 
 /**********************
  *  STATIC VARIABLES
