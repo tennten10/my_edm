@@ -75,6 +75,7 @@ ledc_channel_config_t ledc_c_config{
     .duty = (uint32_t)10,
     .hpoint = 0,
 };
+static disp_flag = false;
 
 /* Initialize image files for display
 * These are stored as .c files and converted from https://lvgl.io/tools/imageconverter
@@ -197,6 +198,7 @@ static void displayTask(void *pvParameter)
 
   //init my style types
   styleInit();
+  disp_flag = true;
 
   // draw my starting screen
   long t = esp_timer_get_time() / 1000;
@@ -220,7 +222,7 @@ static void displayTask(void *pvParameter)
     vTaskDelay(pdMS_TO_TICKS(10));
 
     /* Try to take the semaphore, call lvgl related function on success */
-    if (pdTRUE == xSemaphoreTake(xGuiSemaphore, portMAX_DELAY))
+    if (disp_flag && pdTRUE == xSemaphoreTake(xGuiSemaphore, portMAX_DELAY))
     {
       //displayLoopConditions(t, q, q_last);
       lv_task_handler();
@@ -372,7 +374,7 @@ void pageTestRoutine(long t)
     }
     else if (esp_timer_get_time() / 1000 - t > 7 * show && flag7)
     {
-      debugPrintln("Units test oz\n");
+      debugPrintln("Units test oz");
       xSemaphoreTake(systemMutex, (TickType_t)10);
       _sys.eUnits = oz;
       xSemaphoreGive(systemMutex);
@@ -381,7 +383,7 @@ void pageTestRoutine(long t)
     }
     else if (esp_timer_get_time() / 1000 - t > 8 * show && flag8)
     {
-      debugPrintln("Units test lb\n");
+      debugPrintln("Units test lb");
       xSemaphoreTake(systemMutex, (TickType_t)10);
       _sys.eUnits = lb;
       xSemaphoreGive(systemMutex);
@@ -841,57 +843,66 @@ void displayBattery()
 {
   lv_obj_t *bkgrnd = lv_obj_create(lv_scr_act(), NULL);
   lv_obj_t *img = lv_img_create(bkgrnd, NULL);
-  //lv_obj_t *cont = lv_cont_create(img, NULL);
-  //lv_obj_t *label = lv_label_create(cont, NULL);
-
+  lv_obj_t *cont = lv_cont_create(img, NULL);
+  lv_obj_t *label = lv_label_create(cont, NULL);
 #ifdef CONFIG_SB_V1_HALF_ILI9341
-  
 #endif
 #ifdef CONFIG_SB_V3_ST7735S
-  
+  lv_img_set_src(img, &img_battery);
   lv_obj_set_width(bkgrnd, SB_HORIZ);
   lv_obj_set_height(bkgrnd, SB_VERT);
   lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
 
-  lv_img_set_src(img, &img_battery);
-  lv_img_set_zoom(img, 256);
-  lv_obj_align(img, NULL, LV_ALIGN_CENTER, 0, 0);
+  lv_img_set_zoom(img, 100);
+  lv_obj_align(img, NULL, LV_ALIGN_CENTER, 10, 0);
   
-  //lv_cont_set_fit(cont, LV_FIT_PARENT);
-  //lv_cont_set_layout(cont, LV_LAYOUT_CENTER);
+  
+  lv_cont_set_fit(cont, LV_FIT_PARENT);
+  lv_cont_set_layout(cont, LV_LAYOUT_CENTER);
 
-  //xSemaphoreTake(systemMutex, (TickType_t)10);
-  //lv_label_set_text_fmt(label, "BATTERY: %d%%", _sys.batteryLevel);
-  //xSemaphoreGive(systemMutex);
-  //lv_obj_align(cont, NULL, LV_ALIGN_CENTER, 0,0);
-  
+  xSemaphoreTake(systemMutex, (TickType_t)10);
+  lv_label_set_text_fmt(label, "%d%%", _sys.batteryLevel);
+  xSemaphoreGive(systemMutex);
+  lv_obj_align(cont, NULL, LV_ALIGN_CENTER, 0,0);
 #endif
 #ifdef CONFIG_SB_V6_FULL_ILI9341
-
 #endif
  
   lv_obj_add_style(bkgrnd, LV_OBJ_PART_MAIN, &backgroundStyle);
-  //lv_obj_add_style(cont, LV_CONT_PART_MAIN, &transpCont);
-  //lv_obj_add_style(label, LV_CONT_PART_MAIN, &infoStyle);
+  lv_obj_add_style(cont, LV_CONT_PART_MAIN, &transpCont);
+  lv_obj_add_style(label, LV_CONT_PART_MAIN, &infoStyle);
 }
 
 void displayLowBattery()
 {
+ lv_obj_t *bkgrnd = lv_obj_create(lv_scr_act(), NULL);
+  lv_obj_t *img = lv_img_create(bkgrnd, NULL);
+  lv_obj_t *cont = lv_cont_create(img, NULL);
+  lv_obj_t *label = lv_label_create(cont, NULL);
 #ifdef CONFIG_SB_V1_HALF_ILI9341
 #endif
 #ifdef CONFIG_SB_V3_ST7735S
-  lv_obj_t *img = lv_img_create(lv_scr_act(), NULL);
   lv_img_set_src(img, &img_low_battery);
-  lv_obj_align(img, NULL, LV_ALIGN_CENTER, 0, 0);
-  lv_obj_t *label = lv_obj_get_child(img, NULL);
+  lv_obj_set_width(bkgrnd, SB_HORIZ);
+  lv_obj_set_height(bkgrnd, SB_VERT);
+  lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
 
-  xSemaphoreTake(systemMutex, (TickType_t)10);
-  lv_label_set_text_fmt(label, "LOW Battery: %d", _sys.batteryLevel);
-  xSemaphoreGive(systemMutex);
-  lv_label_set_align(label, LV_ALIGN_CENTER);
+  lv_img_set_zoom(img, 100);
+  lv_obj_align(img, NULL, LV_ALIGN_CENTER, 10, 0);
+  
+  
+  lv_cont_set_fit(cont, LV_FIT_PARENT);
+  lv_cont_set_layout(cont, LV_LAYOUT_CENTER);
+
+  lv_label_set_text(label, "LOW");
+  lv_obj_align(cont, NULL, LV_ALIGN_CENTER, 0,0);
 #endif
 #ifdef CONFIG_SB_V6_FULL_ILI9341
 #endif
+ 
+  lv_obj_add_style(bkgrnd, LV_OBJ_PART_MAIN, &backgroundStyle);
+  lv_obj_add_style(cont, LV_CONT_PART_MAIN, &transpCont);
+  lv_obj_add_style(label, LV_CONT_PART_MAIN, &infoStyle);
 }
 
 void displayOff()
@@ -903,6 +914,7 @@ void displayOff()
 #ifdef CONFIG_SB_V6_FULL_ILI9341
 #endif
   lv_obj_clean(lv_scr_act());
+  disp_flag = false;
   ledc_set_duty_and_update(ledc_c_config.speed_mode, ledc_c_config.channel, 0, 0);
 }
 void displayOn()
@@ -913,5 +925,6 @@ void displayOn()
 #endif
 #ifdef CONFIG_SB_V6_FULL_ILI9341
 #endif
+  disp_flag = true;
   ledc_set_duty_and_update(ledc_c_config.speed_mode, ledc_c_config.channel, 100, 0);
 }

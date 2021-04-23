@@ -28,7 +28,7 @@ TickType_t xBlockTime = pdMS_TO_TICKS(200);
 SemaphoreHandle_t systemMutex;
 SemaphoreHandle_t pageMutex; // this was extern before...
 
-System _sys = {"10011001", "0.1", g, 80};
+System _sys = {"10011001", "0.1", g, 80};  
 STATE eState = STANDARD;
 volatile PAGE ePage;
 
@@ -38,7 +38,7 @@ volatile PAGE ePage;
 extern "C"{
     void app_main();
 };
-void app_main() {
+void app_main() { 
     systemMutex = xSemaphoreCreateMutex();
     pageMutex = xSemaphoreCreateMutex();
     debugSetup();
