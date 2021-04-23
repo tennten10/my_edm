@@ -43,6 +43,9 @@ extern "C" {
 
 #if defined CONFIG_SB_V1_HALF_ILI9341
 #include "configs/PinDefs_V1.h"
+// declare width and height of the display for use later
+#define SB_HORIZ 320
+#define SB_VERT 120
 #elif defined CONFIG_SB_V3_ST7735S
 #include "configs/PinDefs_V3.h"
 // declare width and height of the display for use later
@@ -50,8 +53,9 @@ extern "C" {
 #define SB_VERT 80
 #elif defined CONFIG_SB_V6_FULL_ILI9341
 #include "configs/PinDefs_V6.h"
-#elif defined CONFIG_LV_TFT_DISPLAY_CONTROLLER_ST7735S
-#include "st7735s.h"
+// declare width and height of the display for use later
+#define SB_HORIZ 320
+#define SB_VERT 240
 #endif
 
 

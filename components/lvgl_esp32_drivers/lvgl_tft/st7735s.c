@@ -160,12 +160,12 @@ void st7735s_flush(lv_disp_drv_t * drv, const lv_area_t * area, lv_color_t * col
 void st7735s_sleep_in()
 {
 	st7735s_send_cmd(0x10);
-	axp192_sleep_in();
+	//axp192_sleep_in();
 }
 
 void st7735s_sleep_out()
 {
-	axp192_sleep_out();
+	//axp192_sleep_out();
 	st7735s_send_cmd(0x11);
 }
 
