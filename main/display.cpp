@@ -75,7 +75,7 @@ ledc_channel_config_t ledc_c_config{
     .duty = (uint32_t)10,
     .hpoint = 0,
 };
-static disp_flag = false;
+static bool disp_flag = false;
 
 /* Initialize image files for display
 * These are stored as .c files and converted from https://lvgl.io/tools/imageconverter
