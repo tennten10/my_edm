@@ -3,5 +3,5 @@
 # project subdirectory.
 #
 
-PROJECT_NAME := _SUDOBOARD_
+PROJECT_NAME := SudoBoard
 include $(IDF_PATH)/make/project.mk

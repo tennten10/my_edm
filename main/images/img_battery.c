@@ -996,4 +996,3 @@ const lv_img_dsc_t img_battery = {
   .header.cf = LV_IMG_CF_TRUE_COLOR,
   .data = img_battery_map,
 };
-
