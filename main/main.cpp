@@ -1,65 +1,49 @@
-/* LVGL Example project
- *
- * Basic project to test LVGL on ESP32 based projects.
- *
- * This example code is in the Public Domain (or CC0 licensed, at your option.)
- *
- * Unless required by applicable law or agreed to in writing, this
- * software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
- * CONDITIONS OF ANY KIND, either express or implied.
- */
-/* C++ type includes */
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include "a_config.h"
+#include "globals.h"
+//#include "PinDefs.h"
+#include "debug.h"
+//#include "Weight.h"
+#include "Buttons.h"
+//#include "IOTComms.h"
+#include "display.h"
 
-/* FreeRTOS/esp32 includes */
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "esp_freertos_hooks.h"
 #include "freertos/semphr.h"
 #include "freertos/queue.h"
-#include "esp_system.h"
+
 #include "driver/gpio.h"
 #include "driver/adc.h"
-#include "esp_adc_cal.h"
+//#include "esp_adc_cal.h"
+
 #include "esp_sleep.h"
 #include "nvs.h"
 #include "nvs_flash.h"
-#include "soc/rtc_cntl_reg.h"
-#include "soc/sens_reg.h"
-#include "soc/rtc_periph.h"
-#include "driver/gpio.h"
+ #include "soc/rtc_cntl_reg.h"
+ #include "soc/sens_reg.h"
+ #include "soc/rtc_periph.h"
 #include "driver/rtc_io.h"
 #include "esp32/ulp.h"
 #include "ulp_main.h"
 
-/* My custom code includes*/
-#include "display.h"
-#include "globals.h"
-#include "debug.h"
-#include "Buttons.h"
+extern "C" {
+    void app_main();
+}
+/* Function Prototypes, if necessary */
+ 
+/**/
 
+TaskHandle_t battery_TH;
 TickType_t xBlockTime = pdMS_TO_TICKS(200);
 SemaphoreHandle_t systemMutex;
 SemaphoreHandle_t pageMutex; // this was extern before...
 
-TaskHandle_t battery_TH;
-
-System _sys = {"10011001", "0.1", g, 80};  
+System _sys = {"10011001", "0.1", g, 80};
 STATE eState = STANDARD;
-volatile PAGE ePage;
+volatile PAGE ePage = WEIGHTSTREAM;
 
 extern const uint8_t ulp_main_bin_start[] asm("_binary_ulp_main_bin_start");
 extern const uint8_t ulp_main_bin_end[]   asm("_binary_ulp_main_bin_end");
-
-/**********************
- *   APPLICATION MAIN
- **********************/
-extern "C"{
-    void app_main();
-};
 
 void ulp_deinit(){
     gpio_num_t gpio_num = but1;
@@ -97,6 +81,7 @@ static void init_ulp_program(){
     rtc_gpio_set_direction(gpio_num, RTC_GPIO_MODE_INPUT_ONLY);
     rtc_gpio_pulldown_dis(gpio_num);
     rtc_gpio_pullup_dis(gpio_num);
+    rtc_gpio_pullup_en(gpio_num);
     rtc_gpio_hold_en(gpio_num);
 
     /* Disconnect GPIO12 and GPIO15 to remove current drain through
@@ -115,6 +100,7 @@ static void init_ulp_program(){
     /* Start the program */
     err = ulp_run(&ulp_entry - RTC_SLOW_MEM);
     ESP_ERROR_CHECK(err);
+
 }
 
 static void printPulseCount(){
@@ -187,7 +173,7 @@ void batteryHandler_(void * pvParameters){
         _sys.batteryLevel = battery;
         xSemaphoreGive(systemMutex);
         if(battery < 2){
-        goToSleep();
+            goToSleep();
         }
         vTaskDelay(1500); 
     }
@@ -231,20 +217,25 @@ void decrementUnits(){
   xSemaphoreGive(systemMutex);
 }
 
-void app_main() { 
+
+void app_main() {
+    // Setup
     systemMutex = xSemaphoreCreateMutex();
     pageMutex = xSemaphoreCreateMutex();
     debugSetup();
+
+    // change pin modes if it woke up from ULP vs power up
     esp_sleep_wakeup_cause_t cause = esp_sleep_get_wakeup_cause();
     if (cause != ESP_SLEEP_WAKEUP_ULP) {
         printf("Not ULP wakeup, initializing main prog\n");
-        vTaskDelay(500);
+        vTaskDelay(250);
         
     } else {
         printf("ULP wakeup, saving pulse count\n");
         printPulseCount();
         ulp_deinit();
     }
+
     xTaskCreate(    
         batteryHandler_,          /* Task function. */
         "Battery Handler",        /* String with name of task. */
@@ -253,20 +244,23 @@ void app_main() {
         1,                /* Priority of the task. */
         &battery_TH              /* Task handle. */  
         );  
-
+    
+    // strainGaugeSetup();
+    //BLEsetup();
     displaySetup();
     ButtonsX buttons{true};
     std::string event;
     vTaskDelay(100);
     debugPrintln("Before main loop...");
-    
-    for(;;){
-                event = buttons.getEvents();//ButX_c_getEvents( *buttons ); //"NSNN" ;//buttons.getEvents();
+    // loop
+    for (;;)
+    {
+        event = buttons.getEvents();//ButX_c_getEvents( *buttons ); //"NSNN" ;//buttons.getEvents();
         if (!(event.compare("") == 0)) 
         {
-            debugPrint("a: ");
-            debugPrintln(event);
-            printf("%s", event.c_str());
+            //debugPrint("a: ");
+            //debugPrintln(event);
+            //printf("%s bool: %d", event.c_str(), event.compare(0,4, "LNNN",0,4) );
 
             if (eState == STANDARD)
             {
@@ -274,17 +268,18 @@ void app_main() {
                 if (ePage == WEIGHTSTREAM)
                 {
                     xSemaphoreGive(pageMutex);
-                    if (event.compare("SNNN") == 0)
+                    if (event.compare(0,4,"SNNN",0,4) == 0)
                     {
                         //TODO: TARE FUNCTION
                         //tare();
                     }
-                    if (event.compare("LNNN") == 0)
+                    if (event.compare(0,4,"LNNN",0,4) == 0)
                     {
                         //TODO: SHUTDOWN FUNCTION
+                        debugPrintln("sleepy time");
                         goToSleep();
                     }
-                    if (event.compare("NSNN") == 0)
+                    if (event.compare(0,4,"NSNN", 0, 4) == 0)
                     {
                         //TODO: Units
                         xSemaphoreTake(pageMutex, (TickType_t)10);
@@ -295,16 +290,16 @@ void app_main() {
                 else if (ePage == UNITS)
                 {
                     xSemaphoreGive(pageMutex);
-                    if (event.compare("SNNN") == 0)
+                    if (event.compare(0,4, "SNNN",0,4) == 0)
                     {
                         //TODO:  FUNCTION
                     }
-                    if (event.compare("LNNN") == 0)
+                    if (event.compare(0,4, "LNNN",0,4) == 0)
                     {
                         //TODO:  go to power off function
                         goToSleep();
                     }
-                    if (event.compare("NSNN") == 0)
+                    if (event.compare(0,4,"NSNN",0,4) == 0)
                     {
                         //TODO: Units
                         incrementUnits();
@@ -344,4 +339,3 @@ void app_main() {
         vTaskDelay(20);
     }
 }
-

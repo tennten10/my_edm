@@ -4,9 +4,9 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
+#include "a_config.h"
 #include "debug.h"
 #include "globals.h"
-#include "a_config.h"
 #include <string>
 
 #include "driver/gpio.h"
@@ -62,8 +62,6 @@ public:
   ButtonsX(bool _debounce) : ThreadX{5000, 1, "ButtonHandler"},
                                                 debounce{_debounce}
   {
-    //setup();
-    //debugPrintln("creating buttons");
     //Main();
   }
   ~ButtonsX(){} 
@@ -75,12 +73,13 @@ public:
 
 private:
   bool debounce = false;
+  int debounceCount = 1;
   Button button1;
   Button button2;
   Button button3;
   Button button4;
-  uint8_t longPressTime = (uint8_t)1500;
-  void readButtons(bool _debounce);
+  const int longPressTime = 2000;
+  void readButtons();
   void verifyButtons();
   QueueHandle_t buttonQueue;
 };
