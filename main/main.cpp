@@ -25,6 +25,7 @@
 #include "driver/rtc_io.h"
 #include "esp32/ulp.h"
 #include "ulp_main.h"
+//#include "Eigen/Dense" note: DO NOT USE in same file/namespace as any ULP library. it has naming conflicts.
 
 extern "C" {
     void app_main();

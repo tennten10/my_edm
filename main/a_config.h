@@ -63,4 +63,4 @@ extern "C" {
 } /* extern "C" */
 #endif
 
-#endif /*DISP_DRIVER_H*/
+#endif /**/

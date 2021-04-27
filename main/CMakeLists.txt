@@ -1,8 +1,8 @@
 FILE(GLOB_RECURSE app_sources ${CMAKE_SOURCE_DIR}/main/*.*)
 
 idf_component_register(SRCS "main.cpp" ${app_sources} 
-                            INCLUDE_DIRS "" "../components/lvgl" "../components/lvgl_esp32_drivers" 
-                            REQUIRES soc nvs_flash ulp)
+                            INCLUDE_DIRS "" "../components/lvgl" "../components/lvgl_esp32_drivers"
+                            REQUIRES soc nvs_flash ulp spiffs)
 
 set( ulp_app_name ulp_main)
 
