@@ -8,3 +8,6 @@
 [submodule "components/lvgl_esp32_drivers"]
 	path = lvgl_esp32_drivers
 	url = https://github.com/tennten10/lvgl_esp32_drivers.git
+[submodule "components/esp-nimble-cpp"]
+	path = components/esp-nimble-cpp
+	url = https://github.com/h2zero/esp-nimble-cpp.git
