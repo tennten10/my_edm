@@ -6,7 +6,7 @@
 #include "freertos/queue.h"
 #include "freertos/task.h"
 #include "freertos/semphr.h"
-//#include "esp_adc_cal.h"
+#include "esp_adc_cal.h"
 #include "driver/adc.h"
 #include "math.h"
 #include <string>

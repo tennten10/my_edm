@@ -1,6 +1,5 @@
 #include "a_config.h"
 #include "globals.h"
-//#include "PinDefs.h"
 #include "debug.h"
 //#include "Weight.h"
 #include "Buttons.h"
@@ -14,7 +13,7 @@
 
 #include "driver/gpio.h"
 #include "driver/adc.h"
-//#include "esp_adc_cal.h"
+#include "esp_adc_cal.h"
 
 #include "esp_sleep.h"
 #include "nvs.h"
