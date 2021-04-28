@@ -314,7 +314,7 @@ void pageTestRoutine(long t)
   bool flag1 = 1, flag2 = 1, flag3 = 1, flag4 = 1;
   bool flag5 = 1, flag6 = 1, flag7 = 1, flag8 = 1;
   bool flag9 = 1, flag10 = 1, flag11 = 1, flag12 = 1;
-  bool flag13 = 1, flag14 = 1, flag15 = 1, flag16 = 1;
+  bool flag13 = 1;//, flag14 = 1, flag15 = 1, flag16 = 1;
   //bool flag17 = 1, flag18 = 1, flag19 = 1, flag20 = 1;
   //bool flag21 = 1, flag22 = 1, flag23 = 1, flag24 = 1;
   //bool flag25 = 1, flag26 = 1, flag27 = 1, flag28 = 1;
