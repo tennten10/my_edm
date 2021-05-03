@@ -24,7 +24,7 @@
 #include "driver/rtc_io.h"
 #include "esp32/ulp.h"
 #include "ulp_main.h"
-//#include "Eigen/Dense" note: DO NOT USE in same file/namespace as any ULP library. it has naming conflicts.
+//#include "Eigen/Sparse" note: DO NOT USE in same file/namespace as any ULP library. it has naming conflicts.
 
 extern "C" {
     void app_main();
@@ -103,7 +103,7 @@ static void init_ulp_program(){
 
 }
 
-static void printPulseCount(){
+//static void printPulseCount(){
     //const char* namespace = "plusecnt";
     //const char* count_key = "count";
 
@@ -116,10 +116,10 @@ static void printPulseCount(){
     //printf("Read pulse count from NVS: %5d\n", pulse_count);
 
     /* ULP program counts signal edges, convert that to the number of pulses */
-    uint32_t pulse_count_from_ulp = (ulp_edge_count & UINT16_MAX) / 2;
+    //uint32_t pulse_count_from_ulp = (ulp_edge_count & UINT16_MAX) / 2;
     /* In case of an odd number of edges, keep one until next time */
-    ulp_edge_count = ulp_edge_count % 2;
-    printf("Pulse count from ULP: %5d\n", pulse_count_from_ulp);
+    //ulp_edge_count = ulp_edge_count % 2;
+    //printf("Pulse count from ULP: %5d\n", pulse_count_from_ulp);
 
     /* Save the new pulse count to NVS */
     //pulse_count += pulse_count_from_ulp;
@@ -127,7 +127,7 @@ static void printPulseCount(){
     //ESP_ERROR_CHECK(nvs_commit(handle));
     //nvs_close(handle);
     //printf("Wrote updated pulse count to NVS: %5d\n", pulse_count);
-}
+//}
 
 
 void goToSleep(){
@@ -142,22 +142,22 @@ void goToSleep(){
   
 }
 
-void batteryHandler_(void * pvParameters){
+/*void batteryHandler_(void * pvParameters){
     int battery=0;
     uint32_t reading=0;
     //uint32_t voltage=0;
 
     //Characterize ADC at particular atten
-    /*esp_adc_cal_characteristics_t *adc_chars = calloc(1, sizeof(esp_adc_cal_characteristics_t));
-    esp_adc_cal_value_t val_type = esp_adc_cal_characterize(unit, atten, ADC_WIDTH_BIT_12, DEFAULT_VREF, adc_chars);
-    //Check type of calibration value used to characterize ADC
-    if (val_type == ESP_ADC_CAL_VAL_EFUSE_VREF) {
-        printf("eFuse Vref");
-    } else if (val_type == ESP_ADC_CAL_VAL_EFUSE_TP) {
-        printf("Two Point");
-    } else {
-        printf("Default");
-    }*/
+    // esp_adc_cal_characteristics_t *adc_chars = calloc(1, sizeof(esp_adc_cal_characteristics_t));
+    // esp_adc_cal_value_t val_type = esp_adc_cal_characterize(unit, atten, ADC_WIDTH_BIT_12, DEFAULT_VREF, adc_chars);
+    // //Check type of calibration value used to characterize ADC
+    // if (val_type == ESP_ADC_CAL_VAL_EFUSE_VREF) {
+    //     printf("eFuse Vref");
+    // } else if (val_type == ESP_ADC_CAL_VAL_EFUSE_TP) {
+    //     printf("Two Point");
+    // } else {
+    //     printf("Default");
+    // }
     for(;;){
     // Operating voltage range of 3.0-4.2V
         // Gave some weird readings over 200% in the past. Add in a coulomb counting "gas gauge" in the future since Li-ion have a non-linear charge-discharge curve.
@@ -178,7 +178,7 @@ void batteryHandler_(void * pvParameters){
         vTaskDelay(1500); 
     }
 }
-
+*/ 
 void incrementUnits(){
   xSemaphoreTake(systemMutex, (TickType_t)10);
   switch(_sys.eUnits){
@@ -232,35 +232,39 @@ void app_main() {
         
     } else {
         printf("ULP wakeup, saving pulse count\n");
-        printPulseCount();
+        //printPulseCount();
         ulp_deinit();
     }
 
-    xTaskCreate(    
-        batteryHandler_,          /* Task function. */
-        "Battery Handler",        /* String with name of task. */
-        5000,            /* Stack size in words, not bytes. */
-        NULL,             /* Parameter passed as input of the task */
-        1,                /* Priority of the task. */
-        &battery_TH              /* Task handle. */  
-        );  
+    // xTaskCreate(    
+    //     batteryHandler_,          /* Task function. */
+    //     "Battery Handler",        /* String with name of task. */
+    //     5000,            /* Stack size in words, not bytes. */
+    //     NULL,             /* Parameter passed as input of the task */
+    //     1,                /* Priority of the task. */
+    //     &battery_TH              /* Task handle. */  
+    //     );  
     
-    // strainGaugeSetup();
-    //BLEsetup();
+    
+    strainGaugeSetup();
+
     displaySetup();
+    BLEsetup();
+    
     ButtonsX buttons{true};
+    
     std::string event;
     vTaskDelay(100);
     debugPrintln("Before main loop...");
+
+    //heap_caps_print_heap_info( MALLOC_CAP_DEFAULT );
+
     // loop
     for (;;)
     {
-        event = buttons.getEvents();//ButX_c_getEvents( *buttons ); //"NSNN" ;//buttons.getEvents();
+        event = buttons.getEvents();
         if (!(event.compare("") == 0)) 
         {
-            //debugPrint("a: ");
-            //debugPrintln(event);
-            //printf("%s bool: %d", event.c_str(), event.compare(0,4, "LNNN",0,4) );
 
             if (eState == STANDARD)
             {

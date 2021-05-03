@@ -11,33 +11,43 @@
 #include "mySPIFFS.h"
 #include "globals.h"
 #include "debug.h"
-#include "Eigen/Dense"
+#include "Eigen/Sparse"
+
+//static bool spiffs_init_flag = false;
+esp_vfs_spiffs_conf_t conf;
+esp_err_t ret;
 
 //#define DEFAULT_SCAN_LIST_SIZE CONFIG_EXAMPLE_SCAN_LIST_SIZE
 
 WiFiStruct getActiveWifiInfo(){
     WiFiStruct wfi[20];
-    debugPrintln("Initializing SPIFFS");
-    esp_vfs_spiffs_conf_t conf = {
-      .base_path = "/spiffs",
-      .partition_label = NULL,
-      .max_files = 5,
-      .format_if_mount_failed = true
-    };
-    esp_err_t ret = esp_vfs_spiffs_register(&conf);
+    if(!esp_spiffs_mounted("/spiffs")){
+        debugPrintln("Initializing SPIFFS");
+        conf = {
+            .base_path = "/spiffs",
+            .partition_label = NULL,
+            .max_files = 5,
+            .format_if_mount_failed = true
+        };
+        ret = esp_vfs_spiffs_register(&conf);
 
-    if (ret != ESP_OK) {
-        if (ret == ESP_FAIL) {
-            debugPrintln("Failed to mount or format filesystem");
-        } else if (ret == ESP_ERR_NOT_FOUND) {
-            debugPrintln("Failed to find SPIFFS partition");
-        } else {
-            debugPrint("Failed to initialize SPIFFS (");
-            debugPrint(ret);
-            debugPrint(")");
+        if (ret != ESP_OK) {
+            if (ret == ESP_FAIL) {
+                debugPrintln("Failed to mount or format filesystem");
+            } else if (ret == ESP_ERR_NOT_FOUND) {
+                debugPrintln("Failed to find SPIFFS partition");
+            } else {
+                debugPrint("Failed to initialize SPIFFS (");
+                debugPrint(ret);
+                debugPrint(")");
+            }
+            return (WiFiStruct){0,"",""};
         }
-        return (WiFiStruct){0,"",""};
+        
+    }else{
+        debugPrintln("SPIFFS already initialized?");
     }
+ 
     debugPrintln("Opening file");
     int i = 0;
     int j = -1;
@@ -67,6 +77,7 @@ WiFiStruct getActiveWifiInfo(){
         i++;
     }
     fclose(f);
+    debugPrintln("SPIFFS file closed.");
     debugPrint(i+1);
     debugPrintln(" stored networks");
     if(j){
@@ -83,27 +94,33 @@ void setWiFiInfo(WiFiStruct wifi){
     WiFiStruct wfi[20];
     int matchedIndex = -1;
     int i = 0;
-    debugPrintln("Initializing SPIFFS");
-    esp_vfs_spiffs_conf_t conf = {
-      .base_path = "/spiffs",
-      .partition_label = NULL,
-      .max_files = 5,
-      .format_if_mount_failed = true
-    };
-    esp_err_t ret = esp_vfs_spiffs_register(&conf);
+    if(!esp_spiffs_mounted("/spiffs")){
+        debugPrintln("Initializing SPIFFS");
+        conf = {
+            .base_path = "/spiffs",
+            .partition_label = NULL,
+            .max_files = 5,
+            .format_if_mount_failed = true
+        };
+        ret = esp_vfs_spiffs_register(&conf);
 
-    if (ret != ESP_OK) {
-        if (ret == ESP_FAIL) {
-            debugPrintln("Failed to mount or format filesystem");
-        } else if (ret == ESP_ERR_NOT_FOUND) {
-            debugPrintln("Failed to find SPIFFS partition");
-        } else {
-            debugPrint("Failed to initialize SPIFFS (");
-            debugPrint(ret);
-            debugPrint(")");
+        if (ret != ESP_OK) {
+            if (ret == ESP_FAIL) {
+                debugPrintln("Failed to mount or format filesystem");
+            } else if (ret == ESP_ERR_NOT_FOUND) {
+                debugPrintln("Failed to find SPIFFS partition");
+            } else {
+                debugPrint("Failed to initialize SPIFFS (");
+                debugPrint(ret);
+                debugPrint(")");
+            }
+            return;
         }
-        return;
+        
+    }else{
+        debugPrintln("SPIFFS already initialized?");
     }
+
     debugPrintln("Opening file");
   
     FILE* f = fopen("/spiffs/config.txt", "r"); 
@@ -126,6 +143,7 @@ void setWiFiInfo(WiFiStruct wifi){
         i++;
     }
     fclose(f);
+    debugPrintln("file closed.");
 
     // compare to known networks and change password as necessary...
     for(int k = 0; k<i; k++){ 
@@ -152,6 +170,7 @@ void setWiFiInfo(WiFiStruct wifi){
         }
     }
     fclose(f);
+    debugPrintln("file closed.");
 }
 
 
@@ -160,27 +179,34 @@ void setWiFiInfo(WiFiStruct wifi){
 
 WiFiStruct defaultWiFiInfo(){
     WiFiStruct wfi[20];
-    debugPrintln("Initializing SPIFFS");
-    esp_vfs_spiffs_conf_t conf = {
-      .base_path = "/spiffs",
-      .partition_label = NULL,
-      .max_files = 5,
-      .format_if_mount_failed = true
-    };
-    esp_err_t ret = esp_vfs_spiffs_register(&conf);
 
-    if (ret != ESP_OK) {
-        if (ret == ESP_FAIL) {
-            debugPrintln("Failed to mount or format filesystem");
-        } else if (ret == ESP_ERR_NOT_FOUND) {
-            debugPrintln("Failed to find SPIFFS partition");
-        } else {
-            debugPrint("Failed to initialize SPIFFS (");
-            debugPrint(ret);
-            debugPrint(")");
+    if(!esp_spiffs_mounted("/spiffs")){
+        debugPrintln("Initializing SPIFFS");
+        conf = {
+            .base_path = "/spiffs",
+            .partition_label = NULL,
+            .max_files = 5,
+            .format_if_mount_failed = true
+        };
+        ret = esp_vfs_spiffs_register(&conf);
+
+        if (ret != ESP_OK) {
+            if (ret == ESP_FAIL) {
+                debugPrintln("Failed to mount or format filesystem");
+            } else if (ret == ESP_ERR_NOT_FOUND) {
+                debugPrintln("Failed to find SPIFFS partition");
+            } else {
+                debugPrint("Failed to initialize SPIFFS (");
+                debugPrint(ret);
+                debugPrint(")");
+            }
+            return (WiFiStruct){0,"",""};
         }
-        return (WiFiStruct){0,"",""};
+        
+    }else{
+        debugPrintln("SPIFFS already initialized?");
     }
+
     debugPrintln("Opening file");
     // variables to store indexes
     int i = 0;
@@ -207,6 +233,7 @@ WiFiStruct defaultWiFiInfo(){
         i++;
     }
     fclose(f);
+    debugPrintln("file closed.");
     
 
     uint16_t networkNum = 20; //DEFAULT_SCAN_LIST_SIZE; // set to max number of networks, return value later is actual number
@@ -267,13 +294,13 @@ bool getStrainGaugeParams(const Eigen::Matrix3d& m0, const Eigen::Matrix3d& m1, 
     Eigen::Matrix3d m[4] = {const_cast< Eigen::Matrix3d& >(m0), const_cast< Eigen::Matrix3d& >(m1), const_cast< Eigen::Matrix3d& >(m2), const_cast< Eigen::Matrix3d& >(m3)};
     debugPrintln("Initializing SPIFFS");
     if(!esp_spiffs_mounted("/spiffs")){
-        esp_vfs_spiffs_conf_t conf = {
+        conf = {
         .base_path = "/spiffs",
         .partition_label = NULL,
         .max_files = 5,
         .format_if_mount_failed = true
         };
-        esp_err_t ret = esp_vfs_spiffs_register(&conf);
+        ret = esp_vfs_spiffs_register(&conf);
         if (ret != ESP_OK) {
             if (ret == ESP_FAIL) {
                 debugPrintln("Failed to mount or format filesystem");
@@ -324,13 +351,13 @@ bool saveStrainGaugeParams(Eigen::Matrix3d *m0, Eigen::Matrix3d *m1, Eigen::Matr
     Eigen::Matrix3d* m[4] = {m0, m1, m2, m3};
     debugPrintln("Initializing SPIFFS");
     if(!esp_spiffs_mounted("/spiffs")){
-        esp_vfs_spiffs_conf_t conf = {
+        conf = {
         .base_path = "/spiffs",
         .partition_label = NULL,
         .max_files = 5,
         .format_if_mount_failed = true
         };
-        esp_err_t ret = esp_vfs_spiffs_register(&conf);
+        ret = esp_vfs_spiffs_register(&conf);
         if (ret != ESP_OK) {
             if (ret == ESP_FAIL) {
                 debugPrintln("Failed to mount or format filesystem");

@@ -36,7 +36,7 @@ QueueHandle_t serialQueue;
 extern TickType_t xBlockTime;
 xSemaphoreHandle debugMutex;
 
-static const char *TAG = "MyModule";
+// static const char *TAG = "MyModule";
 
 //#ifdef __cplusplus
 //extern "C"{
@@ -97,7 +97,7 @@ void debugClose()
     switch (eDebugState)
     {
     case debugSERIAL:
-        ESP_LOGI(TAG, "Exiting Serial...");
+        printf("Exiting Serial...");
         
         break;
     //case debugBT:

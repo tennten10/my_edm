@@ -1,5 +1,6 @@
 #include "a_config.h"
 #include "globals.h"
+#include "main.h"
 #include "debug.h"
 #include "mySPIFFS.h"
 #include "freertos/FreeRTOS.h"
@@ -11,7 +12,8 @@
 #include "math.h"
 #include <string>
 #include <stdio.h>
-#include "Eigen/Dense"
+#include "Eigen/Sparse"
+
 
 TaskHandle_t weightHandler_TH;
 QueueHandle_t weightQueue;
@@ -203,6 +205,14 @@ void weightHandler_(void * pvParameters){
   std::string foo;
   double lastWeight = 0.0;
   double currentWeight= 0.0;
+
+  // battery variables
+  int battery=0;
+  uint32_t reading=0;
+  long batTime = esp_timer_get_time()/1000;
+    
+        
+    
   for(;;){
     readSensors();
     currentWeight = getWeight();
@@ -222,6 +232,26 @@ void weightHandler_(void * pvParameters){
       debugPrintln("Doing weight stuff");
       debugPrintln(foo);
       lastWeight = currentWeight;
+    }
+    //battery update moved into this loop to free up some memory
+    if(esp_timer_get_time()/1000-batTime > 5000){
+      // Operating voltage range of 3.0-4.2V
+        // Gave some weird readings over 200% in the past. Add in a coulomb counting "gas gauge" in the future since Li-ion have a non-linear charge-discharge curve.
+        // Voltage divider with 1M & 2M, giving read voltage of 2.8 V = 4.2V, 2.0V = 3.0V
+        // Resolution of ~ 0.0008V / division
+      
+
+        reading =  adc1_get_raw(batV);
+        //voltage = esp_adc_cal_raw_to_voltage(reading, adc_chars);
+
+        battery = (int) 100 *( reading * 3.3 / 4096.0 - 2.0) /(2.8 - 2.0); //(voltage - 2.0) / (2.8 - 2.0) ;
+        xSemaphoreTake(systemMutex, (TickType_t)10);
+        _sys.batteryLevel = battery;
+        xSemaphoreGive(systemMutex);
+        if(battery < 2){
+            goToSleep();
+        }
+        batTime = esp_timer_get_time()/1000;
     }
     vTaskDelay(WEIGHT_UPDATE_RATE*1000);
   }

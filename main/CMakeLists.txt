@@ -5,6 +5,7 @@ idf_component_register(SRCS "main.cpp" ${app_sources}
                             REQUIRES soc nvs_flash ulp spiffs esp_adc_cal bt esp_https_ota app_update
                             # Embed the server root certificate into the final binary
                             EMBED_TXTFILES ${project_dir}/server_certs/ca_cert.pem )
+                            #LDFRAGMENTS "linker_fragment.lf")
 
 set( ulp_app_name ulp_main)
 

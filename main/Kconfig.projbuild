@@ -58,7 +58,9 @@ menu "AAA SUDOBOARD menu"
 
         config EXAMPLE_FIRMWARE_UPGRADE_URL
             string "Firmware Upgrade URL"
-            default "https://192.168.2.106:8070/hello-world.bin"
+            # note: use the firmware.bin file and rename as needed for each version
+            #default "https://192.168.2.106:8070/hello-world.bin"
+            default "https://storage.cloud.google.com/sb-firmware-00/proto_v3/sb_v3_0_0_1.bin"
             help
                 URL of server which hosts the firmware image.
 
@@ -85,4 +87,5 @@ menu "AAA SUDOBOARD menu"
                 Maximum time for reception
 
     endmenu
+
 endmenu

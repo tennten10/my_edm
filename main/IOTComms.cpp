@@ -267,17 +267,17 @@ class OTACallbacks: public NimBLECharacteristicCallbacks {
       
       if (strcmp(pCharacteristic->getValue().c_str(), "yes") == 0) {
         debugPrintln("Begin updating..........");
-        //xSemaphoreTake(pageMutex, (TickType_t) 10);
-        //ePage = pUPDATE;
-        //xSemaphoreGive(pageMutex);
-        //vTaskDelay(20);
-        //setupOTA();
-        //vTaskDelay(1000);
-        //execOTA(0);
-        //xSemaphoreTake(pageMutex, (TickType_t)10);
-        //ePage = WEIGHTSTREAM;
-        //xSemaphoreGive(pageMutex);
-        //debugPrintln("page change");
+        xSemaphoreTake(pageMutex, (TickType_t) 10);
+        ePage = pUPDATE;
+        xSemaphoreGive(pageMutex);
+        vTaskDelay(20);
+        setupOTA();
+        vTaskDelay(1000);
+        execOTA();
+        xSemaphoreTake(pageMutex, (TickType_t)10);
+        ePage = WEIGHTSTREAM;
+        xSemaphoreGive(pageMutex);
+        debugPrintln("page change");
       } else {
         debugPrintln("OTA Command not recognized");
       }
@@ -332,7 +332,7 @@ char* unitsToString(Units u) { // note: call free(returned_string) after this re
 
 
 void BLEsetup() {
-  //Serial.begin(115200);
+  
   debugPrintln("Starting NimBLE Server");
   /** sets device name */
   NimBLEDevice::init("SudoBoard");
@@ -357,12 +357,12 @@ void BLEsetup() {
   pServer->setCallbacks(new ServerCallbacks());
 
   debugPrintln(" It got to here 7"); // mike look here
-  vTaskDelay(500);
+  vTaskDelay(100);
 
   //Holding semaphore until BT services are created...
-  xSemaphoreTake(systemMutex, (TickType_t)10);
+  
   debugPrintln(" It got to here 8"); // mike look here
-  vTaskDelay(500);
+  vTaskDelay(100);
 
   NimBLEService* pDeviceService = pServer->createService("180A");
   NimBLECharacteristic* pSerialNumCharacteristic = pDeviceService->createCharacteristic(
@@ -373,11 +373,13 @@ void BLEsetup() {
         NIMBLE_PROPERTY::READ_ENC  // only allow reading if paired / encrypted
         //NIMBLE_PROPERTY::WRITE_ENC   // only allow writing if paired / encrypted
       );
+  xSemaphoreTake(systemMutex, (TickType_t)10);
   pSerialNumCharacteristic->setValue(_sys.SN);
+  xSemaphoreGive(systemMutex);
   pSerialNumCharacteristic->setCallbacks(&devCallbacks);
 
   debugPrintln(" It got to here 9"); // mike look here
-  vTaskDelay(500);
+  vTaskDelay(100);
 
   NimBLECharacteristic* pSoftwareCharacteristic = pDeviceService->createCharacteristic(
         "2A28",
@@ -387,7 +389,9 @@ void BLEsetup() {
         NIMBLE_PROPERTY::READ_ENC  // only allow reading if paired / encrypted
         //NIMBLE_PROPERTY::WRITE_ENC   // only allow writing if paired / encrypted
       );
+  xSemaphoreTake(systemMutex, (TickType_t)10);
   pSoftwareCharacteristic->setValue(_sys.VER);
+  xSemaphoreGive(systemMutex);
   pSoftwareCharacteristic->setCallbacks(&devCallbacks);
   NimBLECharacteristic* pMfgCharacteristic = pDeviceService->createCharacteristic(
         "2A29",
@@ -402,7 +406,7 @@ void BLEsetup() {
   pMfgCharacteristic->setCallbacks(&devCallbacks);
 
   debugPrintln(" It got to here 10"); // mike look here
-  vTaskDelay(500);
+  vTaskDelay(100);
 
   NimBLECharacteristic* pDateTimeCharacteristic = pDeviceService->createCharacteristic(
         "2A11",
@@ -417,7 +421,7 @@ void BLEsetup() {
   pDateTimeCharacteristic->setCallbacks(&devCallbacks);
 
   debugPrintln(" It got to here 11"); // mike look here
-  vTaskDelay(500);
+  vTaskDelay(100);
 
   /* Next Service - Battery  */ 
   NimBLEService* pBatteryService = pServer->createService("180F");
@@ -426,13 +430,15 @@ void BLEsetup() {
         NIMBLE_PROPERTY::READ
       );
   char srerdsf [16];
+  xSemaphoreTake(systemMutex, (TickType_t)10);
   sprintf(srerdsf, "%d %%", _sys.batteryLevel);
-  //srerdsf = String.format("%d %%", _sys.batteryLevel);
+  xSemaphoreGive(systemMutex);
+  
   pBatteryCharacteristic->setValue(srerdsf);
   pBatteryCharacteristic->setCallbacks(&batCallbacks);
 
   debugPrintln(" It got to here 12"); // mike look here
-  vTaskDelay(500);
+  vTaskDelay(100);
 
   /* Next Service - Weight Scale */
   NimBLEService* pWeightService = pServer->createService("181D");
@@ -463,10 +469,10 @@ void BLEsetup() {
   pUnitsCharacteristic->setCallbacks(&wgtCallbacks);
 
   //Release Semaphore
-  xSemaphoreGive(systemMutex);
+  //xSemaphoreGive(systemMutex);
 
   debugPrintln(" It got to here 13"); // mike look here
-  vTaskDelay(500);
+  vTaskDelay(100);
 
   /* Next Service - Actions performed through connection */
 
@@ -512,20 +518,25 @@ void BLEsetup() {
   sprintf(wifi_read, "%s,%s", w.ssid, w.pswd);
   debugPrint(" wifi_read value: ");
   debugPrintln(wifi_read);
+
+  debugPrintln(" It got to here 14"); // mike look here
+  vTaskDelay(100);
   
   NimBLECharacteristic* pWiFiCharacteristic = pActionService->createCharacteristic(
         "0000F1F1-60be-11eb-ae93-0242ac130002",
         NIMBLE_PROPERTY::READ |
         NIMBLE_PROPERTY::WRITE |
-
         NIMBLE_PROPERTY::READ_ENC |  // only allow reading if paired / encrypted
         NIMBLE_PROPERTY::WRITE_ENC   // only allow writing if paired / encrypted
       );
+  debugPrintln(" It got to here 15"); // mike look here
+  vTaskDelay(100);
 
-  pWiFiCharacteristic->setValue((uint8_t*)wifi_read, strlen(wifi_read));
+  pWiFiCharacteristic->setValue((uint8_t*)wifi_read, strlen(wifi_read)+1);
   pWiFiCharacteristic->setCallbacks(&actCallbacks); 
 
-  
+  debugPrintln(" It got to here 16"); // mike look here
+  vTaskDelay(100);
 
 
   /** Start the services when finished creating all Characteristics and Descriptors */
@@ -533,6 +544,9 @@ void BLEsetup() {
   pBatteryService->start();
   pWeightService->start();
   pActionService->start();
+
+  debugPrintln(" It got to here 15"); // mike look here
+  vTaskDelay(100);
 
   NimBLEAdvertising* pAdvertising = NimBLEDevice::getAdvertising();
   /** Add the services to the advertisment data **/

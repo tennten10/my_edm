@@ -12,6 +12,7 @@
 #include "a_config.h"
 #include "globals.h"
 #include "debug.h"
+#include "IOTComms.h"
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -46,8 +47,10 @@
 /**********************
  *  STATIC PROTOTYPES
  **********************/
-static void lv_tick_task(void *arg);
-static void displayTask(void *pvParameter);
+//static 
+void lv_tick_task(void *arg);
+//static 
+void displayTask(void *pvParameter);
 
 void displayLoopConditions(long &t, int &q, int &q_last);
 
@@ -58,9 +61,9 @@ TaskHandle_t displayHandler_TH;
 //extern QueueHandle_t weightQueue;
 extern TickType_t xBlockTime;
 
-SemaphoreHandle_t displayMutex;
 extern SemaphoreHandle_t pageMutex;
 extern SemaphoreHandle_t systemMutex;
+extern QueueHandle_t weightQueue;
 extern struct System _sys;
 char currentWeight[32] = "0.0";
 bool updateStarted = 0;
@@ -75,7 +78,7 @@ ledc_channel_config_t ledc_c_config{
     .duty = (uint32_t)10,
     .hpoint = 0,
 };
-static bool disp_flag = false;
+bool disp_flag = false;
 
 /* Initialize image files for display
 * These are stored as .c files and converted from https://lvgl.io/tools/imageconverter
@@ -93,7 +96,9 @@ lv_style_t backgroundStyle;
 lv_style_t infoStyle;
 lv_style_t transpCont;
 
-lv_color_t cbuf[LV_CANVAS_BUF_SIZE_TRUE_COLOR(SB_HORIZ, SB_VERT)];
+lv_disp_buf_t disp_buf;
+
+// lv_color_t cbuf[LV_CANVAS_BUF_SIZE_TRUE_COLOR(SB_HORIZ, SB_VERT)];
 
 /**********************
  *   
@@ -113,7 +118,8 @@ void displaySetup()
  * you should lock on the very same semaphore! */
 SemaphoreHandle_t xGuiSemaphore;
 
-static void displayTask(void *pvParameter)
+//static 
+void displayTask(void *pvParameter)
 {
   xGuiSemaphore = xSemaphoreCreateMutex();
 
@@ -122,7 +128,7 @@ static void displayTask(void *pvParameter)
   /* Initialize SPI or I2C bus used by the drivers */
   lvgl_driver_init();
 
-  lv_color_t *buf1 = static_cast<lv_color_t *>(heap_caps_malloc(DISP_BUF_SIZE * sizeof(lv_color_t), MALLOC_CAP_DMA));
+  lv_color_t *buf1 = reinterpret_cast<lv_color_t *>(heap_caps_malloc(DISP_BUF_SIZE * sizeof(lv_color_t), MALLOC_CAP_DMA));
   assert(buf1 != NULL);
 
   /* Initialize backlight LED  */
@@ -144,21 +150,16 @@ static void displayTask(void *pvParameter)
 
   /* Use double buffered when not working with monochrome displays */
 #ifndef CONFIG_LV_TFT_DISPLAY_MONOCHROME
-  lv_color_t *buf2 = static_cast<lv_color_t *>(heap_caps_malloc(DISP_BUF_SIZE * sizeof(lv_color_t), MALLOC_CAP_DMA));
+  lv_color_t *buf2 = reinterpret_cast<lv_color_t *>(heap_caps_malloc(DISP_BUF_SIZE * sizeof(lv_color_t), MALLOC_CAP_DMA));
   assert(buf2 != NULL);
 #else
   static lv_color_t *buf2 = NULL;
 #endif
 
-  static lv_disp_buf_t disp_buf;
+  //static lv_disp_buf_t disp_buf;
 
   uint32_t size_in_px = DISP_BUF_SIZE;
 
-#if defined CONFIG_LV_TFT_DISPLAY_CONTROLLER_IL3820 || defined CONFIG_LV_TFT_DISPLAY_CONTROLLER_JD79653A || defined CONFIG_LV_TFT_DISPLAY_CONTROLLER_UC8151D || defined CONFIG_LV_TFT_DISPLAY_CONTROLLER_SSD1306
-
-  /* Actual size in pixels, not bytes. */
-  size_in_px *= 8;
-#endif
 
   /* Initialize the working buffer depending on the selected display.
      * NOTE: buf2 == NULL when using monochrome displays. */
@@ -212,9 +213,7 @@ static void displayTask(void *pvParameter)
     vTaskDelay(10);
   }
 
-  //displayWeight(currentWeight);
-
-  pageTestRoutine((long)(esp_timer_get_time() / 1000));
+  //pageTestRoutine((long)(esp_timer_get_time() / 1000));
 
   while (1)
   {
@@ -224,7 +223,7 @@ static void displayTask(void *pvParameter)
     /* Try to take the semaphore, call lvgl related function on success */
     if (disp_flag && pdTRUE == xSemaphoreTake(xGuiSemaphore, portMAX_DELAY))
     {
-      //displayLoopConditions(t, q, q_last);
+      displayLoopConditions(t, q, q_last);
       lv_task_handler();
       xSemaphoreGive(xGuiSemaphore);
     }
@@ -446,19 +445,19 @@ void pageEventCheck(long &t, int &q, int &q_last)
 #ifdef CONFIG_SB_V6_FULL_ILI9341
 #endif
 
-    //debugPrintln(String(uxQueueMessagesWaiting(weightQueue)));
-    // if (uxQueueMessagesWaiting(weightQueue) > 0)
-    // {
-    //   xQueueReceive(weightQueue, &currentWeight, xBlockTime);
+    //debugPrintln(uxQueueMessagesWaiting(weightQueue));
+    if (uxQueueMessagesWaiting(weightQueue) > 0)
+    {
+      xQueueReceive(weightQueue, &currentWeight, xBlockTime);
 
-    //   //displayWeight(currentWeight);
-    //   displayWeight(*currentWeight);
-    //   //if (isBtConnected())
-    //   //{
-    //   //updateBTWeight(currentWeight);
-    //   //}
-    //   debugPrintln("This is where weight would be printed");
-    // }
+      displayWeight(currentWeight);
+      //displayWeight(*currentWeight);
+      if (isBtConnected())
+      {
+        updateBTWeight(currentWeight);
+      }
+      debugPrintln("This is where weight would be printed");
+    }
     break;
   case pUPDATE:
     xSemaphoreGive(pageMutex);
@@ -520,7 +519,8 @@ void pageEventCheck(long &t, int &q, int &q_last)
   }
 }
 
-static void lv_tick_task(void *arg)
+//static 
+void lv_tick_task(void *arg)
 {
   (void)arg;
 
