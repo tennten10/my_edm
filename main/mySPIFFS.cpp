@@ -21,7 +21,8 @@ esp_err_t ret;
 
 WiFiStruct getActiveWifiInfo(){
     WiFiStruct wfi[20];
-    if(!esp_spiffs_mounted("/spiffs")){
+    debugPrintln("getActiveWiFiInfo");
+    if(!esp_spiffs_mounted(conf.partition_label)){
         debugPrintln("Initializing SPIFFS");
         conf = {
             .base_path = "/spiffs",
@@ -36,6 +37,9 @@ WiFiStruct getActiveWifiInfo(){
                 debugPrintln("Failed to mount or format filesystem");
             } else if (ret == ESP_ERR_NOT_FOUND) {
                 debugPrintln("Failed to find SPIFFS partition");
+            } else if (ret == ESP_ERR_INVALID_STATE){
+                debugPrintln("Invalid State");
+                // ESP_ERR_INVALID_STATE if already mounted or partition is encrypted
             } else {
                 debugPrint("Failed to initialize SPIFFS (");
                 debugPrint(ret);
@@ -94,8 +98,9 @@ void setWiFiInfo(WiFiStruct wifi){
     WiFiStruct wfi[20];
     int matchedIndex = -1;
     int i = 0;
-    if(!esp_spiffs_mounted("/spiffs")){
-        debugPrintln("Initializing SPIFFS");
+    debugPrintln("setWiFiInfo");
+    if(!esp_spiffs_mounted(conf.partition_label)){
+        
         conf = {
             .base_path = "/spiffs",
             .partition_label = NULL,
@@ -107,6 +112,8 @@ void setWiFiInfo(WiFiStruct wifi){
         if (ret != ESP_OK) {
             if (ret == ESP_FAIL) {
                 debugPrintln("Failed to mount or format filesystem");
+            } else if (ret == ESP_ERR_NOT_FOUND) {
+                debugPrintln("Failed to find SPIFFS partition");
             } else if (ret == ESP_ERR_NOT_FOUND) {
                 debugPrintln("Failed to find SPIFFS partition");
             } else {
@@ -179,8 +186,9 @@ void setWiFiInfo(WiFiStruct wifi){
 
 WiFiStruct defaultWiFiInfo(){
     WiFiStruct wfi[20];
-
-    if(!esp_spiffs_mounted("/spiffs")){
+    debugPrintln("default WiFi Info");
+    
+    if(!esp_spiffs_mounted(conf.partition_label)){
         debugPrintln("Initializing SPIFFS");
         conf = {
             .base_path = "/spiffs",
@@ -193,6 +201,8 @@ WiFiStruct defaultWiFiInfo(){
         if (ret != ESP_OK) {
             if (ret == ESP_FAIL) {
                 debugPrintln("Failed to mount or format filesystem");
+            } else if (ret == ESP_ERR_NOT_FOUND) {
+                debugPrintln("Failed to find SPIFFS partition");
             } else if (ret == ESP_ERR_NOT_FOUND) {
                 debugPrintln("Failed to find SPIFFS partition");
             } else {
@@ -212,15 +222,19 @@ WiFiStruct defaultWiFiInfo(){
     int i = 0;
     int j = 0;
     int thisone[10]={0};
-    FILE* f = fopen("/spiffs/config.txt", "r"); 
+    debugPrintln("before opening file");
+    FILE* f = fopen("/spiffs/config.txt", "r");
+    debugPrintln("after opening file"); 
     if (f == NULL) {
         debugPrintln("Failed to open file for reading");
         return (WiFiStruct){0,"",""};
     }
-    
+    debugPrintln("after checking if file openend... it did btw");
     char line[100];
+    debugPrintln("after allocating line");
     // populate from text file into struct for easier processing 
     while(!feof(f)){
+        debugPrintln("populating wifiStructs");
         if(i > 20){
             debugPrint("too many entries in wifi text file");
             break;
@@ -231,6 +245,7 @@ WiFiStruct defaultWiFiInfo(){
         strcpy(wfi[i].ssid, strtok(NULL, ","));
         strcpy(wfi[i].pswd, strtok(NULL, ","));
         i++;
+        // TODO: maybe in the future find a way to catch an error of an empty line. Otherwise the file should end with a comma on the same line as the last entry
     }
     fclose(f);
     debugPrintln("file closed.");
@@ -292,8 +307,8 @@ WiFiStruct defaultWiFiInfo(){
 bool getStrainGaugeParams(const Eigen::Matrix3d& m0, const Eigen::Matrix3d& m1, const Eigen::Matrix3d& m2, const Eigen::Matrix3d& m3){
     // if file exists and am able to open...
     Eigen::Matrix3d m[4] = {const_cast< Eigen::Matrix3d& >(m0), const_cast< Eigen::Matrix3d& >(m1), const_cast< Eigen::Matrix3d& >(m2), const_cast< Eigen::Matrix3d& >(m3)};
-    debugPrintln("Initializing SPIFFS");
-    if(!esp_spiffs_mounted("/spiffs")){
+    debugPrintln("getStrainGaugeParams");
+    if(!esp_spiffs_mounted(conf.partition_label)){
         conf = {
         .base_path = "/spiffs",
         .partition_label = NULL,
@@ -301,9 +316,12 @@ bool getStrainGaugeParams(const Eigen::Matrix3d& m0, const Eigen::Matrix3d& m1, 
         .format_if_mount_failed = true
         };
         ret = esp_vfs_spiffs_register(&conf);
+        
         if (ret != ESP_OK) {
             if (ret == ESP_FAIL) {
                 debugPrintln("Failed to mount or format filesystem");
+            } else if (ret == ESP_ERR_NOT_FOUND) {
+                debugPrintln("Failed to find SPIFFS partition");
             } else if (ret == ESP_ERR_NOT_FOUND) {
                 debugPrintln("Failed to find SPIFFS partition");
             } else {
@@ -312,6 +330,14 @@ bool getStrainGaugeParams(const Eigen::Matrix3d& m0, const Eigen::Matrix3d& m1, 
                 debugPrint(")");
             }
             return false;
+        }
+        size_t total = 0, used = 0;
+        ret = esp_spiffs_info(conf.partition_label, &total, &used);
+        
+        if (ret != ESP_OK) {
+            printf( "Failed to get SPIFFS partition information (%s)", esp_err_to_name(ret));
+        } else {
+            printf("Partition size: total: %d, used: %d", total, used);
         }
     }
     debugPrintln("Opening file");
@@ -343,14 +369,15 @@ bool getStrainGaugeParams(const Eigen::Matrix3d& m0, const Eigen::Matrix3d& m1, 
         
     }
     fclose(f);
+    debugPrintln("Closing SPIFFS file");
     return true;
 }
 
 bool saveStrainGaugeParams(Eigen::Matrix3d *m0, Eigen::Matrix3d *m1, Eigen::Matrix3d *m2,Eigen::Matrix3d *m3){
     // if file exists and am able to open...
     Eigen::Matrix3d* m[4] = {m0, m1, m2, m3};
-    debugPrintln("Initializing SPIFFS");
-    if(!esp_spiffs_mounted("/spiffs")){
+    debugPrintln("saveStrainGaugeParams");
+    if(!esp_spiffs_mounted(conf.partition_label)){
         conf = {
         .base_path = "/spiffs",
         .partition_label = NULL,
@@ -361,6 +388,8 @@ bool saveStrainGaugeParams(Eigen::Matrix3d *m0, Eigen::Matrix3d *m1, Eigen::Matr
         if (ret != ESP_OK) {
             if (ret == ESP_FAIL) {
                 debugPrintln("Failed to mount or format filesystem");
+            } else if (ret == ESP_ERR_NOT_FOUND) {
+                debugPrintln("Failed to find SPIFFS partition");
             } else if (ret == ESP_ERR_NOT_FOUND) {
                 debugPrintln("Failed to find SPIFFS partition");
             } else {
@@ -390,6 +419,7 @@ bool saveStrainGaugeParams(Eigen::Matrix3d *m0, Eigen::Matrix3d *m1, Eigen::Matr
         //}
     }
     fclose(f);
+    debugPrintln("Closing spiffs file");
     return true;
 }
 
