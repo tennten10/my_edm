@@ -110,7 +110,7 @@ changed:
 	move r3, debounce_counter
 	ld r2, r3, 0
 	add r2, r2, 0 /* dummy ADD to use "jump if ALU result is zero" */
-	jump edge_detected, eq
+	jump wake_up, eq
 	/* Not yet. Decrement debounce_counter */
 	sub r2, r2, 1
 	st r2, r3, 0
