@@ -138,7 +138,7 @@ edge_detected:
 	/* Compare edge_count to edge_count_to_wake_up */
 	move r3, edge_count_to_wake_up
 	ld r3, r3, 0
-	sub r3, r3, 0
+	sub r3, r3, r2
 	jump wake_up, eq
 	/* Not yet. End program */
 	halt

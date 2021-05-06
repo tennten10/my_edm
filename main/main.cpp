@@ -74,7 +74,7 @@ static void init_ulp_program(){
     ulp_debounce_max_count = 3;
     ulp_next_edge = 0;
     ulp_io_number = rtcio_num; /* map from GPIO# to RTC_IO# */
-    ulp_edge_count_to_wake_up = 10;
+    ulp_edge_count_to_wake_up = 1;
 
     /* Initialize selected GPIO as RTC IO, enable input, disable pullup and pulldown */
     rtc_gpio_init(gpio_num);
