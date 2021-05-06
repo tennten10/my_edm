@@ -58,15 +58,11 @@ menu "AAA SUDOBOARD menu"
 
         config EXAMPLE_FIRMWARE_UPGRADE_URL
             string "Firmware Upgrade URL"
-            # note: use the firmware.bin file and rename as needed for each version
+            # note: use the firmware.bin file and rename as needed for each version. Overridden in a_config for predefined configurations...
             #default "https://192.168.2.106:8070/hello-world.bin"
             default "https://storage.cloud.google.com/sb-firmware-00/proto_v3/sb_v3_0_0_1.bin"
             help
                 URL of server which hosts the firmware image.
-
-        config EXAMPLE_FIRMWARE_UPGRADE_URL_FROM_STDIN
-            bool
-            default y if EXAMPLE_FIRMWARE_UPGRADE_URL = "FROM_STDIN"
 
         config EXAMPLE_SKIP_COMMON_NAME_CHECK
             bool "Skip server certificate CN fieldcheck"

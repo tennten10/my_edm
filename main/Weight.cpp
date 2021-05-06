@@ -13,6 +13,7 @@
 #include <string>
 #include <stdio.h>
 #include "Eigen/Sparse"
+#include "Weight.h"
 
 
 TaskHandle_t weightHandler_TH;
@@ -63,7 +64,7 @@ Eigen::Matrix3d mK_sg4 = Eigen::Matrix3d::Identity();
 // BLA::Matrix<4> mOutput;
 
 
-double ReadVoltage(adc1_channel_t pin){
+double WeightX::ReadVoltage(adc1_channel_t pin){
   // from https://github.com/G6EJD/ESP32-ADC-Accuracy-Improvement-function/blob/master/ESP32_ADC_Read_Voltage_Accurate.ino
   // Use for more accurate reading on ESP32 ADC
   double reading = 1.0*adc1_get_raw(pin);; // Reference voltage is 3v3 so maximum reading is 3v3 = 4095 in range 0 to 4095
@@ -83,7 +84,7 @@ double ReadVoltage(adc1_channel_t pin){
  *  
  */
 
-void readSensors(){
+void WeightX::readSensors(){
   // read sensors Using dummy values until sensors are hooked up
   xSemaphoreTake(sgMutex, (TickType_t)10);
   sg1 = ReadVoltage(SG1);
@@ -109,7 +110,7 @@ void readSensors(){
   // 0 and 0.1V, or between 3.2 and 3.3V
   // expect between 1.15 and 2.8V
 }
-std::string truncateWeight( double d){
+std::string WeightX::truncateWeight( double d){
   xSemaphoreTake(systemMutex, (TickType_t)10);
   Units u = _sys.eUnits;
   xSemaphoreGive(systemMutex);
@@ -141,7 +142,7 @@ std::string truncateWeight( double d){
   // on the small screen we can do maximum 4 characters without changing fonts?
 }
 
-void setUnits(Units m){
+void WeightX::setUnits(Units m){
   switch(m){
     // default system is in g
     case g: // grams
@@ -163,7 +164,7 @@ void setUnits(Units m){
   //conversion *= 1000;
 }
 
-double getRawWeight(){
+double WeightX::getRawWeight(){
   // weight before conversions and tare offset
   xSemaphoreTake(sgMutex, (TickType_t)10);
   double weight = sg1 + sg2 + sg3+ sg4;
@@ -176,7 +177,7 @@ double getRawWeight(){
   return weight;
 }
 
-double getWeight(){
+double WeightX::getWeight(){
   //double weight = (getRawWeight() - tareOffset)* conversion;
   //xSemaphoreTake(systemMutex, (TickType_t)10);
   double weight = ((sg1-mTareOffset(0))*mK_sg1(2,2)+(sg2-mTareOffset(1))*mK_sg2(2,2)+(sg3-mTareOffset(2))*mK_sg3(2,2)+(sg4-mTareOffset(3))*mK_sg4(2,2))*conversion;
@@ -200,7 +201,7 @@ void tare(){
   xSemaphoreGive(sgMutex);
 }
 
-void weightHandler_(void * pvParameters){
+void WeightX::Main(){
   char doo[16];
   std::string foo;
   double lastWeight = 0.0;
@@ -283,32 +284,32 @@ void strainGaugeSetup(){
   //pinMode(enable_165, OUTPUT);
   //digitalWrite(enable_165, HIGH);
   
-  vTaskDelay(300);
-  xSemaphoreTake(systemMutex, (TickType_t)50);
-  setUnits(_sys.eUnits);
-  xSemaphoreGive(systemMutex);
+  //vTaskDelay(300);
+  // xSemaphoreTake(systemMutex, (TickType_t)50);
+  // setUnits(_sys.eUnits);
+  // xSemaphoreGive(systemMutex);
   
   weightQueue = xQueueCreate(5, sizeof(uint32_t));
   
-  if(weightQueue == NULL){
-    debugPrintln("Error creating weightQueue");
-  }else{
-    debugPrintln("Weight queue created...");
-  }
+  // if(weightQueue == NULL){
+  //   debugPrintln("Error creating weightQueue");
+  // }else{
+  //   debugPrintln("Weight queue created...");
+  // }
   
-  xTaskCreate(    
-        weightHandler_,          /* Task function. */
-        "Weight Handler",        /* String with name of task. */
-        20000,            /* Stack size in words, not bytes. */
-        NULL,             /* Parameter passed as input of the task */
-        0,                /* Priority of the task. */
-        &weightHandler_TH              /* Task handle. */  
-        );  
+  // xTaskCreate(    
+  //       weightHandler_,          /* Task function. */
+  //       "Weight Handler",        /* String with name of task. */
+  //       20000,            /* Stack size in words, not bytes. */
+  //       NULL,             /* Parameter passed as input of the task */
+  //       0,                /* Priority of the task. */
+  //       &weightHandler_TH              /* Task handle. */  
+  //       );  
         
-  debugPrintln("Weight thread created...");
-  tare();
-  vTaskDelay(3);
-  debugPrintln("after tare");
+  // debugPrintln("Weight thread created...");
+  // tare();
+  // vTaskDelay(3);
+  // debugPrintln("after tare");
 
 }
 

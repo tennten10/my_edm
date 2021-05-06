@@ -51,6 +51,10 @@ extern "C" {
 // declare width and height of the display for use later
 #define SB_HORIZ 160
 #define SB_VERT 80
+
+// OTA update server
+#define UPDATE_URL "https://storage.googleapis.com/sb-firmware-00/proto_v3/firmware.bin"
+
 #elif defined CONFIG_SB_V6_FULL_ILI9341
 #include "configs/PinDefs_V6.h"
 // declare width and height of the display for use later

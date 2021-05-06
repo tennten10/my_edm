@@ -13,6 +13,7 @@
 #include "globals.h"
 #include "debug.h"
 #include "IOTComms.h"
+#include "display.h"
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -48,27 +49,27 @@
  *  STATIC PROTOTYPES
  **********************/
 //static 
-void lv_tick_task(void *arg);
+//void lv_tick_task(void *arg);
 //static 
-void displayTask(void *pvParameter);
+//void displayTask(void *pvParameter);
 
-void displayLoopConditions(long &t, int &q, int &q_last);
+//void displayLoopConditions(long &t, int &q, int &q_last);
 
 /**********************
  *  GLOBAL VARIABLES
  **********************/
-TaskHandle_t displayHandler_TH;
-//extern QueueHandle_t weightQueue;
+
 extern TickType_t xBlockTime;
 
 extern SemaphoreHandle_t pageMutex;
 extern SemaphoreHandle_t systemMutex;
 extern QueueHandle_t weightQueue;
-extern struct System _sys;
-char currentWeight[32] = "0.0";
-bool updateStarted = 0;
-extern volatile PAGE ePage; // = WEIGHTSTREAM;
-Units currentUnits = kg;
+// extern struct System _sys;
+
+
+extern volatile PAGE ePage;
+
+
 ledc_channel_config_t ledc_c_config{
     .gpio_num = ledB,
     .speed_mode = LEDC_LOW_SPEED_MODE,
@@ -78,7 +79,7 @@ ledc_channel_config_t ledc_c_config{
     .duty = (uint32_t)10,
     .hpoint = 0,
 };
-bool disp_flag = false;
+//bool disp_flag = false;
 
 /* Initialize image files for display
 * These are stored as .c files and converted from https://lvgl.io/tools/imageconverter
@@ -89,14 +90,14 @@ LV_IMG_DECLARE(img_logo_black);
 LV_IMG_DECLARE(img_logo_white);
 
 // Global style variables
-lv_style_t weightStyle;
-lv_style_t unitStyle;
-lv_style_t logoStyle;
-lv_style_t backgroundStyle;
-lv_style_t infoStyle;
-lv_style_t transpCont;
+//lv_style_t weightStyle;
+//lv_style_t unitStyle;
+//lv_style_t logoStyle;
+//lv_style_t backgroundStyle;
+//lv_style_t infoStyle;
+//lv_style_t transpCont;
 
-lv_disp_buf_t disp_buf;
+//lv_disp_buf_t disp_buf;
 
 // lv_color_t cbuf[LV_CANVAS_BUF_SIZE_TRUE_COLOR(SB_HORIZ, SB_VERT)];
 
@@ -104,340 +105,329 @@ lv_disp_buf_t disp_buf;
  *   
  **********************/
 
-void displaySetup()
-{
-  /* If you want to use a task to create the graphic, you NEED to create a Pinned task
-     * Otherwise there can be problem such as memory corruption and so on.
-     * NOTE: When not using Wi-Fi nor Bluetooth you can pin the guiTask to core 0 */
-  xTaskCreatePinnedToCore(displayTask, "display", 4096 * 2, NULL, 0, &displayHandler_TH, 1);
-  debugPrintln("Display thread created...");
-}
+// void displaySetup()
+// {
+//     /* If you want to use a task to create the graphic, you NEED to create a Pinned task
+//       * Otherwise there can be problem such as memory corruption and so on.
+//       * NOTE: When not using Wi-Fi nor Bluetooth you can pin the guiTask to core 0 */
+//     xTaskCreatePinnedToCore(displayTask, "display", 4096 * 2, NULL, 0, &displayHandler_TH, 1);
+//     debugPrintln("Display thread created...");
+// }
 
 /* Creates a semaphore to handle concurrent call to lvgl stuff
  * If you wish to call *any* lvgl function from other threads/tasks
  * you should lock on the very same semaphore! */
-SemaphoreHandle_t xGuiSemaphore;
+//SemaphoreHandle_t xGuiSemaphore;
 
 //static 
-void displayTask(void *pvParameter)
+void DisplayX::Main()
 {
-  xGuiSemaphore = xSemaphoreCreateMutex();
+    xGuiSemaphore = xSemaphoreCreateMutex();
 
-  lv_init();
+    lv_init();
 
-  /* Initialize SPI or I2C bus used by the drivers */
-  lvgl_driver_init();
+    /* Initialize SPI or I2C bus used by the drivers */
+    lvgl_driver_init();
 
-  lv_color_t *buf1 = reinterpret_cast<lv_color_t *>(heap_caps_malloc(DISP_BUF_SIZE * sizeof(lv_color_t), MALLOC_CAP_DMA));
-  assert(buf1 != NULL);
+    lv_color_t *buf1 = reinterpret_cast<lv_color_t *>(heap_caps_malloc(DISP_BUF_SIZE * sizeof(lv_color_t), MALLOC_CAP_DMA));
+    assert(buf1 != NULL);
 
-  /* Initialize backlight LED  */
+    /* Initialize backlight LED  */
 
-  ledc_timer_config_t ledc_timer{
-      .speed_mode = LEDC_LOW_SPEED_MODE,    // timer mode
-      .duty_resolution = LEDC_TIMER_13_BIT, // resolution of PWM duty
-      .timer_num = LEDC_TIMER_1,            // timer index
-      .freq_hz = 5000,                      // frequency of PWM signal
-      .clk_cfg = LEDC_AUTO_CLK,             // Auto select the source clock
-  };
+    ledc_timer_config_t ledc_timer{
+        .speed_mode = LEDC_LOW_SPEED_MODE,    // timer mode
+        .duty_resolution = LEDC_TIMER_13_BIT, // resolution of PWM duty
+        .timer_num = LEDC_TIMER_1,            // timer index
+        .freq_hz = 5000,                      // frequency of PWM signal
+        .clk_cfg = LEDC_AUTO_CLK,             // Auto select the source clock
+    };
 
-  ledc_timer_config(&ledc_timer);
-  ledc_channel_config(&ledc_c_config);
+    ledc_timer_config(&ledc_timer);
+    ledc_channel_config(&ledc_c_config);
 
-  //ledc_set_duty(ledc_c_config.speed_mode, ledc_c_config.channel, 50);
-  //ledc_update_duty(ledc_c_config.speed_mode, ledc_c_config.channel);
-  ledc_set_duty_and_update(ledc_c_config.speed_mode, ledc_c_config.channel, 100, 0);
+    //ledc_set_duty(ledc_c_config.speed_mode, ledc_c_config.channel, 50);
+    //ledc_update_duty(ledc_c_config.speed_mode, ledc_c_config.channel);
+    ledc_set_duty_and_update(ledc_c_config.speed_mode, ledc_c_config.channel, 100, 0);
 
-  /* Use double buffered when not working with monochrome displays */
+    /* Use double buffered when not working with monochrome displays */
 #ifndef CONFIG_LV_TFT_DISPLAY_MONOCHROME
-  lv_color_t *buf2 = reinterpret_cast<lv_color_t *>(heap_caps_malloc(DISP_BUF_SIZE * sizeof(lv_color_t), MALLOC_CAP_DMA));
-  assert(buf2 != NULL);
+    lv_color_t *buf2 = reinterpret_cast<lv_color_t *>(heap_caps_malloc(DISP_BUF_SIZE * sizeof(lv_color_t), MALLOC_CAP_DMA));
+    assert(buf2 != NULL);
 #else
-  static lv_color_t *buf2 = NULL;
+    static lv_color_t *buf2 = NULL;
 #endif
 
-  //static lv_disp_buf_t disp_buf;
+    //static lv_disp_buf_t disp_buf;
 
-  uint32_t size_in_px = DISP_BUF_SIZE;
+    uint32_t size_in_px = DISP_BUF_SIZE;
 
 
-  /* Initialize the working buffer depending on the selected display.
-     * NOTE: buf2 == NULL when using monochrome displays. */
-  lv_disp_buf_init(&disp_buf, buf1, buf2, size_in_px);
+    /* Initialize the working buffer depending on the selected display.
+      * NOTE: buf2 == NULL when using monochrome displays. */
+    lv_disp_buf_init(&disp_buf, buf1, buf2, size_in_px);
 
-  lv_disp_drv_t disp_drv;
-  lv_disp_drv_init(&disp_drv);
-  disp_drv.flush_cb = disp_driver_flush;
+    lv_disp_drv_t disp_drv;
+    lv_disp_drv_init(&disp_drv);
+    disp_drv.flush_cb = disp_driver_flush;
 
-  /* When using a monochrome display we need to register the callbacks:
-     * - rounder_cb
-     * - set_px_cb */
+    /* When using a monochrome display we need to register the callbacks:
+      * - rounder_cb
+      * - set_px_cb */
 #ifdef CONFIG_LV_TFT_DISPLAY_MONOCHROME
-  disp_drv.rounder_cb = disp_driver_rounder;
-  disp_drv.set_px_cb = disp_driver_set_px;
+    disp_drv.rounder_cb = disp_driver_rounder;
+    disp_drv.set_px_cb = disp_driver_set_px;
 #endif
 
-  disp_drv.buffer = &disp_buf;
-  lv_disp_drv_register(&disp_drv);
+    disp_drv.buffer = &disp_buf;
+    lv_disp_drv_register(&disp_drv);
 
-  /* Register an input device when enabled on the menuconfig */
+    /* Register an input device when enabled on the menuconfig */
 #if CONFIG_LV_TOUCH_CONTROLLER != TOUCH_CONTROLLER_NONE
-  lv_indev_drv_t indev_drv;
-  lv_indev_drv_init(&indev_drv);
-  indev_drv.read_cb = touch_driver_read;
-  indev_drv.type = LV_INDEV_TYPE_POINTER;
-  lv_indev_drv_register(&indev_drv);
+    lv_indev_drv_t indev_drv;
+    lv_indev_drv_init(&indev_drv);
+    indev_drv.read_cb = touch_driver_read;
+    indev_drv.type = LV_INDEV_TYPE_POINTER;
+    lv_indev_drv_register(&indev_drv);
 #endif
 
-  /* Create and start a periodic timer interrupt to call lv_tick_inc */
-  const esp_timer_create_args_t periodic_timer_args = {
-      .callback = &lv_tick_task,
-      .name = "periodic_gui"};
-  esp_timer_handle_t periodic_timer;
-  ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args, &periodic_timer));
-  ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer, LV_TICK_PERIOD_MS * 1000));
+    /* Create and start a periodic timer interrupt to call lv_tick_inc */
+    const esp_timer_create_args_t periodic_timer_args = {
+        .callback = &lv_tick_task,
+        .name = "periodic_gui"};
+    esp_timer_handle_t periodic_timer;
+    ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args, &periodic_timer));
+    ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer, LV_TICK_PERIOD_MS * 1000));
 
-  //init my style types
-  styleInit();
-  disp_flag = true;
+    //init my style types
+    styleInit();
+    disp_flag = true;
 
-  // draw my starting screen
-  long t = esp_timer_get_time() / 1000;
-  int q = 0;
-  int q_last = 0;
-  displayLogo();
-  while (esp_timer_get_time() / 1000 - t < 1000)
-  {
-    lv_task_handler();
-    //xSemaphoreGive(xGuiSemaphore);
-    vTaskDelay(10);
-  }
-
-  //pageTestRoutine((long)(esp_timer_get_time() / 1000));
-
-  while (1)
-  {
-    /* Delay 1 tick (assumes FreeRTOS tick is 10ms */
-    vTaskDelay(pdMS_TO_TICKS(10));
-
-    /* Try to take the semaphore, call lvgl related function on success */
-    if (disp_flag && pdTRUE == xSemaphoreTake(xGuiSemaphore, portMAX_DELAY))
+    // draw my starting screen
+    long t = esp_timer_get_time() / 1000;
+    int q = 0;
+    int q_last = 0;
+    displayLogo();
+    while (esp_timer_get_time() / 1000 - t < 1000)
     {
-      displayLoopConditions(t, q, q_last);
-      lv_task_handler();
-      xSemaphoreGive(xGuiSemaphore);
+        lv_task_handler();
+        //xSemaphoreGive(xGuiSemaphore);
+        vTaskDelay(10);
     }
-  }
 
-  /* A task should NEVER return */
-  free(buf1);
+    //pageTestRoutine((long)(esp_timer_get_time() / 1000));
+
+    while (1)
+    {
+        /* Delay 1 tick (assumes FreeRTOS tick is 10ms */
+        vTaskDelay(pdMS_TO_TICKS(10));
+
+        /* Try to take the semaphore, call lvgl related function on success */
+        if (disp_flag && pdTRUE == xSemaphoreTake(xGuiSemaphore, portMAX_DELAY))
+        {
+          displayLoopConditions(t, q, q_last);
+          lv_task_handler();
+          xSemaphoreGive(xGuiSemaphore);
+        }
+    }
+
+    /* A task should NEVER return */
+    free(buf1);
 #ifndef CONFIG_LV_TFT_DISPLAY_MONOCHROME
-  free(buf2);
+    free(buf2);
 #endif
-  vTaskDelete(NULL);
+    vTaskDelete(NULL);
 }
 
-void displayLoopConditions(long &t, int &q, int &q_last)
+void DisplayX::displayLoopConditions(long &t, int &q, int &q_last)
 {
 
-  // Low battery warning
+    // Low battery warning
+    // TODO: Move this low battery warning to another part of the code
+    // if ((esp_timer_get_time() / 1000) - t > 10000)
+    // {
+    //     xSemaphoreTake(systemMutex, (TickType_t)10);
+    //     if (_sys.batteryLevel < 20)
+    //     {
+    //       xSemaphoreGive(systemMutex);
+    //       displayLowBattery();
+    //       vTaskDelay(1000);
+    //       t = esp_timer_get_time() / 1000;
+    //     }
+    //     else
+    //     {
+    //       xSemaphoreGive(systemMutex);
+    //     }
+    // }
 
-  if ((esp_timer_get_time() / 1000) - t > 10000)
-  {
-    xSemaphoreTake(systemMutex, (TickType_t)10);
-    if (_sys.batteryLevel < 20)
-    {
-      xSemaphoreGive(systemMutex);
-      displayLowBattery();
-      vTaskDelay(1000);
-      t = esp_timer_get_time() / 1000;
-    }
-    else
-    {
-      xSemaphoreGive(systemMutex);
-    }
-  }
-
-  // Look at if the screen should change from button interactions
-  pageEventCheck(t, q, q_last);
+    // Look at if the screen should change from button interactions
+    pageEventCheck(t, q, q_last);
 }
 
-void styleInit()
+void DisplayX::styleInit()
 {
-  lv_style_init(&weightStyle);
-  lv_style_init(&unitStyle);
-  lv_style_init(&logoStyle);
-  lv_style_init(&backgroundStyle);
-  lv_style_init(&infoStyle);
-  lv_style_init(&transpCont);
+    lv_style_init(&weightStyle);
+    lv_style_init(&unitStyle);
+    lv_style_init(&logoStyle);
+    lv_style_init(&backgroundStyle);
+    lv_style_init(&infoStyle);
+    lv_style_init(&transpCont);
+
 #ifdef CONFIG_SB_V1_HALF_ILI9341
-  lv_style_
-      lv_obj_align(label1, NULL, LV_ALIGN_CENTER, 0, 0);
+    lv_style_
+        lv_obj_align(label1, NULL, LV_ALIGN_CENTER, 0, 0);
 
-  lv_style_set_text_font(&style, LV_STATE_DEFAULT, &lv_font_montserrat_14);
-  lv_style_set_text_color(&style, LV_STATE_DEFAULT, LV_COLOR_WHITE);
-  lv_style_set_bg_color(&style, LV_STATE_DEFAULT, LV_COLOR_BLACK);
+    lv_style_set_text_font(&style, LV_STATE_DEFAULT, &lv_font_montserrat_14);
+    lv_style_set_text_color(&style, LV_STATE_DEFAULT, LV_COLOR_WHITE);
+    lv_style_set_bg_color(&style, LV_STATE_DEFAULT, LV_COLOR_BLACK);
 
 #endif
 #ifdef CONFIG_SB_V3_ST7735S
-  //lv_style_set_bg_color(&weightStyle, LV_STATE_DEFAULT, LV_COLOR_BLACK);
-  lv_style_set_text_font(&weightStyle, LV_STATE_DEFAULT, &lv_font_montserrat_40);
-  lv_style_set_text_color(&weightStyle, LV_STATE_DEFAULT, LV_COLOR_WHITE);
-  //lv_style_set_bg_opa(&weightStyle, LV_STATE_DEFAULT, 100);
+    //lv_style_set_bg_color(&weightStyle, LV_STATE_DEFAULT, LV_COLOR_BLACK);
+    lv_style_set_text_font(&weightStyle, LV_STATE_DEFAULT, &lv_font_montserrat_40);
+    lv_style_set_text_color(&weightStyle, LV_STATE_DEFAULT, LV_COLOR_WHITE);
+    //lv_style_set_bg_opa(&weightStyle, LV_STATE_DEFAULT, 100);
 
-  lv_style_set_text_font(&unitStyle, LV_STATE_DEFAULT, &lv_font_montserrat_40);
-  lv_style_set_text_color(&unitStyle, LV_STATE_DEFAULT, LV_COLOR_WHITE);
-  //lv_style_set_bg_color(&unitStyle, LV_STATE_DEFAULT, LV_COLOR_BLACK);
+    lv_style_set_text_font(&unitStyle, LV_STATE_DEFAULT, &lv_font_montserrat_40);
+    lv_style_set_text_color(&unitStyle, LV_STATE_DEFAULT, LV_COLOR_WHITE);
+    //lv_style_set_bg_color(&unitStyle, LV_STATE_DEFAULT, LV_COLOR_BLACK);
 
-  //lv_style_set_text_font(&logoStyle, LV_STATE_DEFAULT, &lv_font_montserrat_14);
-  //lv_style_set_text_color(&logoStyle, LV_STATE_DEFAULT, LV_COLOR_WHITE);
-  lv_style_set_bg_color(&logoStyle, LV_STATE_DEFAULT, LV_COLOR_BLACK);
+    //lv_style_set_text_font(&logoStyle, LV_STATE_DEFAULT, &lv_font_montserrat_14);
+    //lv_style_set_text_color(&logoStyle, LV_STATE_DEFAULT, LV_COLOR_WHITE);
+    lv_style_set_bg_color(&logoStyle, LV_STATE_DEFAULT, LV_COLOR_BLACK);
 
-  lv_style_set_bg_color(&backgroundStyle, LV_STATE_DEFAULT, LV_COLOR_BLACK);
-  lv_style_set_border_opa(&backgroundStyle, LV_STATE_DEFAULT, 0);
+    lv_style_set_bg_color(&backgroundStyle, LV_STATE_DEFAULT, LV_COLOR_BLACK);
+    lv_style_set_border_opa(&backgroundStyle, LV_STATE_DEFAULT, 0);
 
-  lv_style_set_text_color(&infoStyle, LV_STATE_DEFAULT, LV_COLOR_WHITE);
-  lv_style_set_text_font(&unitStyle, LV_STATE_DEFAULT, &lv_font_montserrat_30);
+    lv_style_set_text_color(&infoStyle, LV_STATE_DEFAULT, LV_COLOR_WHITE);
+    lv_style_set_text_font(&unitStyle, LV_STATE_DEFAULT, &lv_font_montserrat_30);
 
-  lv_style_set_bg_opa(&transpCont, LV_STATE_DEFAULT, 0);
-  lv_style_set_border_opa(&transpCont, LV_STATE_DEFAULT, 0);
- 
+    lv_style_set_bg_opa(&transpCont, LV_STATE_DEFAULT, 0);
+    lv_style_set_border_opa(&transpCont, LV_STATE_DEFAULT, 0);
+  
 #endif
 #ifdef CONFIG_SB_V6_FULL_ILI9341
 #endif
 }
 
-void pageTestRoutine(long t)
+void DisplayX::pageTestRoutine(long t)
 {
-  int show = 2000; // 5 seconds
-  bool flag1 = 1, flag2 = 1, flag3 = 1, flag4 = 1;
-  bool flag5 = 1, flag6 = 1, flag7 = 1, flag8 = 1;
-  bool flag9 = 1, flag10 = 1, flag11 = 1, flag12 = 1;
-  bool flag13 = 1;//, flag14 = 1, flag15 = 1, flag16 = 1;
-  //bool flag17 = 1, flag18 = 1, flag19 = 1, flag20 = 1;
-  //bool flag21 = 1, flag22 = 1, flag23 = 1, flag24 = 1;
-  //bool flag25 = 1, flag26 = 1, flag27 = 1, flag28 = 1;
-  //bool flag29 = 1, flag30 = 1, flag31 = 1, flag32 = 1;
+    int show = 2000; // 5 seconds
+    bool flag1 = 1, flag2 = 1, flag3 = 1, flag4 = 1;
+    bool flag5 = 1, flag6 = 1, flag7 = 1, flag8 = 1;
+    bool flag9 = 1, flag10 = 1, flag11 = 1, flag12 = 1;
+    bool flag13 = 1; //, flag14 = 1, flag15 = 1, flag16 = 1;
+    //bool flag17 = 1, flag18 = 1, flag19 = 1, flag20 = 1;
+    //bool flag21 = 1, flag22 = 1, flag23 = 1, flag24 = 1;
+    //bool flag25 = 1, flag26 = 1, flag27 = 1, flag28 = 1;
+    //bool flag29 = 1, flag30 = 1, flag31 = 1, flag32 = 1;
 
-  while (1)
-  {
-    vTaskDelay(pdMS_TO_TICKS(10));
-    if (pdTRUE == xSemaphoreTake(xGuiSemaphore, portMAX_DELAY))
+    while (1)
     {
-      lv_task_handler();
-      xSemaphoreGive(xGuiSemaphore);
-    }
-    //lv_task_handler();
+        vTaskDelay(pdMS_TO_TICKS(10));
+        if (pdTRUE == xSemaphoreTake(xGuiSemaphore, portMAX_DELAY))
+        {
+            lv_task_handler();
+            xSemaphoreGive(xGuiSemaphore);
+        }
+        //lv_task_handler();
 
-    if (esp_timer_get_time() / 1000 - t < show && flag1)
-    {
-      debugPrintln("weight test 2 char");
-      displayWeight((char *)"12"); // and for each character length
-      flag1 = false;
-    }
-    else if (esp_timer_get_time() / 1000 - t > 2 * show && flag2)
-    {
-      debugPrintln("weight test 3 char");
-      displayWeight((char *)"1.9");
-      flag2 = false;
-    }
-    else if (esp_timer_get_time() / 1000 - t > 3 * show && flag3)
-    {
-      debugPrintln("weight test 4 char");
-      displayWeight((char *)"300.2");
-      flag3 = false;
-    }
-    else if (esp_timer_get_time() / 1000 - t > 4 * show && flag4)
-    {
-      debugPrintln("weight test 4+ char");
-      displayWeight((char *)"800.15");
-      flag4 = false;
-    }
-    else if (esp_timer_get_time() / 1000 - t > 5 * show && flag5)
-    {
-      debugPrintln("Units test g");
-      xSemaphoreTake(systemMutex, (TickType_t)10);
-      _sys.eUnits = g;
-      xSemaphoreGive(systemMutex);
-      displayUnits();
-      flag5 = false;
-    }
-    else if (esp_timer_get_time() / 1000 - t > 6 * show && flag6)
-    {
-      debugPrintln("Units test kg");
-      xSemaphoreTake(systemMutex, (TickType_t)10);
-      _sys.eUnits = kg;
-      xSemaphoreGive(systemMutex);
-      displayUnits();
-      flag6 = false;
-    }
-    else if (esp_timer_get_time() / 1000 - t > 7 * show && flag7)
-    {
-      debugPrintln("Units test oz");
-      xSemaphoreTake(systemMutex, (TickType_t)10);
-      _sys.eUnits = oz;
-      xSemaphoreGive(systemMutex);
-      displayUnits();
-      flag7 = false;
-    }
-    else if (esp_timer_get_time() / 1000 - t > 8 * show && flag8)
-    {
-      debugPrintln("Units test lb");
-      xSemaphoreTake(systemMutex, (TickType_t)10);
-      _sys.eUnits = lb;
-      xSemaphoreGive(systemMutex);
-      displayUnits();
-      flag8 = false;
-    }
-    else if (esp_timer_get_time() / 1000 - t > 9 * show && flag9)
-    {
-      debugPrintln("Info test\n");
-      displayDeviceInfo(); //
-      flag9 = false;
-    }
-    else if (esp_timer_get_time() / 1000 - t > 10 * show && flag10)
-    {
-      debugPrintln("Battery Image Test");
-      displayBattery(); //
-      flag10 = false;
-    }
-    else if (esp_timer_get_time() / 1000 - t > 11 * show && flag11)
-    {
-      debugPrintln("Low Battery Test");
-      displayLowBattery(); //
-      flag11 = false;
-    }
-    else if (esp_timer_get_time() / 1000 - t > 12 * show && flag12)
-    {
-      debugPrintln("Display Off");
-      displayOff(); // ready
-      flag12 = false;
-    }
-    else if (esp_timer_get_time() / 1000 - t > 13 * show && flag13)
-    {
-      debugPrintln("Display logo and resetting...");
-      displayOn();
-      displayLogo(); // ready
-      flag13 = false;
-    }
-    else if (!flag13)
-    {
-      // displaySettings(); // Need to figure out what I want on this menu first
+        if (esp_timer_get_time() / 1000 - t < show && flag1)
+        {
+            debugPrintln("weight test 2 char");
+            displayWeight((char *)"12"); // and for each character length
+            flag1 = false;
+        }
+        else if (esp_timer_get_time() / 1000 - t > 2 * show && flag2)
+        {
+            debugPrintln("weight test 3 char");
+            displayWeight((char *)"1.9");
+            flag2 = false;
+        }
+        else if (esp_timer_get_time() / 1000 - t > 3 * show && flag3)
+        {
+            debugPrintln("weight test 4 char");
+            displayWeight((char *)"300.2");
+            flag3 = false;
+        }
+        else if (esp_timer_get_time() / 1000 - t > 4 * show && flag4)
+        {
+            debugPrintln("weight test 4+ char");
+            displayWeight((char *)"800.15");
+            flag4 = false;
+        }
+        else if (esp_timer_get_time() / 1000 - t > 5 * show && flag5)
+        {
+            debugPrintln("Units test g");
+            displayUnits(Units::g);
+            flag5 = false;
+        }
+        else if (esp_timer_get_time() / 1000 - t > 6 * show && flag6)
+        {
+            debugPrintln("Units test kg");
+            displayUnits(Units::kg);
+            flag6 = false;
+        }
+        else if (esp_timer_get_time() / 1000 - t > 7 * show && flag7)
+        {
+            debugPrintln("Units test oz");
+            displayUnits(Units::oz);
+            flag7 = false;
+        }
+        else if (esp_timer_get_time() / 1000 - t > 8 * show && flag8)
+        {
+            debugPrintln("Units test lb");
+            displayUnits(Units::lb);
+            flag8 = false;
+        }
+        else if (esp_timer_get_time() / 1000 - t > 9 * show && flag9)
+        {
+            debugPrintln("Info test\n");
+            displayDeviceInfo(); //
+            flag9 = false;
+        }
+        else if (esp_timer_get_time() / 1000 - t > 10 * show && flag10)
+        {
+            debugPrintln("Battery Image Test");
+            displayBattery(); //
+            flag10 = false;
+        }
+        else if (esp_timer_get_time() / 1000 - t > 11 * show && flag11)
+        {
+            debugPrintln("Low Battery Test");
+            displayLowBattery(); //
+            flag11 = false;
+        }
+        else if (esp_timer_get_time() / 1000 - t > 12 * show && flag12)
+        {
+            debugPrintln("Display Off");
+            displayOff(); // ready
+            flag12 = false;
+        }
+        else if (esp_timer_get_time() / 1000 - t > 13 * show && flag13)
+        {
+            debugPrintln("Display logo and resetting...");
+            displayOn();
+            displayLogo(); // ready
+            flag13 = false;
+        }
+        else if (!flag13)
+        {
+            // displaySettings(); // Need to figure out what I want on this menu first
 
-      // displayUpdateScreen(int pct); // add this later?
-      //displayOff(); // ready
-      return;
+            // displayUpdateScreen(int pct); // add this later?
+            //displayOff(); // ready
+            return;
+        }
     }
-  }
 }
-void pageEventCheck(long &t, int &q, int &q_last)
+void DisplayX::pageEventCheck(long &t, int &q, int &q_last)
 {
-  // do do dooo do do do do.
-  xSemaphoreTake(pageMutex, (TickType_t)10);
-  switch (ePage)
-  { // options are {WEIGHTSTREAM, SETTINGS, INFO, UNITS, pUPDATE};
-  case WEIGHTSTREAM:
-    xSemaphoreGive(pageMutex);
+    // do do dooo do do do do.
+    xSemaphoreTake(pageMutex, (TickType_t)10);
+    switch (ePage)
+    { // options are {WEIGHTSTREAM, SETTINGS, INFO, UNITS, pUPDATE};
+    case WEIGHTSTREAM:
+      xSemaphoreGive(pageMutex);
 #ifdef CONFIG_SB_V1_HALF_ILI9341
 #endif
 #ifdef CONFIG_SB_V3_ST7735S
@@ -445,22 +435,22 @@ void pageEventCheck(long &t, int &q, int &q_last)
 #ifdef CONFIG_SB_V6_FULL_ILI9341
 #endif
 
-    //debugPrintln(uxQueueMessagesWaiting(weightQueue));
-    if (uxQueueMessagesWaiting(weightQueue) > 0)
-    {
-      xQueueReceive(weightQueue, &currentWeight, xBlockTime);
-
-      displayWeight(currentWeight);
-      //displayWeight(*currentWeight);
-      if (isBtConnected())
+      //debugPrintln(uxQueueMessagesWaiting(weightQueue));
+      if (uxQueueMessagesWaiting(weightQueue) > 0)
       {
-        updateBTWeight(currentWeight);
+        xQueueReceive(weightQueue, &currentWeight, xBlockTime);
+
+        displayWeight(currentWeight);
+        //displayWeight(*currentWeight);
+        if (isBtConnected())
+        {
+          updateBTWeight(currentWeight);
+        }
+        debugPrintln("This is where weight would be printed");
       }
-      debugPrintln("This is where weight would be printed");
-    }
-    break;
-  case pUPDATE:
-    xSemaphoreGive(pageMutex);
+      break;
+    case pUPDATE:
+        xSemaphoreGive(pageMutex);
 
 #ifdef CONFIG_SB_V1_HALF_ILI9341
 #endif
@@ -468,21 +458,21 @@ void pageEventCheck(long &t, int &q, int &q_last)
 #endif
 #ifdef CONFIG_SB_V6_FULL_ILI9341
 #endif
-    q = 50; //getUpdatePercent(); TODO: include update file
-    if (q < 3 && q != q_last)
-    {
-      displayUpdateScreen(3);
-      q_last = q;
-    }
-    else if (q > q_last)
-    {
-      displayUpdateScreen(q);
-      q_last = q;
-    }
-    // TODO: dynamically update percentage when downloading and inistalling updated code
-    break;
-  case INFO:
-    xSemaphoreGive(pageMutex);
+        q = 50; //getUpdatePercent(); TODO: include update file
+        if (q < 3 && q != q_last)
+        {
+          displayUpdateScreen(3);
+          q_last = q;
+        }
+        else if (q > q_last)
+        {
+          displayUpdateScreen(q);
+          q_last = q;
+        }
+        // TODO: dynamically update percentage when downloading and inistalling updated code
+        break;
+    case INFO:
+      xSemaphoreGive(pageMutex);
 #ifdef CONFIG_SB_V1_HALF_ILI9341
 #endif
 #ifdef CONFIG_SB_V3_ST7735S
@@ -490,10 +480,10 @@ void pageEventCheck(long &t, int &q, int &q_last)
 #ifdef CONFIG_SB_V6_FULL_ILI9341
 #endif
 
-    displayDeviceInfo();
-    break;
+        displayDeviceInfo();
+        break;
   case UNITS:
-    xSemaphoreGive(pageMutex);
+      xSemaphoreGive(pageMutex);
 #ifdef CONFIG_SB_V1_HALF_ILI9341
 #endif
 #ifdef CONFIG_SB_V3_ST7735S
@@ -519,17 +509,16 @@ void pageEventCheck(long &t, int &q, int &q_last)
   }
 }
 
-//static 
-void lv_tick_task(void *arg)
+void DisplayX::lv_tick_task(void *arg)
 {
-  (void)arg;
+    (void)arg;
 
-  lv_tick_inc(LV_TICK_PERIOD_MS);
+    lv_tick_inc(LV_TICK_PERIOD_MS);
 }
 
 /***   My functions below this line   ***/
 
-void resizeWeight(char *w)
+void DisplayX::resizeWeight(char *w)
 {
 
 #ifdef CONFIG_SB_V1_HALF_ILI9341
@@ -623,7 +612,7 @@ void resizeWeight(char *w)
 #endif
 }
 
-void displayWeight(char *weight)
+void DisplayX::displayWeight(char *weight)
 {
   char now[32];
   strcpy(now, weight);
@@ -687,7 +676,7 @@ void displayWeight(char *weight)
 }
 
 // Units
-void displayUnits()
+void DisplayX::displayUnits(Units u)
 {
   //lv_obj_t *scr = lv_disp_get_scr_act(NULL);
   lv_obj_t *bkgrnd = lv_obj_create(lv_scr_act(), NULL);
@@ -708,7 +697,7 @@ void displayUnits()
 #ifdef CONFIG_SB_V6_FULL_ILI9341
 #endif
   xSemaphoreTake(systemMutex, (TickType_t)10);
-  switch (_sys.eUnits)
+  switch (u)
   {
   case kg:
     xSemaphoreGive(systemMutex);
@@ -741,7 +730,7 @@ void displayUnits()
 }
 
 // Settings
-void displaySettings()
+void DisplayX::displaySettings()
 {
 #ifdef CONFIG_SB_V1_HALF_ILI9341
 #endif
@@ -752,15 +741,15 @@ void displaySettings()
 }
 
 // Battery & Info
-void displayDeviceInfo()
+void DisplayX::displayDeviceInfo(char* SN, char* VER)
 {
   // get device info from struct defined in main.cpp
-  xSemaphoreTake(systemMutex, (TickType_t)10);
+  //xSemaphoreTake(systemMutex, (TickType_t)10);
   char sn[9]; // = _sys.SN;
-  strcpy(sn, _sys.SN);
+  strcpy(sn, SN);
   char ver[4]; //= _sys.VER;
-  strcpy(ver, _sys.VER);
-  xSemaphoreGive(systemMutex);
+  strcpy(ver, VER);
+  //xSemaphoreGive(systemMutex);
 
   // create objects to display info
   lv_obj_t *bkgrnd = lv_obj_create(lv_scr_act(), NULL);
@@ -793,7 +782,7 @@ void displayDeviceInfo()
 }
 
 // Update
-void displayUpdateScreen(int pct)
+void DisplayX::displayUpdateScreen(int pct)
 {
   debugPrintln("inside displayUpdateScreen");
   if (!updateStarted)
@@ -814,7 +803,7 @@ void displayUpdateScreen(int pct)
   //tft.fillRect(12, 45, pct, 24, ST7735_WHITE);
 }
 
-void displayLogo()
+void DisplayX::displayLogo()
 {
   lv_obj_t *bkgrnd = lv_obj_create(lv_scr_act(), NULL);
   lv_obj_t *img = lv_img_create(bkgrnd, NULL);
@@ -839,7 +828,7 @@ void displayLogo()
   lv_obj_add_style(bkgrnd, LV_OBJ_PART_MAIN, &backgroundStyle);
 }
 
-void displayBattery()
+void DisplayX::displayBattery()
 {
   lv_obj_t *bkgrnd = lv_obj_create(lv_scr_act(), NULL);
   lv_obj_t *img = lv_img_create(bkgrnd, NULL);
@@ -873,7 +862,7 @@ void displayBattery()
   lv_obj_add_style(label, LV_CONT_PART_MAIN, &infoStyle);
 }
 
-void displayLowBattery()
+void DisplayX::displayLowBattery()
 {
  lv_obj_t *bkgrnd = lv_obj_create(lv_scr_act(), NULL);
   lv_obj_t *img = lv_img_create(bkgrnd, NULL);
@@ -905,7 +894,7 @@ void displayLowBattery()
   lv_obj_add_style(label, LV_CONT_PART_MAIN, &infoStyle);
 }
 
-void displayOff()
+void DisplayX::displayOff()
 {
 #ifdef CONFIG_SB_V1_HALF_ILI9341
 #endif
@@ -917,7 +906,8 @@ void displayOff()
   disp_flag = false;
   ledc_set_duty_and_update(ledc_c_config.speed_mode, ledc_c_config.channel, 0, 0);
 }
-void displayOn()
+
+void DisplayX::displayOn()
 {
 #ifdef CONFIG_SB_V1_HALF_ILI9341
 #endif

@@ -1,10 +1,15 @@
 #include "a_config.h"
 #include "globals.h"
+#include "System.h"
 #include "debug.h"
 #include "Weight.h"
 #include "Buttons.h"
 #include "IOTComms.h"
 #include "display.h"
+#include "main.h"
+
+//temporarily use this to test ota methods
+#include "myOTA.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -29,18 +34,16 @@
 extern "C" {
     void app_main();
 }
-/* Function Prototypes, if necessary */
- 
-/**/
 
-TaskHandle_t battery_TH;
+
+// TaskHandle_t battery_TH;
 TickType_t xBlockTime = pdMS_TO_TICKS(200);
-SemaphoreHandle_t systemMutex;
-SemaphoreHandle_t pageMutex; // this was extern before...
+// SemaphoreHandle_t systemMutex;
+// SemaphoreHandle_t pageMutex; // this was extern before...
 
-System _sys = {"10011001", "0.1", g, 80};
-STATE eState = STANDARD;
-volatile PAGE ePage = WEIGHTSTREAM;
+//System _sys = {"10011001", "0.1", g, 80};
+//STATE eState = STANDARD;
+//volatile PAGE ePage = WEIGHTSTREAM;
 
 extern const uint8_t ulp_main_bin_start[] asm("_binary_ulp_main_bin_start");
 extern const uint8_t ulp_main_bin_end[]   asm("_binary_ulp_main_bin_end");
@@ -51,7 +54,8 @@ void ulp_deinit(){
     rtc_gpio_deinit(gpio_num);    
 }
 
-static void init_ulp_program(){
+//static 
+void init_ulp_program(){
     esp_err_t err = ulp_load_binary(0, ulp_main_bin_start,
             (ulp_main_bin_end - ulp_main_bin_start) / sizeof(uint32_t));
     ESP_ERROR_CHECK(err);
@@ -101,46 +105,40 @@ static void init_ulp_program(){
     err = ulp_run(&ulp_entry - RTC_SLOW_MEM);
     ESP_ERROR_CHECK(err);
 
+    //go to sleep
+    esp_deep_sleep_start();
+
 }
 
 //static void printPulseCount(){
     //const char* namespace = "plusecnt";
     //const char* count_key = "count";
 
-    //ESP_ERROR_CHECK( nvs_flash_init() );
-    //nvs_handle_t handle;
-    //ESP_ERROR_CHECK( nvs_open(namespace, NVS_READWRITE, &handle));
-    //uint32_t pulse_count = 0;
-    //esp_err_t err = nvs_get_u32(handle, count_key, &pulse_count);
-    //assert(err == ESP_OK || err == ESP_ERR_NVS_NOT_FOUND);
-    //printf("Read pulse count from NVS: %5d\n", pulse_count);
+    // ESP_ERROR_CHECK( nvs_flash_init() );
+    // nvs_handle_t handle;
+    // ESP_ERROR_CHECK( nvs_open(namespace, NVS_READWRITE, &handle));
+    // uint32_t pulse_count = 0;
+    // esp_err_t err = nvs_get_u32(handle, count_key, &pulse_count);
+    // assert(err == ESP_OK || err == ESP_ERR_NVS_NOT_FOUND);
+    // printf("Read pulse count from NVS: %5d\n", pulse_count);
 
-    /* ULP program counts signal edges, convert that to the number of pulses */
-    //uint32_t pulse_count_from_ulp = (ulp_edge_count & UINT16_MAX) / 2;
-    /* In case of an odd number of edges, keep one until next time */
-    //ulp_edge_count = ulp_edge_count % 2;
-    //printf("Pulse count from ULP: %5d\n", pulse_count_from_ulp);
+    // /* ULP program counts signal edges, convert that to the number of pulses */
+    // uint32_t pulse_count_from_ulp = (ulp_edge_count & UINT16_MAX) / 2;
+    // /* In case of an odd number of edges, keep one until next time */
+    // ulp_edge_count = ulp_edge_count % 2;
+    // printf("Pulse count from ULP: %5d\n", pulse_count_from_ulp);
 
-    /* Save the new pulse count to NVS */
-    //pulse_count += pulse_count_from_ulp;
-    //ESP_ERROR_CHECK(nvs_set_u32(handle, count_key, pulse_count));
-    //ESP_ERROR_CHECK(nvs_commit(handle));
-    //nvs_close(handle);
-    //printf("Wrote updated pulse count to NVS: %5d\n", pulse_count);
+    // /* Save the new pulse count to NVS */
+    // pulse_count += pulse_count_from_ulp;
+    // ESP_ERROR_CHECK(nvs_set_u32(handle, count_key, pulse_count));
+    // ESP_ERROR_CHECK(nvs_commit(handle));
+    // nvs_close(handle);
+    // printf("Wrote updated pulse count to NVS: %5d\n", pulse_count);
 //}
 
 
-void goToSleep(){
-  // create shutdown function
-  // Deep sleep turned off until chip is on board
-  //esp_sleep_enable_ext0_wakeup(GPIO_NUM_13, 0); // 1 = HIGH, 0 = LOW // but1
-  //rtc_gpio_pullup_en(GPIO_NUM_13);
-  //debugPrintln("sleeping...");
-  vTaskDelay(10);
-  init_ulp_program();
-  esp_deep_sleep_start();
-  
-}
+
+
 
 /*void batteryHandler_(void * pvParameters){
     int battery=0;
@@ -179,50 +177,39 @@ void goToSleep(){
     }
 }
 */ 
-void incrementUnits(){
-  xSemaphoreTake(systemMutex, (TickType_t)10);
-  switch(_sys.eUnits){
-    case g:
-    _sys.eUnits = kg;
-    break;
-    case kg: 
-    _sys.eUnits = oz;
-    break;
-    case oz:
-    _sys.eUnits = lb;
-    break;
-    case lb:
-    _sys.eUnits = g;
-    break;
-  }
-  xSemaphoreGive(systemMutex);
-}
 
-void decrementUnits(){
-  xSemaphoreTake(systemMutex, (TickType_t)10);
-  switch(_sys.eUnits){
-    case g:
-    _sys.eUnits = lb;
-    break;
-    case kg: 
-    _sys.eUnits = g;
-    break;
-    case oz:
-    _sys.eUnits = kg;
-    break;
-    case lb:
-    _sys.eUnits = oz;
-    break;
-  }
-  xSemaphoreGive(systemMutex);
-}
 
+
+
+Device populateStartData(){
+    Device ret;
+    //char* buf;
+    size_t buflen = 8;
+    // read NVS flash for SN and stuff...
+    
+    nvs_handle fctry_handle;
+    nvs_flash_init_partition("fctry");
+    nvs_open_from_partition("fctry", "fctryNamespace",  
+                NVS_READWRITE, &fctry_handle);
+    nvs_get_str(fctry_handle, "serial_no", ret.SN, &buflen);
+    //strcpy(ret.SN, buf);
+
+
+    const esp_partition_t *running = esp_ota_get_running_partition();
+    esp_app_desc_t running_app_info;
+    if (esp_ota_get_partition_description(running, &running_app_info) == ESP_OK) {
+        debugPrint("Running firmware version: ");
+        debugPrintln(running_app_info.version);
+        strcpy(ret.VER, running_app_info.version);
+    }
+    return ret;
+}
 
 void app_main() {
     // Setup
-    systemMutex = xSemaphoreCreateMutex();
-    pageMutex = xSemaphoreCreateMutex();
-    debugSetup();
+    //systemMutex = xSemaphoreCreateMutex();
+    //pageMutex = xSemaphoreCreateMutex();
+    
 
     // change pin modes if it woke up from ULP vs power up
     esp_sleep_wakeup_cause_t cause = esp_sleep_get_wakeup_cause();
@@ -235,6 +222,8 @@ void app_main() {
         //printPulseCount();
         ulp_deinit();
     }
+    debugSetup();
+    SystemX system{populateStartData()};
 
     // xTaskCreate(    
     //     batteryHandler_,          /* Task function. */
@@ -247,31 +236,34 @@ void app_main() {
     
     
     strainGaugeSetup();
-
-    displaySetup();
-    BLEsetup();
     
-    ButtonsX buttons{true};
+    // temporary for testing ota
+    setupOTA();
+
+    //DisplayX display{};
+    //ButtonsX buttons{true};
+    //BLEsetup();
     
     std::string event;
     vTaskDelay(100);
     debugPrintln("Before main loop...");
 
+    // To print the threads/packages that are taking a lot of memory
     //heap_caps_print_heap_info( MALLOC_CAP_DEFAULT );
 
     // loop
     for (;;)
     {
-        event = buttons.getEvents();
+        event = system.buttons->getEvents();
         if (!(event.compare("") == 0)) 
         {
 
             if (eState == STANDARD)
             {
-                xSemaphoreTake(pageMutex, (TickType_t)10);
-                if (ePage == WEIGHTSTREAM)
+                //xSemaphoreTake(pageMutex, (TickType_t)10);
+                if (system.getPage() == WEIGHTSTREAM)
                 {
-                    xSemaphoreGive(pageMutex);
+                    //xSemaphoreGive(pageMutex);
                     if (event.compare(0,4,"SNNN",0,4) == 0)
                     {
                         //TODO: TARE FUNCTION
@@ -281,19 +273,25 @@ void app_main() {
                     {
                         //TODO: SHUTDOWN FUNCTION
                         debugPrintln("sleepy time");
-                        goToSleep();
+                        system.goToSleep(); 
                     }
                     if (event.compare(0,4,"NSNN", 0, 4) == 0)
                     {
                         //TODO: Units
-                        xSemaphoreTake(pageMutex, (TickType_t)10);
-                        ePage = UNITS;
-                        xSemaphoreGive(pageMutex);
+                        //xSemaphoreTake(pageMutex, (TickType_t)10);
+                        system.setPage(UNITS);
+                        //xSemaphoreGive(pageMutex);
+                    }
+                    if (event.compare(0,4,"NLNN", 0, 4) == 0)
+                    {
+                        // temporary for testing ota
+                        executeOTA();
+                        
                     }
                 }
                 else if (ePage == UNITS)
                 {
-                    xSemaphoreGive(pageMutex);
+                    //xSemaphoreGive(pageMutex);
                     if (event.compare(0,4, "SNNN",0,4) == 0)
                     {
                         //TODO:  FUNCTION
@@ -301,12 +299,12 @@ void app_main() {
                     if (event.compare(0,4, "LNNN",0,4) == 0)
                     {
                         //TODO:  go to power off function
-                        goToSleep();
+                        system.goToSleep();
                     }
                     if (event.compare(0,4,"NSNN",0,4) == 0)
                     {
                         //TODO: Units
-                        incrementUnits();
+                        system.incrementUnits();
                     }
                 }
             }
@@ -343,3 +341,12 @@ void app_main() {
         vTaskDelay(20);
     }
 }
+
+/*           
+ *
+ *
+ */
+
+// void otaRoutine(){
+//     executeOTA();
+// }

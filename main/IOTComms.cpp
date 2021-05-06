@@ -273,7 +273,7 @@ class OTACallbacks: public NimBLECharacteristicCallbacks {
         vTaskDelay(20);
         setupOTA();
         vTaskDelay(1000);
-        execOTA();
+        executeOTA();
         xSemaphoreTake(pageMutex, (TickType_t)10);
         ePage = WEIGHTSTREAM;
         xSemaphoreGive(pageMutex);
