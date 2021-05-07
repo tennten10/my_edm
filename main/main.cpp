@@ -70,19 +70,19 @@ static void init_ulp_program(){
      *
      * Note that the ULP reads only the lower 16 bits of these variables.
      */
-    ulp_debounce_counter = 3;
-    ulp_debounce_max_count = 3;
-    ulp_next_edge = 0;
+    ulp_debounce_counter = 45;
+    ulp_debounce_max_count = 45;
+    ulp_next_edge = 0; // Constant value, but leaving the variable here 
     ulp_io_number = rtcio_num; /* map from GPIO# to RTC_IO# */
-    ulp_edge_count_to_wake_up = 10;
+    //ulp_edge_count_to_wake_up = 1;
 
     /* Initialize selected GPIO as RTC IO, enable input, disable pullup and pulldown */
     rtc_gpio_init(gpio_num);
     rtc_gpio_set_direction(gpio_num, RTC_GPIO_MODE_INPUT_ONLY);
     rtc_gpio_pulldown_dis(gpio_num);
     rtc_gpio_pullup_dis(gpio_num);
-    rtc_gpio_pullup_en(gpio_num);
-    rtc_gpio_hold_en(gpio_num);
+    rtc_gpio_pullup_en(gpio_num); // I added this line, and this makes it work!
+    rtc_gpio_hold_en(gpio_num); // might try disabling this? Not sure why I'd want it to stay held. I guess this only works while it's running and not during deep sleep?
 
     /* Disconnect GPIO12 and GPIO15 to remove current drain through
      * pullup/pulldown resistors.
@@ -103,41 +103,40 @@ static void init_ulp_program(){
 
 }
 
-//static void printPulseCount(){
-    //const char* namespace = "plusecnt";
-    //const char* count_key = "count";
+// static void printPulseCount(){
+//     const char* namespace = "plusecnt";
+//     const char* count_key = "count";
 
-    //ESP_ERROR_CHECK( nvs_flash_init() );
-    //nvs_handle_t handle;
-    //ESP_ERROR_CHECK( nvs_open(namespace, NVS_READWRITE, &handle));
-    //uint32_t pulse_count = 0;
-    //esp_err_t err = nvs_get_u32(handle, count_key, &pulse_count);
-    //assert(err == ESP_OK || err == ESP_ERR_NVS_NOT_FOUND);
-    //printf("Read pulse count from NVS: %5d\n", pulse_count);
+//     ESP_ERROR_CHECK( nvs_flash_init() );
+//     nvs_handle_t handle;
+//     ESP_ERROR_CHECK( nvs_open(namespace, NVS_READWRITE, &handle));
+//     uint32_t pulse_count = 0;
+//     esp_err_t err = nvs_get_u32(handle, count_key, &pulse_count);
+//     assert(err == ESP_OK || err == ESP_ERR_NVS_NOT_FOUND);
+//     printf("Read pulse count from NVS: %5d\n", pulse_count);
 
-    /* ULP program counts signal edges, convert that to the number of pulses */
-    //uint32_t pulse_count_from_ulp = (ulp_edge_count & UINT16_MAX) / 2;
-    /* In case of an odd number of edges, keep one until next time */
-    //ulp_edge_count = ulp_edge_count % 2;
-    //printf("Pulse count from ULP: %5d\n", pulse_count_from_ulp);
+//     /* ULP program counts signal edges, convert that to the number of pulses */
+//     uint32_t pulse_count_from_ulp = (ulp_edge_count & UINT16_MAX) / 2;
+//     /* In case of an odd number of edges, keep one until next time */
+//     ulp_edge_count = ulp_edge_count % 2;
+//     printf("Pulse count from ULP: %5d\n", pulse_count_from_ulp);
 
-    /* Save the new pulse count to NVS */
-    //pulse_count += pulse_count_from_ulp;
-    //ESP_ERROR_CHECK(nvs_set_u32(handle, count_key, pulse_count));
-    //ESP_ERROR_CHECK(nvs_commit(handle));
-    //nvs_close(handle);
-    //printf("Wrote updated pulse count to NVS: %5d\n", pulse_count);
-//}
+//     /* Save the new pulse count to NVS */
+//     pulse_count += pulse_count_from_ulp;
+//     ESP_ERROR_CHECK(nvs_set_u32(handle, count_key, pulse_count));
+//     ESP_ERROR_CHECK(nvs_commit(handle));
+//     nvs_close(handle);
+//     printf("Wrote updated pulse count to NVS: %5d\n", pulse_count);
+// }
 
 
 void goToSleep(){
   // create shutdown function
-  // Deep sleep turned off until chip is on board
-  //esp_sleep_enable_ext0_wakeup(GPIO_NUM_13, 0); // 1 = HIGH, 0 = LOW // but1
-  //rtc_gpio_pullup_en(GPIO_NUM_13);
-  //debugPrintln("sleeping...");
+  debugPrintln("Sleepy time...");
   vTaskDelay(10);
+
   init_ulp_program();
+  ESP_ERROR_CHECK( esp_sleep_enable_ulp_wakeup() );
   esp_deep_sleep_start();
   
 }
@@ -220,9 +219,7 @@ void decrementUnits(){
 
 void app_main() {
     // Setup
-    systemMutex = xSemaphoreCreateMutex();
-    pageMutex = xSemaphoreCreateMutex();
-    debugSetup();
+    
 
     // change pin modes if it woke up from ULP vs power up
     esp_sleep_wakeup_cause_t cause = esp_sleep_get_wakeup_cause();
@@ -231,10 +228,13 @@ void app_main() {
         vTaskDelay(250);
         
     } else {
-        printf("ULP wakeup, saving pulse count\n");
+        printf("ULP wakeup, setting everything up...\n");
         //printPulseCount();
         ulp_deinit();
     }
+    systemMutex = xSemaphoreCreateMutex();
+    pageMutex = xSemaphoreCreateMutex();
+    debugSetup();
 
     // xTaskCreate(    
     //     batteryHandler_,          /* Task function. */
