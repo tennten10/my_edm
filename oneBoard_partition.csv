@@ -2,7 +2,7 @@
 # Note: Firmware partition offset needs to be 64K aligned, initial 36K (9 sectors) are reserved for bootloader and partition table
 nvs,      data, nvs,     0x9000,  	0x5000,
 otadata,  data, ota,     0xe000,  	0x2000,
-fctry,    data, nvs,     0x10000,   0x4000
-app0,     app,  ota_0,   0x14000, 	0x730000,
-app1,     app,  ota_1,   0x744000,	0x730000,
-spiffs,   data, spiffs,  0xE74000,  0x10000,
+app0,     app,  ota_0,   0x10000, 	0x730000,
+app1,     app,  ota_1,   0x740000,	0x730000,
+spiffs,   data, spiffs,  0xE70000,  0x6000,
+fctry,    data, nvs,     0xE76000,   0x4000,

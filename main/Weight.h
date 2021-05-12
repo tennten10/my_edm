@@ -9,18 +9,20 @@ extern "C"{
 #include "globals.h"
 #include "Eigen/Sparse"
 #include <string>
+#include "mySPIFFS.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
+#include "freertos/task.h"
+#include "freertos/queue.h"
+#include "driver/adc.h"
+#include "math.h"
+#include "driver/gpio.h"
+#include "esp_adc_cal.h"
 
-void strainGaugeSetup();
-// read all 4 pins
-//void doStrainGaugeStuff();
-//
-//float convert(String from, String to);
-//void readSensors();
-//void setUnits(Units m);
-//double getWeight();
-//double readVoltage(int pin);
-//void weightHandler_(void * pvParameters);
-//void tare();
+//void strainGaugeSetup();
+
+
+
 
 /*   */ 
 
@@ -51,6 +53,7 @@ private:
 
     TaskHandle_t taskHandle;
 };
+/*************************************/
 
 class WeightX : public ThreadXb<WeightX>
 {
@@ -58,6 +61,21 @@ public:
     WeightX() : ThreadXb{5000, 1, "ButtonHandler"}                               
     {
         //Main();
+        adc1_config_width(ADC_WIDTH_BIT_12);
+        adc1_config_channel_atten(SG1,ADC_ATTEN_DB_11); // Will need to change the attenuation when the circuit gets upgraded to auto-ranging
+        adc1_config_channel_atten(SG2,ADC_ATTEN_DB_11);
+        adc1_config_channel_atten(SG3,ADC_ATTEN_DB_11);
+        adc1_config_channel_atten(SG4,ADC_ATTEN_DB_11);
+  
+        getStrainGaugeParams(mK_sg1,mK_sg2, mK_sg3, mK_sg4 );
+
+        // temporary calibration values
+        mK_sg1(2,2) = 9.9099; // V/g
+        mK_sg2(2,2) = 9.9099;
+        mK_sg3(2,2) = 55.8559;
+        mK_sg4(2,2) = 64.8649;
+
+        
     }
     ~WeightX(){} 
     
@@ -65,12 +83,20 @@ public:
     void sleepPreparation();
     void setWeightUpdateRate(int r); // update rate in milliseconds
     double getWeight();
+    Units getLocalUnits(){
+
+        return localUnits;
+    }
+    void setLocalUnits(Units u){
+        localUnits = u;
+        conversion = units2conversion(u);
+    }
     void Main();
 
 private:
-    
+    SemaphoreHandle_t sgMutex; 
+    QueueHandle_t weightQueue; 
     void setUnits(Units m);
-    double getWeight();
     double getRawWeight();
     double readVoltage(int pin);
     double ReadVoltage(adc1_channel_t pin);
@@ -78,10 +104,32 @@ private:
     std::string truncateWeight(double d);
     //QueueHandle_t weightQueue;
 
-    Eigen::Matrix3d mK_sg1;
-    Eigen::Matrix3d mK_sg2;
-    Eigen::Matrix3d mK_sg3;
-    Eigen::Matrix3d mK_sg4;
+    double units2conversion(Units u){
+        double ret = 0.0;
+        switch(u){
+            case g:
+            break;
+            case kg:
+            break;
+            case oz:
+            break;
+            case lb:
+            break;
+            default:
+            break;
+        }
+        return ret;
+    }
+
+    Eigen::Vector4d mRawWeight = Eigen::Vector4d::Zero();
+    Eigen::Vector4d mTareOffset = Eigen::Vector4d::Zero();
+    Eigen::Vector4d mOutput = Eigen::Vector4d::Zero();
+
+
+    Eigen::Matrix3d mK_sg1 = Eigen::Matrix3d::Identity();
+    Eigen::Matrix3d mK_sg2 = Eigen::Matrix3d::Identity();
+    Eigen::Matrix3d mK_sg3 = Eigen::Matrix3d::Identity();
+    Eigen::Matrix3d mK_sg4 = Eigen::Matrix3d::Identity();
 
     double sg1 = 0;
     double sg2 = 0;
@@ -94,7 +142,9 @@ private:
 
     float a = 0.9;
 
-    float conversion = 1.0;
+    double conversion = 1.0;
+
+    Units localUnits;
 };
 
 

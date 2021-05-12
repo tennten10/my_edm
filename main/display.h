@@ -78,12 +78,12 @@ public:
 
 
     void displayWeight(char* weight);
-    void displayUnits( Units u);
+    void displayUnits(Units u);
     void displaySettings();
-    void displayDeviceInfo(char* SN, char* VER);  
+    void displayDeviceInfo(std::string SN, std::string VER);  
     void displayUpdateScreen(int pct);
     void displayLogo();
-    void displayBattery();
+    void displayBattery(int bat);
     void displayLowBattery();
     void displayOff();
     void displayOn();

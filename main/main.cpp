@@ -38,12 +38,10 @@ extern "C" {
 
 // TaskHandle_t battery_TH;
 TickType_t xBlockTime = pdMS_TO_TICKS(200);
-// SemaphoreHandle_t systemMutex;
-// SemaphoreHandle_t pageMutex; // this was extern before...
 
-//System _sys = {"10011001", "0.1", g, 80};
-//STATE eState = STANDARD;
-//volatile PAGE ePage = WEIGHTSTREAM;
+
+SystemX* _sys;
+
 
 extern const uint8_t ulp_main_bin_start[] asm("_binary_ulp_main_bin_start");
 extern const uint8_t ulp_main_bin_end[]   asm("_binary_ulp_main_bin_end");
@@ -110,76 +108,6 @@ void init_ulp_program(){
 
 }
 
-//static void printPulseCount(){
-    //const char* namespace = "plusecnt";
-    //const char* count_key = "count";
-
-    // ESP_ERROR_CHECK( nvs_flash_init() );
-    // nvs_handle_t handle;
-    // ESP_ERROR_CHECK( nvs_open(namespace, NVS_READWRITE, &handle));
-    // uint32_t pulse_count = 0;
-    // esp_err_t err = nvs_get_u32(handle, count_key, &pulse_count);
-    // assert(err == ESP_OK || err == ESP_ERR_NVS_NOT_FOUND);
-    // printf("Read pulse count from NVS: %5d\n", pulse_count);
-
-    // /* ULP program counts signal edges, convert that to the number of pulses */
-    // uint32_t pulse_count_from_ulp = (ulp_edge_count & UINT16_MAX) / 2;
-    // /* In case of an odd number of edges, keep one until next time */
-    // ulp_edge_count = ulp_edge_count % 2;
-    // printf("Pulse count from ULP: %5d\n", pulse_count_from_ulp);
-
-    // /* Save the new pulse count to NVS */
-    // pulse_count += pulse_count_from_ulp;
-    // ESP_ERROR_CHECK(nvs_set_u32(handle, count_key, pulse_count));
-    // ESP_ERROR_CHECK(nvs_commit(handle));
-    // nvs_close(handle);
-    // printf("Wrote updated pulse count to NVS: %5d\n", pulse_count);
-//}
-
-
-
-
-
-/*void batteryHandler_(void * pvParameters){
-    int battery=0;
-    uint32_t reading=0;
-    //uint32_t voltage=0;
-
-    //Characterize ADC at particular atten
-    // esp_adc_cal_characteristics_t *adc_chars = calloc(1, sizeof(esp_adc_cal_characteristics_t));
-    // esp_adc_cal_value_t val_type = esp_adc_cal_characterize(unit, atten, ADC_WIDTH_BIT_12, DEFAULT_VREF, adc_chars);
-    // //Check type of calibration value used to characterize ADC
-    // if (val_type == ESP_ADC_CAL_VAL_EFUSE_VREF) {
-    //     printf("eFuse Vref");
-    // } else if (val_type == ESP_ADC_CAL_VAL_EFUSE_TP) {
-    //     printf("Two Point");
-    // } else {
-    //     printf("Default");
-    // }
-    for(;;){
-    // Operating voltage range of 3.0-4.2V
-        // Gave some weird readings over 200% in the past. Add in a coulomb counting "gas gauge" in the future since Li-ion have a non-linear charge-discharge curve.
-        // Voltage divider with 1M & 2M, giving read voltage of 2.8 V = 4.2V, 2.0V = 3.0V
-        // Resolution of ~ 0.0008V / division
-      
-
-        reading =  adc1_get_raw(batV);
-        //voltage = esp_adc_cal_raw_to_voltage(reading, adc_chars);
-
-        battery = (int) 100 *( reading * 3.3 / 4096.0 - 2.0) /(2.8 - 2.0); //(voltage - 2.0) / (2.8 - 2.0) ;
-        xSemaphoreTake(systemMutex, (TickType_t)10);
-        _sys.batteryLevel = battery;
-        xSemaphoreGive(systemMutex);
-        if(battery < 2){
-            goToSleep();
-        }
-        vTaskDelay(1500); 
-    }
-}
-*/ 
-
-
-
 
 Device populateStartData(){
     Device ret;
@@ -207,61 +135,78 @@ Device populateStartData(){
 
 void app_main() {
     // Setup
-    //systemMutex = xSemaphoreCreateMutex();
-    //pageMutex = xSemaphoreCreateMutex();
+    
+
     
 
     // change pin modes if it woke up from ULP vs power up
     esp_sleep_wakeup_cause_t cause = esp_sleep_get_wakeup_cause();
     if (cause != ESP_SLEEP_WAKEUP_ULP) {
         printf("Not ULP wakeup, initializing main prog\n");
-        vTaskDelay(250);
+        vTaskDelay(150);
         
     } else {
         printf("ULP wakeup, saving pulse count\n");
         //printPulseCount();
         ulp_deinit();
     }
-    debugSetup();
-    SystemX system{populateStartData()};
 
-    // xTaskCreate(    
-    //     batteryHandler_,          /* Task function. */
-    //     "Battery Handler",        /* String with name of task. */
-    //     5000,            /* Stack size in words, not bytes. */
-    //     NULL,             /* Parameter passed as input of the task */
-    //     1,                /* Priority of the task. */
-    //     &battery_TH              /* Task handle. */  
-    //     );  
-    
-    
-    strainGaugeSetup();
+
+    debugSetup();
+    _sys = new SystemX(populateStartData());
+
+    //strainGaugeSetup();
     
     // temporary for testing ota
     setupOTA();
 
-    //DisplayX display{};
-    //ButtonsX buttons{true};
-    //BLEsetup();
+
+    BLEsetup();
     
     std::string event;
-    vTaskDelay(100);
+    
     debugPrintln("Before main loop...");
 
     // To print the threads/packages that are taking a lot of memory
     //heap_caps_print_heap_info( MALLOC_CAP_DEFAULT );
 
+    // battery variables
+    int battery=0;
+    uint32_t reading=0;
+    long batTime = esp_timer_get_time()/1000;
+
     // loop
     for (;;)
     {
-        event = system.buttons->getEvents();
+        //battery update moved into this loop to free up some memory
+        if(esp_timer_get_time()/1000-batTime > 5000){
+        // Operating voltage range of 3.0-4.2V
+            // Gave some weird readings over 200% in the past. Add in a coulomb counting "gas gauge" in the future since Li-ion have a non-linear charge-discharge curve.
+            // Voltage divider with 1M & 2M, giving read voltage of 2.8 V = 4.2V, 2.0V = 3.0V
+            // Resolution of ~ 0.0008V / division
+        
+
+            reading =  adc1_get_raw(batV);
+            //voltage = esp_adc_cal_raw_to_voltage(reading, adc_chars);
+
+            battery = (int) 100 *( reading * 3.3 / 4096.0 - 2.0) /(2.8 - 2.0); //(voltage - 2.0) / (2.8 - 2.0) ;
+            _sys->setBattery(battery);
+            
+            if(battery < 2){
+                _sys->goToSleep();
+            }
+            batTime = esp_timer_get_time()/1000;
+        }
+
+
+        event = _sys->buttons->getEvents();
         if (!(event.compare("") == 0)) 
         {
 
-            if (eState == STANDARD)
+            if (_sys->getMode() == STANDARD)
             {
                 //xSemaphoreTake(pageMutex, (TickType_t)10);
-                if (system.getPage() == WEIGHTSTREAM)
+                if (_sys->getPage() == WEIGHTSTREAM)
                 {
                     //xSemaphoreGive(pageMutex);
                     if (event.compare(0,4,"SNNN",0,4) == 0)
@@ -273,13 +218,13 @@ void app_main() {
                     {
                         //TODO: SHUTDOWN FUNCTION
                         debugPrintln("sleepy time");
-                        system.goToSleep(); 
+                        _sys->goToSleep(); 
                     }
                     if (event.compare(0,4,"NSNN", 0, 4) == 0)
                     {
                         //TODO: Units
                         //xSemaphoreTake(pageMutex, (TickType_t)10);
-                        system.setPage(UNITS);
+                        _sys->setPage(UNITS);
                         //xSemaphoreGive(pageMutex);
                     }
                     if (event.compare(0,4,"NLNN", 0, 4) == 0)
@@ -289,7 +234,7 @@ void app_main() {
                         
                     }
                 }
-                else if (ePage == UNITS)
+                else if (_sys->getPage() == UNITS)
                 {
                     //xSemaphoreGive(pageMutex);
                     if (event.compare(0,4, "SNNN",0,4) == 0)
@@ -299,17 +244,17 @@ void app_main() {
                     if (event.compare(0,4, "LNNN",0,4) == 0)
                     {
                         //TODO:  go to power off function
-                        system.goToSleep();
+                        _sys->goToSleep();
                     }
                     if (event.compare(0,4,"NSNN",0,4) == 0)
                     {
                         //TODO: Units
-                        system.incrementUnits();
+                        _sys->incrementUnits();
                     }
                 }
             }
 
-            if (eState == CALIBRATION)
+            if (_sys->getMode() == CALIBRATION)
             {
                 /*if(ePage == ){
            * xSemaphoreGive(pageMutex);
@@ -341,12 +286,3 @@ void app_main() {
         vTaskDelay(20);
     }
 }
-
-/*           
- *
- *
- */
-
-// void otaRoutine(){
-//     executeOTA();
-// }

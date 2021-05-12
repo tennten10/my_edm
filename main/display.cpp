@@ -67,7 +67,7 @@ extern QueueHandle_t weightQueue;
 // extern struct System _sys;
 
 
-extern volatile PAGE ePage;
+//extern volatile PAGE ePage;
 
 
 ledc_channel_config_t ledc_c_config{
@@ -382,13 +382,13 @@ void DisplayX::pageTestRoutine(long t)
         else if (esp_timer_get_time() / 1000 - t > 9 * show && flag9)
         {
             debugPrintln("Info test\n");
-            displayDeviceInfo(); //
+            displayDeviceInfo("01100101", "1.0.2"); //
             flag9 = false;
         }
         else if (esp_timer_get_time() / 1000 - t > 10 * show && flag10)
         {
             debugPrintln("Battery Image Test");
-            displayBattery(); //
+            displayBattery(40); //
             flag10 = false;
         }
         else if (esp_timer_get_time() / 1000 - t > 11 * show && flag11)
@@ -423,11 +423,11 @@ void DisplayX::pageTestRoutine(long t)
 void DisplayX::pageEventCheck(long &t, int &q, int &q_last)
 {
     // do do dooo do do do do.
-    xSemaphoreTake(pageMutex, (TickType_t)10);
-    switch (ePage)
+    //xSemaphoreTake(pageMutex, (TickType_t)10);
+    switch (WEIGHTSTREAM) // TODO: add ePage link
     { // options are {WEIGHTSTREAM, SETTINGS, INFO, UNITS, pUPDATE};
     case WEIGHTSTREAM:
-      xSemaphoreGive(pageMutex);
+      //xSemaphoreGive(pageMutex);
 #ifdef CONFIG_SB_V1_HALF_ILI9341
 #endif
 #ifdef CONFIG_SB_V3_ST7735S
@@ -436,21 +436,21 @@ void DisplayX::pageEventCheck(long &t, int &q, int &q_last)
 #endif
 
       //debugPrintln(uxQueueMessagesWaiting(weightQueue));
-      if (uxQueueMessagesWaiting(weightQueue) > 0)
-      {
-        xQueueReceive(weightQueue, &currentWeight, xBlockTime);
+      //if (uxQueueMessagesWaiting(weightQueue) > 0)
+      //{
+        //xQueueReceive(weightQueue, &currentWeight, xBlockTime);
 
-        displayWeight(currentWeight);
+        //displayWeight(currentWeight);
         //displayWeight(*currentWeight);
-        if (isBtConnected())
-        {
-          updateBTWeight(currentWeight);
-        }
-        debugPrintln("This is where weight would be printed");
-      }
+      //   if (isBtConnected())
+      //   {
+      //     updateBTWeight(currentWeight);
+      //   }
+      //   debugPrintln("This is where weight would be printed");
+      // }
       break;
     case pUPDATE:
-        xSemaphoreGive(pageMutex);
+        //xSemaphoreGive(pageMutex);
 
 #ifdef CONFIG_SB_V1_HALF_ILI9341
 #endif
@@ -472,7 +472,7 @@ void DisplayX::pageEventCheck(long &t, int &q, int &q_last)
         // TODO: dynamically update percentage when downloading and inistalling updated code
         break;
     case INFO:
-      xSemaphoreGive(pageMutex);
+      //xSemaphoreGive(pageMutex);
 #ifdef CONFIG_SB_V1_HALF_ILI9341
 #endif
 #ifdef CONFIG_SB_V3_ST7735S
@@ -480,20 +480,20 @@ void DisplayX::pageEventCheck(long &t, int &q, int &q_last)
 #ifdef CONFIG_SB_V6_FULL_ILI9341
 #endif
 
-        displayDeviceInfo();
+        displayDeviceInfo("sn", "ver");
         break;
   case UNITS:
-      xSemaphoreGive(pageMutex);
+      //xSemaphoreGive(pageMutex);
 #ifdef CONFIG_SB_V1_HALF_ILI9341
 #endif
 #ifdef CONFIG_SB_V3_ST7735S
 #endif
 #ifdef CONFIG_SB_V6_FULL_ILI9341
 #endif
-    displayUnits();
+    displayUnits(kg);
     break;
   case SETTINGS:
-    xSemaphoreGive(pageMutex);
+    //xSemaphoreGive(pageMutex);
 #ifdef CONFIG_SB_V1_HALF_ILI9341
 #endif
 #ifdef CONFIG_SB_V3_ST7735S
@@ -503,7 +503,7 @@ void DisplayX::pageEventCheck(long &t, int &q, int &q_last)
     displaySettings();
     break;
   default:
-    xSemaphoreGive(pageMutex);
+    //xSemaphoreGive(pageMutex);
     debugPrintln("invalid page type");
     break;
   }
@@ -741,14 +741,14 @@ void DisplayX::displaySettings()
 }
 
 // Battery & Info
-void DisplayX::displayDeviceInfo(char* SN, char* VER)
+void DisplayX::displayDeviceInfo(std::string SN, std::string VER)
 {
   // get device info from struct defined in main.cpp
   //xSemaphoreTake(systemMutex, (TickType_t)10);
-  char sn[9]; // = _sys.SN;
-  strcpy(sn, SN);
-  char ver[4]; //= _sys.VER;
-  strcpy(ver, VER);
+  // char sn[9]; // = _sys.SN;
+  // strcpy(sn, SN);
+  // char ver[4]; //= _sys.VER;
+  // strcpy(ver, VER);
   //xSemaphoreGive(systemMutex);
 
   // create objects to display info
@@ -767,7 +767,7 @@ void DisplayX::displayDeviceInfo(char* SN, char* VER)
   {
     debugPrintln("loop");
   }
-  lv_label_set_text_fmt(label3, "SUDOBOARD INFO\nSN: %s\n VER: %s", sn, ver); // , 5, 10); //"sn", "ver");
+  lv_label_set_text_fmt(label3, "SUDOBOARD INFO\nSN: %s\n VER: %s", SN, VER); // , 5, 10); //"sn", "ver");
   xSemaphoreGive(xGuiSemaphore);
   debugPrintln("after setting label text values");
   lv_label_set_align(label3, LV_ALIGN_CENTER);
@@ -828,7 +828,7 @@ void DisplayX::displayLogo()
   lv_obj_add_style(bkgrnd, LV_OBJ_PART_MAIN, &backgroundStyle);
 }
 
-void DisplayX::displayBattery()
+void DisplayX::displayBattery(int bat)
 {
   lv_obj_t *bkgrnd = lv_obj_create(lv_scr_act(), NULL);
   lv_obj_t *img = lv_img_create(bkgrnd, NULL);
@@ -849,9 +849,9 @@ void DisplayX::displayBattery()
   lv_cont_set_fit(cont, LV_FIT_PARENT);
   lv_cont_set_layout(cont, LV_LAYOUT_CENTER);
 
-  xSemaphoreTake(systemMutex, (TickType_t)10);
-  lv_label_set_text_fmt(label, "%d%%", _sys.batteryLevel);
-  xSemaphoreGive(systemMutex);
+  //xSemaphoreTake(systemMutex, (TickType_t)10);
+  lv_label_set_text_fmt(label, "%d%%", bat);
+  //xSemaphoreGive(systemMutex);
   lv_obj_align(cont, NULL, LV_ALIGN_CENTER, 0,0);
 #endif
 #ifdef CONFIG_SB_V6_FULL_ILI9341

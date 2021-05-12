@@ -41,6 +41,7 @@ void SystemX::incrementUnits(){
         break;
     }
     xSemaphoreGive(unitsMutex);
+    callbackFlag = true;
 }
 
 void SystemX::decrementUnits(){
@@ -60,5 +61,24 @@ void SystemX::decrementUnits(){
         break;
     }
     xSemaphoreGive(unitsMutex);
+    callbackFlag = true;
+}
+
+void SystemX::validateDataAcrossObjects(){
+    // Since I don't know how to properly implement callbacks, this is my version in order to verify 
+    // objects such as Weight, and Display have the proper local versions of systme variables they need to use
+    if(!callbackFlag){
+        return;
+    }
+    /******************************************/
+    
+    if (eUnits != this->weight->getLocalUnits()){
+        weight->setLocalUnits(eUnits);
+    }
+
+
+
+
+    callbackFlag = false;
 }
 

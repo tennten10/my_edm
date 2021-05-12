@@ -1,6 +1,7 @@
 #include "globals.h"
 #include "debug.h"
 #include "myOTA.h"
+#include "System.h"
 
 #include "esp-nimble-cpp/src/NimBLELog.h"
 #include "esp-nimble-cpp/src/NimBLEDevice.h"
@@ -9,35 +10,34 @@
 #include "mySPIFFS.h"
 //#include <esp_wiFi.h>
 //#include <esp_err.h>
-#include "Weight.h"
+//#include "Weight.h"
 #include <string>
 
 TaskHandle_t bluetooth_TH;
-extern SemaphoreHandle_t systemMutex;
-//const byte numChars = 32;
-extern volatile PAGE ePage;
-extern SemaphoreHandle_t pageMutex;
+
+
 
 static NimBLEServer* pServer;
+extern SystemX* _sys;
 
 
 Units convertUnitsEnum(std::string v){
- Units retVal;
- if(v.compare("g")){
-   retVal = g;
-   return retVal;
- }else if(v.compare("kg")){
-   retVal = kg;
-   return retVal;
- }else if(v.compare("oz")){
-   retVal = oz;
-   return retVal;
- }else if(v.compare("lb")){
-   retVal = lb;
-   return retVal;
- }
- return (Units)NULL;
- // g, kg, oz, lb
+    Units retVal;
+    if(v.compare("g")){
+        retVal = g;
+        return retVal;
+    }else if(v.compare("kg")){
+        retVal = kg;
+        return retVal;
+    }else if(v.compare("oz")){
+        retVal = oz;
+        return retVal;
+    }else if(v.compare("lb")){
+        retVal = lb;
+        return retVal;
+    }
+    return (Units)NULL;
+      // g, kg, oz, lb
 }
 
 bool isBtConnected() {
@@ -149,9 +149,8 @@ class DeviceCallbacks: public NimBLECharacteristicCallbacks {
 class BatteryCallbacks: public NimBLECharacteristicCallbacks {
     void onRead(NimBLECharacteristic* pCharacteristic) {
       debugPrint(pCharacteristic->getUUID().toString());
-      xSemaphoreTake(systemMutex, (TickType_t)10);
-      pCharacteristic->setValue(_sys.batteryLevel);
-      xSemaphoreGive(systemMutex);
+      // example?, setValue((uint8_t*)wifi_read, strlen(wifi_read)+1);
+      pCharacteristic->setValue(_sys->getBattery());
       debugPrint(": onRead(), value: ");
       debugPrintln(pCharacteristic->getValue());
       debugPrintln("getBattery received");
@@ -207,15 +206,28 @@ class ActionCallbacks: public NimBLECharacteristicCallbacks {
       debugPrint(pCharacteristic->getUUID().toString().c_str());
       debugPrint(": onWrite(), value: ");
       debugPrintln(pCharacteristic->getValue().c_str());
+      static WiFiStruct w;
 
       // if writing new wifi info
       if (strcmp(pCharacteristic->getUUID().toString().c_str(), "0000551d-60be-11e-ae93-0242ac130002") == 0) {
         char line [100];
-        WiFiStruct w;
+        //WiFiStruct w;
         strcpy(line, pCharacteristic->getValue().c_str());
         w.active = 1;
         strcpy(w.ssid, strtok(NULL, ","));
         strcpy(w.pswd, strtok(NULL, ","));
+        //setWiFiInfo(w);
+      }
+
+      // if writing new wifi info
+      if (strcmp(pCharacteristic->getUUID().toString().c_str(), "0000fa55-60be-11eb-ae93-0242ac130002") == 0) {
+        char line [100];
+        //WiFiStruct w;
+        strcpy(line, pCharacteristic->getValue().c_str());
+        w.active = 1;
+        strcpy(w.ssid, strtok(NULL, ","));
+        strcpy(w.pswd, strtok(NULL, ","));
+        // only check wifi and save after password is saved
         setWiFiInfo(w);
       }
     };
@@ -265,22 +277,22 @@ class OTACallbacks: public NimBLECharacteristicCallbacks {
       std::string s = "yes";
       debugPrintln(pCharacteristic->getValue().compare("yes"));
       
-      if (strcmp(pCharacteristic->getValue().c_str(), "yes") == 0) {
-        debugPrintln("Begin updating..........");
-        xSemaphoreTake(pageMutex, (TickType_t) 10);
-        ePage = pUPDATE;
-        xSemaphoreGive(pageMutex);
-        vTaskDelay(20);
-        setupOTA();
-        vTaskDelay(1000);
-        executeOTA();
-        xSemaphoreTake(pageMutex, (TickType_t)10);
-        ePage = WEIGHTSTREAM;
-        xSemaphoreGive(pageMutex);
-        debugPrintln("page change");
-      } else {
-        debugPrintln("OTA Command not recognized");
-      }
+        if (strcmp(pCharacteristic->getValue().c_str(), "yes") == 0) {
+          debugPrintln("Begin updating..........");
+          // xSemaphoreTake(pageMutex, (TickType_t) 10);
+          // ePage = pUPDATE;
+          // xSemaphoreGive(pageMutex);
+          vTaskDelay(20);
+          setupOTA();
+          vTaskDelay(1000);
+          executeOTA();
+          // xSemaphoreTake(pageMutex, (TickType_t)10);
+          // ePage = WEIGHTSTREAM;
+          // xSemaphoreGive(pageMutex);
+          debugPrintln("page change");
+        } else {
+          debugPrintln("OTA Command not recognized");
+        }
     };
 };
 
@@ -356,13 +368,8 @@ void BLEsetup() {
   pServer = NimBLEDevice::createServer();
   pServer->setCallbacks(new ServerCallbacks());
 
-  debugPrintln(" It got to here 7"); // mike look here
-  vTaskDelay(100);
 
   //Holding semaphore until BT services are created...
-  
-  debugPrintln(" It got to here 8"); // mike look here
-  vTaskDelay(100);
 
   NimBLEService* pDeviceService = pServer->createService("180A");
   NimBLECharacteristic* pSerialNumCharacteristic = pDeviceService->createCharacteristic(
@@ -373,14 +380,14 @@ void BLEsetup() {
         NIMBLE_PROPERTY::READ_ENC  // only allow reading if paired / encrypted
         //NIMBLE_PROPERTY::WRITE_ENC   // only allow writing if paired / encrypted
       );
-  xSemaphoreTake(systemMutex, (TickType_t)10);
-  pSerialNumCharacteristic->setValue(_sys.SN);
-  xSemaphoreGive(systemMutex);
+  std::string sn;
+  
+  sn = _sys->getSN();
+  pSerialNumCharacteristic->setValue(&sn);
+  
   pSerialNumCharacteristic->setCallbacks(&devCallbacks);
 
-  debugPrintln(" It got to here 9"); // mike look here
-  vTaskDelay(100);
-
+  
   NimBLECharacteristic* pSoftwareCharacteristic = pDeviceService->createCharacteristic(
         "2A28",
         NIMBLE_PROPERTY::READ |
@@ -389,9 +396,9 @@ void BLEsetup() {
         NIMBLE_PROPERTY::READ_ENC  // only allow reading if paired / encrypted
         //NIMBLE_PROPERTY::WRITE_ENC   // only allow writing if paired / encrypted
       );
-  xSemaphoreTake(systemMutex, (TickType_t)10);
-  pSoftwareCharacteristic->setValue(_sys.VER);
-  xSemaphoreGive(systemMutex);
+  //xSemaphoreTake(systemMutex, (TickType_t)10);
+  pSoftwareCharacteristic->setValue(_sys->getVER());
+  //xSemaphoreGive(systemMutex);
   pSoftwareCharacteristic->setCallbacks(&devCallbacks);
   NimBLECharacteristic* pMfgCharacteristic = pDeviceService->createCharacteristic(
         "2A29",
@@ -405,9 +412,6 @@ void BLEsetup() {
   pMfgCharacteristic->setValue("SudoChef");
   pMfgCharacteristic->setCallbacks(&devCallbacks);
 
-  debugPrintln(" It got to here 10"); // mike look here
-  vTaskDelay(100);
-
   NimBLECharacteristic* pDateTimeCharacteristic = pDeviceService->createCharacteristic(
         "2A11",
         NIMBLE_PROPERTY::READ |
@@ -420,8 +424,6 @@ void BLEsetup() {
   pDateTimeCharacteristic->setValue("02-08-2021");
   pDateTimeCharacteristic->setCallbacks(&devCallbacks);
 
-  debugPrintln(" It got to here 11"); // mike look here
-  vTaskDelay(100);
 
   /* Next Service - Battery  */ 
   NimBLEService* pBatteryService = pServer->createService("180F");
@@ -430,15 +432,13 @@ void BLEsetup() {
         NIMBLE_PROPERTY::READ
       );
   char srerdsf [16];
-  xSemaphoreTake(systemMutex, (TickType_t)10);
-  sprintf(srerdsf, "%d %%", _sys.batteryLevel);
-  xSemaphoreGive(systemMutex);
+  //xSemaphoreTake(systemMutex, (TickType_t)10);
+  sprintf(srerdsf, "%d %%", _sys->getBattery());
+  //xSemaphoreGive(systemMutex);
   
   pBatteryCharacteristic->setValue(srerdsf);
   pBatteryCharacteristic->setCallbacks(&batCallbacks);
 
-  debugPrintln(" It got to here 12"); // mike look here
-  vTaskDelay(100);
 
   /* Next Service - Weight Scale */
   NimBLEService* pWeightService = pServer->createService("181D");
@@ -463,7 +463,7 @@ void BLEsetup() {
         NIMBLE_PROPERTY::READ_ENC |  // only allow reading if paired / encrypted
         NIMBLE_PROPERTY::WRITE_ENC   // only allow writing if paired / encrypted
       );
-  char *u2s = unitsToString(_sys.eUnits);
+  char *u2s = unitsToString(_sys->getUnits());
   pUnitsCharacteristic->setValue(u2s);
   free(u2s);
   pUnitsCharacteristic->setCallbacks(&wgtCallbacks);
@@ -471,9 +471,7 @@ void BLEsetup() {
   //Release Semaphore
   //xSemaphoreGive(systemMutex);
 
-  debugPrintln(" It got to here 13"); // mike look here
-  vTaskDelay(100);
-
+  
   /* Next Service - Actions performed through connection */
 
   NimBLEService* pActionService = pServer->createService("00005AC7-60be-11eb-ae93-0242ac130002");
@@ -514,39 +512,44 @@ void BLEsetup() {
   pOffCharacteristic->setCallbacks(&actCallbacks);
 
   char wifi_read[100];
+  char w_ssid[32];
+  char w_pass[64];
   WiFiStruct w = defaultWiFiInfo();
+  sprintf(w_ssid, "%s", w.ssid);
+  sprintf(w_pass, "%s", w.pswd);
   sprintf(wifi_read, "%s,%s", w.ssid, w.pswd);
   debugPrint(" wifi_read value: ");
   debugPrintln(wifi_read);
-
-  debugPrintln(" It got to here 14"); // mike look here
-  vTaskDelay(100);
   
-  NimBLECharacteristic* pWiFiCharacteristic = pActionService->createCharacteristic(
-        "0000F1F1-60be-11eb-ae93-0242ac130002",
+  NimBLECharacteristic* pSSIDCharacteristic = pActionService->createCharacteristic(
+        "0000551d-60be-11eb-ae93-0242ac130002",
         NIMBLE_PROPERTY::READ |
         NIMBLE_PROPERTY::WRITE |
         NIMBLE_PROPERTY::READ_ENC |  // only allow reading if paired / encrypted
         NIMBLE_PROPERTY::WRITE_ENC   // only allow writing if paired / encrypted
       );
-  debugPrintln(" It got to here 15"); // mike look here
-  vTaskDelay(100);
+  
 
-  pWiFiCharacteristic->setValue((uint8_t*)wifi_read, strlen(wifi_read)+1);
-  pWiFiCharacteristic->setCallbacks(&actCallbacks); 
+  pSSIDCharacteristic->setValue((uint8_t*)w_ssid, strlen(w_ssid)+1);
+  pSSIDCharacteristic->setCallbacks(&actCallbacks); 
 
-  debugPrintln(" It got to here 16"); // mike look here
-  vTaskDelay(100);
+  NimBLECharacteristic* pPASSCharacteristic = pActionService->createCharacteristic(
+        "0000fa55-60be-11eb-ae93-0242ac130002",
+        NIMBLE_PROPERTY::READ |
+        NIMBLE_PROPERTY::WRITE |
+        NIMBLE_PROPERTY::READ_ENC |  // only allow reading if paired / encrypted
+        NIMBLE_PROPERTY::WRITE_ENC   // only allow writing if paired / encrypted
+      );
+  
 
+  pPASSCharacteristic->setValue((uint8_t*)w_pass, strlen(w_pass)+1);
+  pPASSCharacteristic->setCallbacks(&actCallbacks); 
 
   /** Start the services when finished creating all Characteristics and Descriptors */
   pDeviceService->start();
   pBatteryService->start();
   pWeightService->start();
   pActionService->start();
-
-  debugPrintln(" It got to here 15"); // mike look here
-  vTaskDelay(100);
 
   NimBLEAdvertising* pAdvertising = NimBLEDevice::getAdvertising();
   /** Add the services to the advertisment data **/

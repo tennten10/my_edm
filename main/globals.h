@@ -21,8 +21,6 @@ struct WiFiStruct{
 struct Device{
   char SN[9];    // 8 digits
   char VER[32];  // starting at 0.1  
-  //Units eUnits;
-  //volatile int batteryLevel; // should only be between 0 and 100
 };
 
 

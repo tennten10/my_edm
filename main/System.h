@@ -27,6 +27,7 @@ public:
 
     void incrementUnits();
     void decrementUnits();
+
     Units getUnits(){
         Units ret;
         xSemaphoreTake(unitsMutex, (TickType_t) 20);
@@ -39,6 +40,7 @@ public:
         xSemaphoreTake(unitsMutex, (TickType_t) 20);
         eUnits = u;
         xSemaphoreGive(unitsMutex);
+        callbackFlag = true;
     }
 
     int getBattery(){
@@ -47,6 +49,18 @@ public:
         ret = batteryLevel;
         xSemaphoreGive(batteryMutex);
         return ret;
+    }
+    void setBattery(int b){
+        if(b > 100){
+            debugPrintln("Battery over 100% ??????");
+            b = 100;
+        }else if(b < 0){
+            debugPrintln("Battery less than 0% ???????");
+            b = 0;
+        }
+        xSemaphoreTake(batteryMutex, (TickType_t)10);
+        batteryLevel = b;
+        xSemaphoreGive(batteryMutex);
     }
 
     void goToSleep();
@@ -65,6 +79,7 @@ public:
         xSemaphoreTake(pageMutex, (TickType_t) 20);
         ePage = p;
         xSemaphoreGive(pageMutex);
+        callbackFlag = true;
     }
 
     MODE getMode(){
@@ -78,34 +93,48 @@ public:
         xSemaphoreTake(modeMutex, (TickType_t) 10);
         eMode = m;
         xSemaphoreGive(modeMutex);
+        callbackFlag = true;
+    }
+    std::string getSN(){
+        xSemaphoreTake(deviceMutex, (TickType_t) 10);
+        std::string ret = std::string(device.SN);
+        xSemaphoreGive(deviceMutex);
+        return ret;
+    }
+
+    std::string getVER(){
+        xSemaphoreTake(deviceMutex, (TickType_t) 10);
+        static std::string ret = std::string(this->device.VER);
+        xSemaphoreGive(deviceMutex);
+        return ret;
     }
 
 
     DisplayX *display; // {};
     ButtonsX *buttons; //{_debounce = true};
+    WeightX *weight;
     
 
 private:
-    const Device device;
-    SemaphoreHandle_t systemMutex = xSemaphoreCreateMutex();
+    const Device device;// = {"",""}; //{"",""};
+    SemaphoreHandle_t deviceMutex = xSemaphoreCreateMutex();
     SemaphoreHandle_t pageMutex = xSemaphoreCreateMutex();
     SemaphoreHandle_t unitsMutex = xSemaphoreCreateMutex();
     SemaphoreHandle_t batteryMutex = xSemaphoreCreateMutex();
     SemaphoreHandle_t modeMutex = xSemaphoreCreateMutex();
 
-    void setBattery(int b){
-        xSemaphoreTake(batteryMutex, (TickType_t)10);
-        batteryLevel = b;
-        xSemaphoreGive(batteryMutex);
-    }
+    
+
+    void validateDataAcrossObjects();
     
     //BLEsetup();
  
     Units eUnits;
-    volatile int batteryLevel;
+    int batteryLevel;
 
     MODE eMode = STANDARD;
-    volatile PAGE ePage = WEIGHTSTREAM;
+    PAGE ePage = WEIGHTSTREAM;
+    bool callbackFlag = false;
 
 };
 

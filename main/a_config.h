@@ -40,7 +40,10 @@ extern "C" {
 
 #include "sdkconfig.h"
 
+//defines for all configurations
+#define WEIGHT_UPDATE_RATE 0.5
 
+// defines for individual ones
 #if defined CONFIG_SB_V1_HALF_ILI9341
 #include "configs/PinDefs_V1.h"
 // declare width and height of the display for use later

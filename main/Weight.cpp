@@ -16,10 +16,10 @@
 #include "Weight.h"
 
 
-TaskHandle_t weightHandler_TH;
+
 QueueHandle_t weightQueue;
 extern TickType_t xBlockTime;
-extern SemaphoreHandle_t systemMutex;
+
 SemaphoreHandle_t sgMutex;
 
 
@@ -29,45 +29,40 @@ SemaphoreHandle_t sgMutex;
 // defined in Globals.h
 // typedef enum {g, kg, oz, lb} Units;
 
-double sg1 = 0;
-double sg2 = 0;
-double sg3 = 0;
-double sg4 = 0;
-double sg1_last = 0;
-double sg2_last = 0;
-double sg3_last = 0;
-double sg4_last = 0;
+// double sg1 = 0;
+// double sg2 = 0;
+// double sg3 = 0;
+// double sg4 = 0;
+// double sg1_last = 0;
+// double sg2_last = 0;
+// double sg3_last = 0;
+// double sg4_last = 0;
 
-// filter weight
-float a = 0.9;
+// // filter weight
+// float a = 0.9;
 
-float conversion = 1.0;
+// float conversion = 1.0;
 
 double tareOffset=0.0;  //[] = {0.0, 0.0, 0.0, 0.0};
 
 
 
-Eigen::Vector4d mRawWeight = Eigen::Vector4d::Zero();
-Eigen::Vector4d mTareOffset = Eigen::Vector4d::Zero();
-Eigen::Vector4d mOutput = Eigen::Vector4d::Zero();
+// Eigen::Vector4d mRawWeight = Eigen::Vector4d::Zero();
+// Eigen::Vector4d mTareOffset = Eigen::Vector4d::Zero();
+// Eigen::Vector4d mOutput = Eigen::Vector4d::Zero();
 
 
-Eigen::Matrix3d mK_sg1 = Eigen::Matrix3d::Identity();
-Eigen::Matrix3d mK_sg2 = Eigen::Matrix3d::Identity();
-Eigen::Matrix3d mK_sg3 = Eigen::Matrix3d::Identity();
-Eigen::Matrix3d mK_sg4 = Eigen::Matrix3d::Identity();
+// Eigen::Matrix3d mK_sg1 = Eigen::Matrix3d::Identity();
+// Eigen::Matrix3d mK_sg2 = Eigen::Matrix3d::Identity();
+// Eigen::Matrix3d mK_sg3 = Eigen::Matrix3d::Identity();
+// Eigen::Matrix3d mK_sg4 = Eigen::Matrix3d::Identity();
 
-
-
-// BLA::Matrix<4> mRawWeight;
-// BLA::Matrix<4> mTareOffset;
-// BLA::Matrix<4> mOutput;
 
 
 double WeightX::ReadVoltage(adc1_channel_t pin){
   // from https://github.com/G6EJD/ESP32-ADC-Accuracy-Improvement-function/blob/master/ESP32_ADC_Read_Voltage_Accurate.ino
   // Use for more accurate reading on ESP32 ADC
-  double reading = 1.0*adc1_get_raw(pin);; // Reference voltage is 3v3 so maximum reading is 3v3 = 4095 in range 0 to 4095
+  double reading = 1.0*adc1_get_raw(pin); // Reference voltage is 3v3 so maximum reading is 3v3 = 4095 in range 0 to 4095
   if(reading < 1 || reading > 4095) return 0;
   // return -0.000000000009824 * pow(reading,3) + 0.000000016557283 * pow(reading,2) + 0.000854596860691 * reading + 0.065440348345433;
   return -0.000000000000016 * pow(reading,4) + 0.000000000118171 * pow(reading,3)- 0.000000301211691 * pow(reading,2)+ 0.001109019271794 * reading + 0.034143524634089;
@@ -111,11 +106,11 @@ void WeightX::readSensors(){
   // expect between 1.15 and 2.8V
 }
 std::string WeightX::truncateWeight( double d){
-  xSemaphoreTake(systemMutex, (TickType_t)10);
-  Units u = _sys.eUnits;
-  xSemaphoreGive(systemMutex);
+  //xSemaphoreTake(systemMutex, (TickType_t)10);
+  //Units u = _sys.eUnits;
+  //xSemaphoreGive(systemMutex);
   char str[16]="";
-  switch(u){
+  switch(localUnits){
     case g: // g.1
       sprintf(str, "%0.1f", d);
       return std::string(str);
@@ -189,7 +184,7 @@ double WeightX::getWeight(){
   return weight;
 }
 
-void tare(){
+void WeightX::tare(){
   readSensors();
   xSemaphoreTake(sgMutex, (TickType_t)10);
   //tareOffset = getRawWeight();
@@ -206,13 +201,8 @@ void WeightX::Main(){
   std::string foo;
   double lastWeight = 0.0;
   double currentWeight= 0.0;
-
-  // battery variables
-  int battery=0;
-  uint32_t reading=0;
-  long batTime = esp_timer_get_time()/1000;
-    
-        
+  weightQueue = xQueueCreate(5, sizeof(uint32_t));
+  sgMutex = xSemaphoreCreateMutex();
     
   for(;;){
     readSensors();
@@ -234,52 +224,33 @@ void WeightX::Main(){
       debugPrintln(foo);
       lastWeight = currentWeight;
     }
-    //battery update moved into this loop to free up some memory
-    if(esp_timer_get_time()/1000-batTime > 5000){
-      // Operating voltage range of 3.0-4.2V
-        // Gave some weird readings over 200% in the past. Add in a coulomb counting "gas gauge" in the future since Li-ion have a non-linear charge-discharge curve.
-        // Voltage divider with 1M & 2M, giving read voltage of 2.8 V = 4.2V, 2.0V = 3.0V
-        // Resolution of ~ 0.0008V / division
-      
-
-        reading =  adc1_get_raw(batV);
-        //voltage = esp_adc_cal_raw_to_voltage(reading, adc_chars);
-
-        battery = (int) 100 *( reading * 3.3 / 4096.0 - 2.0) /(2.8 - 2.0); //(voltage - 2.0) / (2.8 - 2.0) ;
-        xSemaphoreTake(systemMutex, (TickType_t)10);
-        _sys.batteryLevel = battery;
-        xSemaphoreGive(systemMutex);
-        if(battery < 2){
-            goToSleep();
-        }
-        batTime = esp_timer_get_time()/1000;
-    }
+    
     vTaskDelay(WEIGHT_UPDATE_RATE*1000);
   }
   
 }
 
-void strainGaugeSetup(){
+// void strainGaugeSetup(){
   
-  adc1_config_width(ADC_WIDTH_BIT_12);
-  adc1_config_channel_atten(SG1,ADC_ATTEN_DB_11); // Will need to change the attenuation when the circuit gets upgraded to auto-ranging
-  adc1_config_channel_atten(SG2,ADC_ATTEN_DB_11);
-  adc1_config_channel_atten(SG3,ADC_ATTEN_DB_11);
-  adc1_config_channel_atten(SG4,ADC_ATTEN_DB_11);
+//   adc1_config_width(ADC_WIDTH_BIT_12);
+//   adc1_config_channel_atten(SG1,ADC_ATTEN_DB_11); // Will need to change the attenuation when the circuit gets upgraded to auto-ranging
+//   adc1_config_channel_atten(SG2,ADC_ATTEN_DB_11);
+//   adc1_config_channel_atten(SG3,ADC_ATTEN_DB_11);
+//   adc1_config_channel_atten(SG4,ADC_ATTEN_DB_11);
   
   
-  getStrainGaugeParams(mK_sg1,mK_sg2, mK_sg3,mK_sg4 );
+//   getStrainGaugeParams(mK_sg1,mK_sg2, mK_sg3, mK_sg4 );
 
-  //mRawWeight.Fill(0);
-  //mTareOffset.Fill(0);
-  //mOutput.Fill(0);
+//   //mRawWeight.Fill(0);
+//   //mTareOffset.Fill(0);
+//   //mOutput.Fill(0);
   
-  sgMutex = xSemaphoreCreateMutex();
-  printf("after mutex creation\n");
-  mK_sg1(2,2) = 9.9099; // V/g
-  mK_sg2(2,2) = 9.9099;
-  mK_sg3(2,2) = 55.8559;
-  mK_sg4(2,2) = 64.8649;
+  
+//   printf("after mutex creation\n");
+//   mK_sg1(2,2) = 9.9099; // V/g
+//   mK_sg2(2,2) = 9.9099;
+//   mK_sg3(2,2) = 55.8559;
+//   mK_sg4(2,2) = 64.8649;
   
   //pinMode(enable_165, OUTPUT);
   //digitalWrite(enable_165, HIGH);
@@ -289,7 +260,7 @@ void strainGaugeSetup(){
   // setUnits(_sys.eUnits);
   // xSemaphoreGive(systemMutex);
   
-  weightQueue = xQueueCreate(5, sizeof(uint32_t));
+  //weightQueue = xQueueCreate(5, sizeof(uint32_t));
   
   // if(weightQueue == NULL){
   //   debugPrintln("Error creating weightQueue");
@@ -311,7 +282,7 @@ void strainGaugeSetup(){
   // vTaskDelay(3);
   // debugPrintln("after tare");
 
-}
+//}
 
 // Amplifier Gain
 double amplifier(){
