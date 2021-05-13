@@ -117,7 +117,7 @@ void wifi_init_sta()
     wifi_config.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
     wifi_config.sta.pmf_cfg.capable = true;
     wifi_config.sta.pmf_cfg.required = false;
-
+    
 
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA) );
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config) );
@@ -187,18 +187,183 @@ void startWiFi()
     }
 }
 
-//esp_netif_t getNetIF(){
-//    return netif
-//}
+bool verifyWiFiInfo(char& s, char& p){ //WiFiStruct wfi
+    char _s[32];
+    char _p[64];
+    strcpy(_s, &s);
+    strcpy(_p, &p);
+    char s_temp[32];
+    char p_temp[64];
+    int ret = 0;
 
 
-//wifi_ap_record_t* scanNetworks(){
-    // uint16_t networkNum = 20; //DEFAULT_SCAN_LIST_SIZE; // set to max number of networks, return value later is actual number
-    // wifi_ap_record_t apRecords[networkNum];
-    // // wifi_scan_config_t* w_scan = {};
-    // esp_wifi_scan_start(NULL, true);
-    // esp_wifi_scan_stop();
-    // //esp_wifi_scan_get_ap_num(*networkNum);
-    // esp_wifi_scan_get_ap_records(&networkNum, apRecords);
-    // if(networkNum > 0){
-//}
+    s_wifi_event_group = xEventGroupCreate();
+    esp_event_handler_instance_t instance_any_id;
+    esp_event_handler_instance_t instance_got_ip;
+    
+
+    
+    // if already connected, disconnect 
+    wifi_config_t wfi;
+    esp_err_t h = esp_wifi_disconnect();
+    if(h == ESP_FAIL){
+        debugPrintln("ESP FAIL IN VERIFY WIFI INFO");
+        ESP_ERROR_CHECK(esp_event_handler_instance_unregister(IP_EVENT, IP_EVENT_STA_GOT_IP, instance_got_ip));
+        ESP_ERROR_CHECK(esp_event_handler_instance_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID, instance_any_id));
+        vEventGroupDelete(s_wifi_event_group);
+        return false;
+    }
+    if(h == ESP_OK){
+        // successfully disconnected
+        // temporarily save old ssid, password
+        if(esp_wifi_get_config(WIFI_IF_STA, &wfi) == ESP_OK){
+            strcpy(s_temp, (char*)wfi.sta.ssid);
+            strcpy(p_temp, (char*)wfi.sta.password);
+        }
+    }
+    
+    if(h == ESP_ERR_WIFI_NOT_INIT){
+        ESP_ERROR_CHECK(esp_netif_init());
+
+        ESP_ERROR_CHECK(esp_event_loop_create_default());
+        esp_netif_create_default_wifi_sta();
+
+        wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+        ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+        debugPrintln("wifi not init in verify wifi info");
+    }
+        
+    
+
+    // set new ssid, password
+
+    memcpy(wfi.sta.ssid, _s,
+                               sizeof(_s));
+    memcpy(wfi.sta.password, _p,
+                               sizeof(_p));
+    //wfi.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
+    //wfi.sta.pmf_cfg.capable = true;
+    //wfi.sta.pmf_cfg.required = false;
+    
+    // try to connect
+    
+    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA) );
+    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wfi) );
+    ESP_ERROR_CHECK(esp_wifi_start() );
+
+    debugPrintln("wifi_init_sta finished.");    
+
+    
+    EventBits_t bits = xEventGroupWaitBits(s_wifi_event_group,
+            WIFI_CONNECTED_BIT | WIFI_FAIL_BIT,
+            pdFALSE,
+            pdFALSE,
+            portMAX_DELAY);
+    
+
+    if (bits & WIFI_CONNECTED_BIT) {
+        debugPrint("connected to ap SSID:");
+        debugPrint(_s);
+        debugPrint(" password:");
+        debugPrintln(_p);
+        ret = 1;
+        
+        
+    } else if (bits & WIFI_FAIL_BIT) {
+        debugPrint("Failed to connect to SSID:");
+        debugPrint(_s);
+        debugPrint(" password:");
+        debugPrintln(_p);
+        
+    } else {
+        debugPrintln("UNEXPECTED EVENT");
+    }
+
+    /* The event will not be processed after unregister */
+    ESP_ERROR_CHECK(esp_event_handler_instance_unregister(IP_EVENT, IP_EVENT_STA_GOT_IP, instance_got_ip));
+    ESP_ERROR_CHECK(esp_event_handler_instance_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID, instance_any_id));
+    vEventGroupDelete(s_wifi_event_group);
+
+    // if successful, disconnect and return true
+    if(ret == 1){
+        ESP_ERROR_CHECK(esp_wifi_deinit());
+        return true;
+    }
+
+    // if unsuccessful, reset old ssid, password and return false
+
+    if(h == ESP_OK){
+        // successfully disconnected
+        // reset to old ssid, password
+        memcpy(wfi.sta.ssid, s_temp,
+                               sizeof(s_temp));
+        memcpy(wfi.sta.password, p_temp,
+                               sizeof(p_temp));
+        ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wfi) );
+        ESP_ERROR_CHECK(esp_wifi_deinit());
+        
+    }
+    return false;
+
+}
+
+
+
+void scanNetworks(uint16_t & num, wifi_ap_record_t & ap){
+    uint16_t networkNum = num; 
+    wifi_ap_record_t apRecords[networkNum];
+    debugPrintln("...");
+    // wifi init
+    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+    debugPrintln("...");
+    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+    debugPrintln("...");
+
+    // wifi scan, but without setting ssid, etc???
+    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA) );
+    //ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, ) );
+    ESP_ERROR_CHECK(esp_wifi_start() );
+    debugPrintln("...");
+    wifi_scan_config_t scan_config = {
+        .ssid = 0,
+        .bssid = 0,
+        .channel = 0,
+        .show_hidden = true
+    };
+    debugPrintln("...");
+    ESP_ERROR_CHECK(esp_wifi_scan_start(&scan_config, true));
+    debugPrintln("...");
+    esp_err_t e = esp_wifi_scan_get_ap_records(&networkNum, apRecords);
+    debugPrintln("...");
+    esp_wifi_scan_stop();
+    debugPrintln("...");
+    if( e != ESP_OK){
+        debugPrintln("error when retrieving ap records");
+        debugPrintln(e);
+
+        if(e == ESP_ERR_WIFI_NOT_INIT){
+            // WiFi is not initialized by esp_wifi_init
+            debugPrintln("esp_wifi_not_init");
+        }else if(e == ESP_ERR_WIFI_NOT_STARTED){ 
+            // WiFi is not started by esp_wifi_start
+            debugPrintln("esp_wifi_not_started");
+        }else if(e == ESP_ERR_INVALID_ARG){
+            // invalid argument
+            debugPrintln("esp_invalid_arg");
+        }else if(e == ESP_ERR_NO_MEM){
+            //: out of memory
+            debugPrintln("out of memory");
+        }else{
+            debugPrintln("unknown error");
+        }
+    }
+    debugPrintln("scan complete, filling return values");
+    num = networkNum;
+    debugPrintln(num);
+    ap = malloc(sizeof(apRecords));
+    
+    //for(int i =0; i< sizeof(apRecords); i++){
+    //    ap[i] = apRecords[i];
+    //}
+    
+}

@@ -158,7 +158,7 @@ void app_main() {
     //strainGaugeSetup();
     
     // temporary for testing ota
-    setupOTA();
+    //setupOTA();
 
 
     BLEsetup();
