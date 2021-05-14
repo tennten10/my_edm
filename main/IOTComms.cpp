@@ -523,9 +523,9 @@ void BLEsetup() {
   pOffCharacteristic->setValue("no");
   pOffCharacteristic->setCallbacks(&actCallbacks);
 
-  char wifi_read[100]={};
-  char w_ssid[32]={};
-  char w_pass[64]={};
+  char wifi_read[100];//={};
+  char w_ssid[32];//={};
+  char w_pass[64];//={};
   WiFiStruct w = defaultWiFiInfo();
   sprintf(w_ssid, "%s", w.ssid);
   sprintf(w_pass, "%s", w.pswd);

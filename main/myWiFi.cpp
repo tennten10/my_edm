@@ -309,7 +309,7 @@ bool verifyWiFiInfo(char& s, char& p){ //WiFiStruct wfi
 
 
 
-void scanNetworks(uint16_t & num, wifi_ap_record_t & ap){
+void scanNetworks(uint16_t& num, std::string * ap) {
     uint16_t networkNum = num; 
     wifi_ap_record_t apRecords[networkNum];
     debugPrintln("...");
@@ -318,7 +318,6 @@ void scanNetworks(uint16_t & num, wifi_ap_record_t & ap){
     debugPrintln("...");
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
     debugPrintln("...");
-
     // wifi scan, but without setting ssid, etc???
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA) );
     //ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, ) );
@@ -328,19 +327,18 @@ void scanNetworks(uint16_t & num, wifi_ap_record_t & ap){
         .ssid = 0,
         .bssid = 0,
         .channel = 0,
-        .show_hidden = true
+        .show_hidden = false
     };
     debugPrintln("...");
     ESP_ERROR_CHECK(esp_wifi_scan_start(&scan_config, true));
     debugPrintln("...");
     esp_err_t e = esp_wifi_scan_get_ap_records(&networkNum, apRecords);
     debugPrintln("...");
-    esp_wifi_scan_stop();
+    //esp_wifi_scan_stop();
     debugPrintln("...");
     if( e != ESP_OK){
         debugPrintln("error when retrieving ap records");
         debugPrintln(e);
-
         if(e == ESP_ERR_WIFI_NOT_INIT){
             // WiFi is not initialized by esp_wifi_init
             debugPrintln("esp_wifi_not_init");
@@ -360,10 +358,13 @@ void scanNetworks(uint16_t & num, wifi_ap_record_t & ap){
     debugPrintln("scan complete, filling return values");
     num = networkNum;
     debugPrintln(num);
-    ap = malloc(sizeof(apRecords));
-    
-    //for(int i =0; i< sizeof(apRecords); i++){
-    //    ap[i] = apRecords[i];
-    //}
-    
+    // ap = (wifi_ap_record_t*)malloc(sizeof(apRecords)+1);
+    // memcpy(ap, apRecords, sizeof(apRecords));
+
+    for(int i =0; i < networkNum; i++){
+       ap[i] = std::string((char*)apRecords[i].ssid);
+       debugPrintln(ap[i]);
+    }
+    debugPrintln("end");
+
 }

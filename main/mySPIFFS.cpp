@@ -47,7 +47,8 @@ WiFiStruct getActiveWifiInfo(){
                 debugPrint(ret);
                 debugPrint(")");
             }
-            return (WiFiStruct){0,"",""};
+            //return (WiFiStruct){0,"",""};
+            return WiFiStruct(0,"","");
         }
         
     }else{
@@ -60,7 +61,8 @@ WiFiStruct getActiveWifiInfo(){
     FILE* f = fopen("/spiffs/config.txt", "r"); 
     if (f == NULL) {
         debugPrintln("Failed to open file for reading");
-        return (WiFiStruct){0,"",""};
+        //return (WiFiStruct){0,"",""};
+        return WiFiStruct(0,"","");
     }
     debugPrintln("after file opening");
 
@@ -94,13 +96,15 @@ WiFiStruct getActiveWifiInfo(){
             return wfi[j];
         }else{
             debugPrintln("No Active Networks");
-            return (WiFiStruct){0,"",""};
+            //return (WiFiStruct){0,"",""};
+            return WiFiStruct(0,"","");
         }
 
     }else {
         debugPrintln("unknown error, look into spiffs file read in getActiveWiFiInfo()");
         fclose(f);
-        return (WiFiStruct){0,"",""};
+        //return (WiFiStruct){0,"",""};
+        return WiFiStruct(0,"","");
     }
 
 }
@@ -227,7 +231,8 @@ WiFiStruct defaultWiFiInfo(){
                 debugPrint(ret);
                 debugPrint(")");
             }
-            return (WiFiStruct){0,"",""};
+            //return (WiFiStruct){0,"",""};
+            return WiFiStruct(0,"","");
         }
         
     }else{
@@ -238,13 +243,14 @@ WiFiStruct defaultWiFiInfo(){
     // variables to store indexes
     int i = 0;
     int j = 0;
-    int thisone[10]={0};
+    int thisone[20]={0};
     debugPrintln("before opening file");
     FILE* f = fopen("/spiffs/config.txt", "r");
     debugPrintln("after opening file"); 
     if (f == NULL) {
         debugPrintln("Failed to open file for reading");
-        return (WiFiStruct){0,"",""};
+        //return (WiFiStruct){0,"",""};
+        return WiFiStruct(0,"","");
     }
     debugPrintln("after checking if file openend... it did btw");
     char line[100];
@@ -259,6 +265,7 @@ WiFiStruct defaultWiFiInfo(){
         wfi[i].active = atoi(strtok(line, ","));
         strcpy(wfi[i].ssid, strtok(NULL, ","));
         strcpy(wfi[i].pswd, strtok(NULL, ","));
+        printf("%d,%s,%s\n", wfi[i].active, wfi[i].ssid, wfi[i].pswd);
         i++;
         // TODO: maybe in the future find a way to catch an error of an empty line. Otherwise the file should end with a comma on the same line as the last entry
     }
@@ -269,40 +276,58 @@ WiFiStruct defaultWiFiInfo(){
     }
     fclose(f);
     debugPrintln("file closed.");
+
+    debugPrintln(wfi[2].active);
     
 
     uint16_t networkNum = 20; //DEFAULT_SCAN_LIST_SIZE; // set to max number of networks, return value later is actual number
     debugPrintln("file closed.");
-    wifi_ap_record_t apRecords[networkNum]; //={};
+    //wifi_ap_record_t apRecords[networkNum]; //={};
+    std::string apRecords[networkNum]={};
+    //ch
     debugPrintln("file closed.");
-    char temp[33]={};
+    //char temp[33];
     debugPrintln("file closed.");
     scanNetworks((uint16_t&)networkNum, apRecords);
     debugPrintln("file closed..");
     printf("%d\n", networkNum);
+    debugPrintln(wfi[2].active);
     if(networkNum > 0){
-        for(int l=0; l < (int)networkNum; l++){
+        for(int p=0; p < (int)networkNum; p++){
+            
+            debugPrintln(apRecords[p]);
+            
+
             for(int k = 0; k < i; k++){
                 // compare to known networks
                 // TODO: double check to make sure this returns the right types to compare... 
                 // apRecords.ssid is uint8_t, which I'm assuming is just the ascii number. Will casting to char fix it?
                 
-                memcpy(temp, apRecords[l].ssid, sizeof(apRecords[l].ssid));
-                debugPrintln(temp);
-                if(strcmp(temp, wfi[k].ssid)==0){
+                
+                if(strcmp(apRecords[p].c_str(), wfi[k].ssid)==0){
                     debugPrintln("compare successful");
                     // If active already, default to this one and change nothing
+
+                    
                     if(wfi[k].active == 1){
                         fclose(f);
+                        //free(apRecords);
+                        debugPrintln("already active");
+                        debugPrint(wfi[k].active);
+                        debugPrint(" ");
+                        debugPrint(wfi[k].ssid);
+                        debugPrint(" ");
+                        debugPrintln(wfi[k].pswd);
                         return wfi[k];
                     }
+                    //wfi[k].active = 1;
                     // collect indexes of available network connections
-                    thisone[j]=i;
+                    thisone[j]=k; 
+                    debugPrintln(wfi[k].active);
                     j++;
+                    debugPrint("this should be 1: ");
+                    debugPrintln(wfi[2].active);
                     
-                }else{
-                    // sort of redundant, but doing it anyways in case previous connection isn't available
-                    wfi[k].active = 0;
                 }
 
             }
@@ -311,7 +336,9 @@ WiFiStruct defaultWiFiInfo(){
     }else{
         debugPrintln("No networks found...");
     }
-    if(j>0){
+    debugPrintln(wfi[thisone[0]].active);
+    // This loop updates the active flag in the file
+    if(j>0){ // this means that at least one was matched
         f = fopen("/spiffs/config.txt", "w");    
         for(int m = 0; m <i; m++){
             // for now, just going with the first match and ignoring multiples
@@ -323,10 +350,23 @@ WiFiStruct defaultWiFiInfo(){
             } 
         }
         fclose(f);
+        //free(apRecords);
+        debugPrint("j > 0 active\n j= ");
+        debugPrintln(j);
+        debugPrintln(thisone[0]);
+        debugPrint(wfi[thisone[0]].active);
+        debugPrint(".");
+        debugPrint(wfi[thisone[0]].ssid);
+        debugPrint(".");
+        debugPrintln(wfi[thisone[0]].pswd);
         return wfi[thisone[0]];
     }else{
-        return (WiFiStruct){0,"",""}; // might need to return NULL. Not sure. 
+        //free(apRecords);
+        debugPrintln("returning empty");
+        //return (WiFiStruct){0,"",""}; // might need to return NULL. Not sure. 
+        return WiFiStruct(0,"","");
     }
+
 }
 
 bool getStrainGaugeParams(const Eigen::Matrix3d& m0, const Eigen::Matrix3d& m1, const Eigen::Matrix3d& m2, const Eigen::Matrix3d& m3){
@@ -447,13 +487,4 @@ bool saveStrainGaugeParams(Eigen::Matrix3d *m0, Eigen::Matrix3d *m1, Eigen::Matr
     debugPrintln("Closing spiffs file");
     return true;
 }
-
-
-
-
-
-
-
-
-
 
