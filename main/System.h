@@ -7,6 +7,7 @@
 #include "Weight.h"
 #include "Buttons.h"
 #include "IOTComms.h"
+#include "mySPIFFS.h"
 #include "display.h"
 #include "main.h"
 
@@ -22,6 +23,11 @@ public:
     {
         this->display = new DisplayX(); // constructor
         this->buttons = new ButtonsX(true);
+        this->weight = new WeightX();
+
+        this->wifiInfo = defaultWiFiInfo();
+
+        
     }
     ~SystemX(){}
 
@@ -109,32 +115,44 @@ public:
         return ret;
     }
 
+    void setWiFiInfo(WiFiStruct w){
+        xSemaphoreTake(deviceMutex, (TickType_t) 10);
+        wifiInfo = w;
+        xSemaphoreGive(deviceMutex);
+    }
+    WiFiStruct getWiFiInfo(){
+        xSemaphoreTake(deviceMutex, (TickType_t) 10);
+        static WiFiStruct ret = wifiInfo;
+        xSemaphoreGive(deviceMutex);
+        return ret;
+    }
 
-    DisplayX *display; // {};
-    ButtonsX *buttons; //{_debounce = true};
+    void validateDataAcrossObjects();
+
+
+    DisplayX *display; 
+    ButtonsX *buttons; 
     WeightX *weight;
     
 
 private:
-    const Device device;// = {"",""}; //{"",""};
+    const Device device;
     SemaphoreHandle_t deviceMutex = xSemaphoreCreateMutex();
     SemaphoreHandle_t pageMutex = xSemaphoreCreateMutex();
     SemaphoreHandle_t unitsMutex = xSemaphoreCreateMutex();
     SemaphoreHandle_t batteryMutex = xSemaphoreCreateMutex();
     SemaphoreHandle_t modeMutex = xSemaphoreCreateMutex();
-
+    SemaphoreHandle_t weightMutex = xSemaphoreCreateMutex();
     
-
-    void validateDataAcrossObjects();
-    
-    //BLEsetup();
  
     Units eUnits;
     int batteryLevel;
 
     MODE eMode = STANDARD;
     PAGE ePage = WEIGHTSTREAM;
-    bool callbackFlag = false;
+    bool callbackFlag = true;
+    WiFiStruct wifiInfo;
+    
 
 };
 

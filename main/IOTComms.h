@@ -8,7 +8,8 @@
 
 
 
-Units convertUnitsEnum(const char* v); 
+Units convertUnitsEnum(const char* v);
+std::string unitsToString(Units u); 
 
 void BLEsetup();
 void updateBTWeight(char * w);

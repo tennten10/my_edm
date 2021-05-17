@@ -112,7 +112,7 @@ void init_ulp_program(){
 Device populateStartData(){
     Device ret;
     //char* buf;
-    size_t buflen = 8;
+    size_t buflen = 9;
     // read NVS flash for SN and stuff...
     
     nvs_handle fctry_handle;
@@ -154,14 +154,13 @@ void app_main() {
 
     debugSetup();
     _sys = new SystemX(populateStartData());
+    BLEsetup();
 
-    //strainGaugeSetup();
+    
     
     // temporary for testing ota
     //setupOTA();
 
-
-    BLEsetup();
     
     std::string event;
     
@@ -197,6 +196,9 @@ void app_main() {
             }
             batTime = esp_timer_get_time()/1000;
         }
+        
+        _sys->validateDataAcrossObjects();
+        
 
 
         event = _sys->buttons->getEvents();
@@ -283,6 +285,6 @@ void app_main() {
 
             event = "";
         }
-        vTaskDelay(20);
+        vTaskDelay(20); // try reducing this to 10 if bluetooth issues come up again
     }
 }

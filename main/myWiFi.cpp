@@ -312,30 +312,32 @@ bool verifyWiFiInfo(char& s, char& p){ //WiFiStruct wfi
 void scanNetworks(uint16_t& num, std::string * ap) {
     uint16_t networkNum = num; 
     wifi_ap_record_t apRecords[networkNum];
-    debugPrintln("...");
+    // nvs init... ? not sure if I need to re-disable this when I'm done or not
+    esp_err_t ret = nvs_flash_init();
+    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+        // 1.OTA app partition table has a smaller NVS partition size than the non-OTA
+        // partition table. This size mismatch may cause NVS initialization to fail.
+        // 2.NVS partition contains data in new format and cannot be recognized by this version of code.
+        // If this happens, we erase NVS partition and initialize NVS again.
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        ret = nvs_flash_init();
+    }
+    ESP_ERROR_CHECK(ret);
     // wifi init
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-    debugPrintln("...");
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
-    debugPrintln("...");
     // wifi scan, but without setting ssid, etc???
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA) );
     //ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, ) );
     ESP_ERROR_CHECK(esp_wifi_start() );
-    debugPrintln("...");
     wifi_scan_config_t scan_config = {
         .ssid = 0,
         .bssid = 0,
         .channel = 0,
         .show_hidden = false
     };
-    debugPrintln("...");
     ESP_ERROR_CHECK(esp_wifi_scan_start(&scan_config, true));
-    debugPrintln("...");
     esp_err_t e = esp_wifi_scan_get_ap_records(&networkNum, apRecords);
-    debugPrintln("...");
-    //esp_wifi_scan_stop();
-    debugPrintln("...");
     if( e != ESP_OK){
         debugPrintln("error when retrieving ap records");
         debugPrintln(e);
@@ -358,8 +360,6 @@ void scanNetworks(uint16_t& num, std::string * ap) {
     debugPrintln("scan complete, filling return values");
     num = networkNum;
     debugPrintln(num);
-    // ap = (wifi_ap_record_t*)malloc(sizeof(apRecords)+1);
-    // memcpy(ap, apRecords, sizeof(apRecords));
 
     for(int i =0; i < networkNum; i++){
        ap[i] = std::string((char*)apRecords[i].ssid);

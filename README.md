@@ -14,7 +14,14 @@ Eigen is installed by just copying the folder with the header files. Had some is
 
 lvgl esp32 drivers are cloned in my own repo with some parts disabled and display register offsets modified to be defined specifically to the parts I'm using. 
 
+Need to flash the NVS fctry.csv file separately. Follow directions on https://medium.com/the-esp-journal/building-products-creating-unique-factory-data-images-3f642832a7a3
+the functions I ran from esp-idf command prompt that worked are
 
+1. ->>>     C:\Users\parr3\esp\esp-idf\components\nvs_flash\nvs_partition_generator> python nvs_partition_gen.py generate C:\Users\parr3\Documents\PlatformIO\Projects\SudoBoard\fctry.csv C:\Users\parr3\Documents\PlatformIO\Projects\SudoBoard\fctry.bin 0x4000
+
+2. ->>>     C:\Users\parr3\esp\esp-idf\components\esptool_py\esptool> esptool.py --port COM5 write_flash 0xE76000 C:\Users\parr3\Documents\PlatformIO\Projects\SudoBoard\fctry.bin
+
+Then pressing reset/prog buttons like normal to upload to the board
 
 Bluetooth Connections and Functions:
 --------------------------------------
@@ -23,3 +30,5 @@ Enter SSID first in SSID field with UUID "0000551d-60be-11eb-ae93-0242ac130002"
 This saves it temporarily in a global variable...
 Enter the password in UUID "0000fa55-60be-11eb-ae93-0242ac130002" 
 When the password is entered it verifies the ssid/pass combination and either saves them or throws the combo out. If the connection is unsuccessful, you need to re-enter the ssid followed by the password.
+
+Ok to complicate this further, BLE can only handle messages of 20 bytes. So any longer SSIDs and passwords need to be read/written in parts and put together later. Some people have used Notify for longer notifications

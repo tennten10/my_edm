@@ -105,6 +105,7 @@ void WeightX::readSensors(){
   // 0 and 0.1V, or between 3.2 and 3.3V
   // expect between 1.15 and 2.8V
 }
+
 std::string WeightX::truncateWeight( double d){
   //xSemaphoreTake(systemMutex, (TickType_t)10);
   //Units u = _sys.eUnits;
@@ -181,7 +182,12 @@ double WeightX::getWeight(){
   //double test = mTareOffset(0)*2.0;
   //debugPrintln(test);*/
   debugPrint( weight);
+  
   return weight;
+}
+
+std::string WeightX::getWeightStr(){
+  return truncateWeight(getWeight());;
 }
 
 void WeightX::tare(){

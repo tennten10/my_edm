@@ -14,9 +14,6 @@
 #include <string>
 #include "myWiFi.h"
 
-TaskHandle_t bluetooth_TH;
-
-
 
 static NimBLEServer* pServer;
 extern SystemX* _sys;
@@ -42,11 +39,11 @@ Units convertUnitsEnum(std::string v){
 }
 
 bool isBtConnected() {
-  if (pServer->getConnectedCount() > 0) {
-    return true;
-  } else {
-    return false;
-  }
+    if (pServer->getConnectedCount() > 0) {
+        return true;
+    } else {
+        return false;
+    }
 }
 
 
@@ -75,7 +72,7 @@ class ServerCallbacks: public NimBLEServerCallbacks {
           Latency: number of intervals allowed to skip.
           Timeout: 10 millisecond increments, try for 5x interval time for best results.
       */
-      pServer->updateConnParams(desc->conn_handle, 24, 48, 0, 60);
+      pServer->updateConnParams(desc->conn_handle, 24, 48, 0, 120);
     };
     void onDisconnect(NimBLEServer* pServer) {
       debugPrintln("Client disconnected - start advertising");
@@ -150,7 +147,7 @@ class DeviceCallbacks: public NimBLECharacteristicCallbacks {
 class BatteryCallbacks: public NimBLECharacteristicCallbacks {
     void onRead(NimBLECharacteristic* pCharacteristic) {
       debugPrint(pCharacteristic->getUUID().toString());
-      // example?, setValue((uint8_t*)wifi_read, strlen(wifi_read)+1);
+      
       pCharacteristic->setValue(_sys->getBattery());
       debugPrint(": onRead(), value: ");
       debugPrintln(pCharacteristic->getValue());
@@ -171,8 +168,8 @@ class WeightCallbacks: public NimBLECharacteristicCallbacks {
     */
     void onNotify(NimBLECharacteristic* pCharacteristic) {
       debugPrintln("Sending notification to clients");
-      static double temp = _sys->weight->getWeight();
-      pCharacteristic->setValue(reinterpret_cast<char*>(&temp));
+      //static double temp = _sys->weight->getWeightStr();
+      pCharacteristic->setValue(_sys->weight->getWeightStr().c_str());
     };
 
 
@@ -328,28 +325,23 @@ void updateBTWeight(char* w) {
   }
 }
 
-char* unitsToString(Units u) { // note: call free(returned_string) after this response is saved elsewhere
-  char* temp = (char*)malloc(3 * sizeof(char));
+std::string unitsToString(Units u) { // note: call free(returned_string) after this response is saved elsewhere
+  
   switch (u) {
     case g:
-      strcpy(temp,"g");
-      return temp;
+      return std::string("g");
       break;
     case kg:
-      strcpy(temp,"kg");
-      return temp;
+      return std::string("kg");
       break;
     case oz:
-      strcpy(temp,"oz");
-      return temp;
+      return std::string("oz");
       break;
     case lb:
-      strcpy(temp,"lb");
-      return temp;
+      return std::string("lb");
       break;
     default:
-      strcpy(temp,"");
-      return temp;
+      return std::string("err");
       break;
   }
 }
@@ -359,23 +351,26 @@ char* unitsToString(Units u) { // note: call free(returned_string) after this re
 void BLEsetup() {
   
   debugPrintln("Starting NimBLE Server");
+
   /** sets device name */
   NimBLEDevice::init("SudoBoard");
+
   /** Optional: set the transmit power, default is 3db */
   NimBLEDevice::setPower(ESP_PWR_LVL_P3); /** +9db */
+
   /** Set the IO capabilities of the device, each option will trigger a different pairing method.
       BLE_HS_IO_DISPLAY_ONLY    - Passkey pairing
       BLE_HS_IO_DISPLAY_YESNO   - Numeric comparison pairing
       BLE_HS_IO_NO_INPUT_OUTPUT - DEFAULT setting - just works pairing
   */
- 
   NimBLEDevice::setSecurityIOCap(BLE_HS_IO_NO_INPUT_OUTPUT);
+
   /** 2 different ways to set security - both calls achieve the same result.
       no bonding, no man in the middle protection, secure connections.
 
       These are the default values, only shown here for demonstration.
   */
-  //NimBLEDevice::setSecurityAuth(false, false, true);
+  NimBLEDevice::setSecurityAuth(false, false, true);
   //NimBLEDevice::setSecurityAuth(/*BLE_SM_PAIR_AUTHREQ_BOND | BLE_SM_PAIR_AUTHREQ_MITM |*/ BLE_SM_PAIR_AUTHREQ_SC);
 
   pServer = NimBLEDevice::createServer();
@@ -475,9 +470,9 @@ void BLEsetup() {
         NIMBLE_PROPERTY::READ_ENC |  // only allow reading if paired / encrypted
         NIMBLE_PROPERTY::WRITE_ENC   // only allow writing if paired / encrypted
       );
-  char *u2s = unitsToString(_sys->getUnits());
+  std::string u2s = unitsToString(_sys->getUnits());
   pUnitsCharacteristic->setValue(u2s);
-  free(u2s);
+  
   pUnitsCharacteristic->setCallbacks(&wgtCallbacks);
 
   //Release Semaphore
@@ -523,13 +518,13 @@ void BLEsetup() {
   pOffCharacteristic->setValue("no");
   pOffCharacteristic->setCallbacks(&actCallbacks);
 
-  char wifi_read[100];//={};
-  char w_ssid[32];//={};
-  char w_pass[64];//={};
-  WiFiStruct w = defaultWiFiInfo();
+  char wifi_read[100]={};
+  char w_ssid[32]={};
+  char w_pass[64]={};
+  WiFiStruct w = _sys->getWiFiInfo();
   sprintf(w_ssid, "%s", w.ssid);
   sprintf(w_pass, "%s", w.pswd);
-  sprintf(wifi_read, "%s,%s", w.ssid, w.pswd);
+  //sprintf(wifi_read, "%s,%s", w.ssid, w.pswd);
   debugPrint(" wifi_read value: ");
   debugPrintln(wifi_read);
   
@@ -544,6 +539,7 @@ void BLEsetup() {
 
   //pSSIDCharacteristic->setValue((uint8_t*)w_ssid, strlen(w_ssid)+1);
   pSSIDCharacteristic->setValue(w_ssid);
+  //pSSIDCharacteristic->setValue("nothing");
   pSSIDCharacteristic->setCallbacks(&actCallbacks); 
 
   NimBLECharacteristic* pPASSCharacteristic = pActionService->createCharacteristic(
@@ -555,7 +551,8 @@ void BLEsetup() {
       );
   
 
-  pPASSCharacteristic->setValue(w_pass); 
+  pPASSCharacteristic->setValue(w_pass);
+  //pPASSCharacteristic->setValue("shortpass"); 
   pPASSCharacteristic->setCallbacks(&actCallbacks); 
 
   /** Start the services when finished creating all Characteristics and Descriptors */
@@ -567,6 +564,10 @@ void BLEsetup() {
   NimBLEAdvertising* pAdvertising = NimBLEDevice::getAdvertising();
   /** Add the services to the advertisment data **/
   pAdvertising->addServiceUUID(pDeviceService->getUUID());
+  pAdvertising->addServiceUUID(pBatteryService->getUUID());
+  pAdvertising->addServiceUUID(pWeightService->getUUID());
+  pAdvertising->addServiceUUID(pActionService->getUUID());
+  
   /** If your device is battery powered you may consider setting scan response
       to false as it will extend battery life at the expense of less data sent.
   */

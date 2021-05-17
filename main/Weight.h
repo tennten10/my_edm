@@ -82,7 +82,7 @@ public:
     void tare();
     void sleepPreparation();
     void setWeightUpdateRate(int r); // update rate in milliseconds
-    double getWeight();
+    std::string getWeightStr();
     Units getLocalUnits(){
 
         return localUnits;
@@ -101,6 +101,7 @@ private:
     double readVoltage(int pin);
     double ReadVoltage(adc1_channel_t pin);
     void readSensors();
+    double getWeight();
     std::string truncateWeight(double d);
     //QueueHandle_t weightQueue;
 
