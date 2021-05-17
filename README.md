@@ -1,136 +1,34 @@
-# LVGL project for ESP32
+# SudoChef Board code
 
-This is an ESP32 demo project showcasing LVGL v7 with support for several display controllers and touch controllers.
-The demo application is the `lv_demo_widgets` project from the [lv_examples](https://github.com/lvgl/lv_examples) repository.
+This code is configured for 3 versions of prototypes at the moment.
 
-- Version of ESP-IDF required 4.2. NOTE: We're trying to make this repo backwards compatible, usage of idf.py is encouraged.
-- Version of LVGL used: 7.9.
-- Version of lv_examples used: 7.9.
+V1 is a separate base design with a cutting surface attachable to the top. It uses half of the lcd screen to create a skinny pass-through display.
+V3 is a flipable design with a projection type display
+V6 is a one sided version using the majority of an lcd screen passing through one layer of wood. 
 
-#### Table of content
-- [Get started](#get-started)
-- [Use LVGL in your ESP-IDF project](#use-lvgl-in-your-esp-idf-project)
-- [Use lvgl_esp32_drivers in your project](#use-lvgl_esp32_drivers-in-your-project)
-- [Platformio support](#platformio-support)
-- [ESP32-S2 Support](#esp32-s2-support)
+Configuration takes place by running MenuConfig, and in the a_config file. Pin defs are done in separate files. 
 
-Example demo for TFT displays:
+If updating the data/config.txt or data/calib.txt, config needs to end on a comma at the end of a populated line. calib needs to end on an empty new line
 
-![Example GUI_DEMO with ESP32 using LVGL](images/new_photo.jpg)
+Eigen is installed by just copying the folder with the header files. Had some issues when installing through Git, so this method is just easier and it shouldn't change that much in the future. 
 
-Monochrome support:
+lvgl esp32 drivers are cloned in my own repo with some parts disabled and display register offsets modified to be defined specifically to the parts I'm using. 
 
-![Example_monochrome demo with ESP32 using LVGL](images/new_mono.jpg)
+Need to flash the NVS fctry.csv file separately. Follow directions on https://medium.com/the-esp-journal/building-products-creating-unique-factory-data-images-3f642832a7a3
+the functions I ran from esp-idf command prompt that worked are
 
-## Display and touch controllers
+1. ->>>     C:\Users\parr3\esp\esp-idf\components\nvs_flash\nvs_partition_generator> python nvs_partition_gen.py generate C:\Users\parr3\Documents\PlatformIO\Projects\SudoBoard\fctry.csv C:\Users\parr3\Documents\PlatformIO\Projects\SudoBoard\fctry.bin 0x4000
 
-The display and touch (indev) controllers are now into it's own repository, you can find it [here](https://github.com/lvgl/lvgl_esp32_drivers).
-To report any issue or add new display or touch (indev) drivers you can do so in the `lvgl_esp32_drivers` repo.
+2. ->>>     C:\Users\parr3\esp\esp-idf\components\esptool_py\esptool> esptool.py --port COM5 write_flash 0xE76000 C:\Users\parr3\Documents\PlatformIO\Projects\SudoBoard\fctry.bin
 
-## Get started
+Then pressing reset/prog buttons like normal to upload to the board
 
-### Prerequisites
+Bluetooth Connections and Functions:
+--------------------------------------
+Set Wifi:
+Enter SSID first in SSID field with UUID "0000551d-60be-11eb-ae93-0242ac130002"
+This saves it temporarily in a global variable...
+Enter the password in UUID "0000fa55-60be-11eb-ae93-0242ac130002" 
+When the password is entered it verifies the ssid/pass combination and either saves them or throws the combo out. If the connection is unsuccessful, you need to re-enter the ssid followed by the password.
 
-- ESP-IDF Framework.
-
-### Note
-
-This project tries to be compatible with both the ESP-IDF v3.x and v4.0, but using v4.0 is recommended.
-Instructions assume you are using the v4.x toolchain, otherwise use the make commands, e.g. instead of running `idf.py menuconfig`, run `make menuconfig`.
-
-### Build and run the demo.
-
-1. Clone this project by `git clone --recurse-submodules https://github.com/lvgl/lv_port_esp32.git`, this will pull this repo and its submodules.
-
-2. Get into the created `lv_port_esp32` directory.
-
-3. Run `idf.py menuconfig`
-
-4. Configure LVGL in `Components config->LVGL Configuration`. For monochrome displays use the mono theme and we suggest enabling the `unscii 8` font.
-
-5. Configure your display and/or touch controllers in `Components config->LVGL TFT Display Configuration` and `Components config->LVGL TOUCH Configuration`.
-
-6. Store your project configuration.
-
-7. Build the project with `idf.py build`
-
-8. If the build don't throw any errors, flash the demo with `idf.py -p (YOUR SERIAL PORT) flash` (with `make` this is just `make flash` - in 3.x PORT is configured in `menuconfig`)
-
-## Use LVGL in your ESP-IDF project
-
-LVGL now includes a Kconfig file which is used to configure most of the LVGL configuration options via menuconfig, so it's not necessary to use a custom `lv_conf.h` file.
-
-It is recommended to add LVGL as a submodule in your IDF project's git repo.
-
-From your project's root directory:
-1. Create a directory named `components` (if you don't have one already) with `mkdir -p components`.
-2. Clone the lvgl repository inside the `components` directory with `git submodule add https://github.com/lvgl/lvgl.git components/lvgl`
-3. Run `idf.py menuconfig`, go to `Component config` then `LVGL configuration` to configure LVGL.
-
-## Use lvgl_esp32_drivers in your project
-
-It is recommended to add [lvgl_esp32_drivers](https://github.com/lvgl/lvgl_esp32_drivers) as a submodule in your IDF project's git repo.
-
-From your project's root directory:
-1. Create a directory named `components` (if you don't have one already) with `mkdir -p components`.
-2. Clone the lvgl_esp32_drivers repository inside the `components` directory with `git submodule add https://github.com/lvgl/lvgl_esp32_drivers.git components/lvgl_esp32_drivers`
-3. Run `idf.py menuconfig`, go to `Component config` then `LVGL TFT configuration` and `LVGL TFT Display configuration` to configure lvgl_esp32_drivers.
-
-## Platformio support
-
-Using the [lv_platformio](https://github.com/lvgl/lv_platformio) project add the following lines to `platformio.ini` file:
-
-```
-[env:esp32]
-platform = espressif32
-framework = espidf
-board = esp-wrover-kit
-```
-
-Change the default environment to `default_envs = esp32`.
-
-Modify the `main.c` like this:
-
-```c
-#include "lvgl.h"
-
-// #include "driver.h"
-
-#include "demo.h"
-
-int app_main(void)
-{
-    lv_init();
-
-    /* Initialize your hardware. */
-    
-    /* hw_init(); */
-
-    demo_create();
-
-    /* Create the UI or start a task for it.
-     * In the end, don't forget to call `lv_task_handler` in a loop. */
-
-    /* hw_loop(); */
-
-    return 0;
-}
-```
-
-For more information see: [platformio with espidf framework compability](https://github.com/lvgl/lv_port_esp32/issues/168).
-
-# ESP32-S2 Support
-
-Support for ESP32-S2 variant is Work In Progress.
-Smaller displays (e.g. 320x240) work fine, but larger ones need testing.
-
-## Background
-
-ESP32-S2 has less on-chip SRAM than its predecessor ESP32 (520kB vs. 320kB).
-This causes problems with memory allocation with large LVGL display buffers as they don't fit into the on-chip memory
-and external PSRAM is not accessible by DMA.
-
-Moreover, static allocation to external PSRAM is not yet supported
-(see [GitHub issue](https://github.com/espressif/esp-idf/issues/6162)).
-
-At this momement, the buffers are dynamicaly allocated with DMA capabilty and memory allocator handles the rest.
+Ok to complicate this further, BLE can only handle messages of 20 bytes. So any longer SSIDs and passwords need to be read/written in parts and put together later. Some people have used Notify for longer notifications

@@ -53,18 +53,18 @@ static esp_err_t validate_image_header(esp_app_desc_t *new_app_info) // This che
     return ESP_OK;
 }
 
-void advanced_ota_example_task(void *pvParameter)
+void ota_task(void *pvParameter)
 {
-    debugPrintln("Starting Advanced OTA example");
+    debugPrintln("Starting OTA Task");
 
     esp_err_t ota_finish_err = ESP_OK;
     esp_http_client_config_t config = {
-        .url = CONFIG_EXAMPLE_FIRMWARE_UPGRADE_URL,
-        .cert_pem = (char *)server_cert_pem_start,
+        .url = UPDATE_URL, // CONFIG_EXAMPLE_FIRMWARE_UPGRADE_URL,
+        //.cert_pem = (char *)server_cert_pem_start,
         .timeout_ms = CONFIG_EXAMPLE_OTA_RECV_TIMEOUT,
     };
 
-
+    debugPrintln("Set http client config");
 #ifdef CONFIG_EXAMPLE_SKIP_COMMON_NAME_CHECK
     config.skip_cert_common_name_check = true;
 #endif
@@ -72,8 +72,10 @@ void advanced_ota_example_task(void *pvParameter)
     esp_https_ota_config_t ota_config = {
         .http_config = &config,
     };
-
+    debugPrintln("Set ota http config");
     esp_https_ota_handle_t https_ota_handle = NULL;
+    debugPrintln("before beginning ota");
+    //debugPrintln(ota_config.http_config);
     esp_err_t err = esp_https_ota_begin(&ota_config, &https_ota_handle);
     if (err != ESP_OK) {
         debugPrintln("ESP HTTPS OTA Begin failed");
@@ -91,6 +93,7 @@ void advanced_ota_example_task(void *pvParameter)
         debugPrintln("image header verification failed");
         goto ota_end;
     }
+    debugPrintln("Made it past header verification so that should be fine");
 
     while (1) {
         err = esp_https_ota_perform(https_ota_handle);
@@ -125,7 +128,7 @@ ota_end:
     }
 }
 
-// Make sure this is called before execOTA()
+// Make sure this is called before executeOTA()
 // This sets up the WiFi and server connection prereqs
 void setupOTA() {
 
@@ -141,12 +144,13 @@ void setupOTA() {
     /* Ensure to disable any WiFi power save mode, this allows best throughput
      * and hence timings for overall OTA operation.
      */
-    esp_wifi_set_ps(WIFI_PS_NONE);
+    // Since WiFi and BT working together needs one not taking all the cpu time, we need some sleep time for it to work. 
+    esp_wifi_set_ps(WIFI_PS_MIN_MODEM); //WIFI_PS_NONE);
 
 }
 
-void execOTA(){
-    xTaskCreate(&advanced_ota_example_task, "advanced_ota_example_task", 1024 * 8, NULL, 5, NULL);
+void executeOTA(){
+    xTaskCreate(&ota_task, "ota_task", 1024 * 8, NULL, 5, NULL);
 }
 
 

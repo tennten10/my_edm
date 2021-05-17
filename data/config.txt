@@ -1,3 +1,3 @@
 0,ATT232,7272032758,
 0,EchoLink,schoolhouse,
-0,RamenCastle,captain123,
+1,RamenCastle,captain123,

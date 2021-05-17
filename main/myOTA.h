@@ -6,8 +6,8 @@
 //void setSSID(char &text);
 //void setPSWD(char &text);
 void setupOTA();
-void execOTA();
-void resetOTA();
+void executeOTA();
+//void resetOTA();
 // void retry();
 // void setup2();
 
