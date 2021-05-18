@@ -103,6 +103,8 @@ void init_ulp_program(){
     err = ulp_run(&ulp_entry - RTC_SLOW_MEM);
     ESP_ERROR_CHECK(err);
 
+    ESP_ERROR_CHECK( esp_sleep_enable_ulp_wakeup() );
+
     //go to sleep
     esp_deep_sleep_start();
 
@@ -148,16 +150,12 @@ void app_main() {
         //printPulseCount();
         ulp_deinit();
     }
-    //systemMutex = xSemaphoreCreateMutex();
-    //pageMutex = xSemaphoreCreateMutex();
-    debugSetup();
 
 
     debugSetup();
     _sys = new SystemX(populateStartData());
     BLEsetup();
 
-    
     
     // temporary for testing ota
     //setupOTA();
@@ -232,8 +230,11 @@ void app_main() {
                     }
                     if (event.compare(0,4,"NLNN", 0, 4) == 0)
                     {
+                        _sys->display->displayUpdateScreen(0);
+                        if(setupOTA() == 0){
                         // temporary for testing ota
-                        executeOTA();
+                            executeOTA();
+                        }
                         
                     }
                 }

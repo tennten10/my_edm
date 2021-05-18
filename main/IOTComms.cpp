@@ -14,296 +14,329 @@
 #include <string>
 #include "myWiFi.h"
 
+//static 
+NimBLEServer *pServer;
+extern SystemX *_sys;
 
-static NimBLEServer* pServer;
-extern SystemX* _sys;
-
-
-Units convertUnitsEnum(std::string v){
-    Units retVal;
-    if(v.compare("g")){
-        retVal = g;
-        return retVal;
-    }else if(v.compare("kg")){
-        retVal = kg;
-        return retVal;
-    }else if(v.compare("oz")){
-        retVal = oz;
-        return retVal;
-    }else if(v.compare("lb")){
-        retVal = lb;
-        return retVal;
-    }
-    return (Units)NULL;
-      // g, kg, oz, lb
+Units convertUnitsEnum(std::string v)
+{
+  Units retVal;
+  if (v.compare("g"))
+  {
+    retVal = g;
+    return retVal;
+  }
+  else if (v.compare("kg"))
+  {
+    retVal = kg;
+    return retVal;
+  }
+  else if (v.compare("oz"))
+  {
+    retVal = oz;
+    return retVal;
+  }
+  else if (v.compare("lb"))
+  {
+    retVal = lb;
+    return retVal;
+  }
+  return (Units)NULL;
+  // g, kg, oz, lb
 }
 
-bool isBtConnected() {
-    if (pServer->getConnectedCount() > 0) {
-        return true;
-    } else {
-        return false;
-    }
+bool isBtConnected()
+{
+  if (pServer->getConnectedCount() > 0)
+  {
+    return true;
+  }
+  else
+  {
+    return false;
+  }
 }
-
-
-
 
 /* */
 /* BLE changes below this. Probably deleting all previous stuff, but will comment out for now. */
 /* */
 
-class ServerCallbacks: public NimBLEServerCallbacks {
-    void onConnect(NimBLEServer* pServer) {
-      debugPrintln("Client connected");
-      debugPrintln("Multi-connect support: start advertising");
-      NimBLEDevice::startAdvertising();
-    };
-    /** Alternative onConnect() method to extract details of the connection.
+class ServerCallbacks : public NimBLEServerCallbacks
+{
+  void onConnect(NimBLEServer *pServer)
+  {
+    debugPrintln("Client connected");
+    debugPrintln("Multi-connect support: start advertising");
+    NimBLEDevice::startAdvertising();
+  };
+  /** Alternative onConnect() method to extract details of the connection.
         See: src/ble_gap.h for the details of the ble_gap_conn_desc struct.
     */
-    void onConnect(NimBLEServer* pServer, ble_gap_conn_desc* desc) {
-      debugPrint("Client address: ");
-      debugPrintln(NimBLEAddress(desc->peer_ota_addr).toString().c_str());
-      /** We can use the connection handle here to ask for different connection parameters.
+  void onConnect(NimBLEServer *pServer, ble_gap_conn_desc *desc)
+  {
+    debugPrint("Client address: ");
+    debugPrintln(NimBLEAddress(desc->peer_ota_addr).toString().c_str());
+    /** We can use the connection handle here to ask for different connection parameters.
           Args: connection handle, min connection interval, max connection interval
           latency, supervision timeout.
           Units; Min/Max Intervals: 1.25 millisecond increments.
           Latency: number of intervals allowed to skip.
           Timeout: 10 millisecond increments, try for 5x interval time for best results.
       */
-      pServer->updateConnParams(desc->conn_handle, 24, 48, 0, 120);
-    };
-    void onDisconnect(NimBLEServer* pServer) {
-      debugPrintln("Client disconnected - start advertising");
-      NimBLEDevice::startAdvertising();
-    };
+    pServer->updateConnParams(desc->conn_handle, 24, 48, 0, 120);
+  };
+  void onDisconnect(NimBLEServer *pServer)
+  {
+    debugPrintln("Client disconnected - start advertising");
+    NimBLEDevice::startAdvertising();
+  };
 
-    /********************* Security handled here **********************
+  /********************* Security handled here **********************
     ****** Note: these are the same return values as defaults ********/
-    uint32_t onPassKeyRequest() {
-      debugPrintln("Server Passkey Request");
-      /** This should return a random 6 digit number for security
+  uint32_t onPassKeyRequest()
+  {
+    debugPrintln("Server Passkey Request");
+    /** This should return a random 6 digit number for security
           or make your own static passkey as done here.
       */
-      return 123456;
-    };
+    return 123456;
+  };
 
-    bool onConfirmPIN(uint32_t pass_key) {
-      debugPrint("The passkey YES/NO number: "); debugPrintln((int)pass_key);
-      /** Return false if passkeys don't match. */
-      return true;
-    };
+  bool onConfirmPIN(uint32_t pass_key)
+  {
+    debugPrint("The passkey YES/NO number: ");
+    debugPrintln((int)pass_key);
+    /** Return false if passkeys don't match. */
+    return true;
+  };
 
-    void onAuthenticationComplete(ble_gap_conn_desc* desc) {
-      /** Check that encryption was successful, if not we disconnect the client */
-      if (!desc->sec_state.encrypted) {
-        NimBLEDevice::getServer()->disconnect(desc->conn_handle);
-        debugPrintln("Encrypt connection failed - disconnecting client");
-        return;
-      }
-      debugPrintln("Starting BLE work!");
-    };
+  void onAuthenticationComplete(ble_gap_conn_desc *desc)
+  {
+    /** Check that encryption was successful, if not we disconnect the client */
+    if (!desc->sec_state.encrypted)
+    {
+      NimBLEDevice::getServer()->disconnect(desc->conn_handle);
+      debugPrintln("Encrypt connection failed - disconnecting client");
+      return;
+    }
+    debugPrintln("Starting BLE work!");
+  };
 };
 
 /** Handler class for characteristic actions */
-class DeviceCallbacks: public NimBLECharacteristicCallbacks {
-    void onRead(NimBLECharacteristic* pCharacteristic) {
-      debugPrint(pCharacteristic->getUUID().toString().c_str());
-      debugPrint(": onRead(), value: ");
-      debugPrintln(pCharacteristic->getValue().c_str());
-    };
+class DeviceCallbacks : public NimBLECharacteristicCallbacks
+{
+  void onRead(NimBLECharacteristic *pCharacteristic)
+  {
+    debugPrint(pCharacteristic->getUUID().toString().c_str());
+    debugPrint(": onRead(), value: ");
+    debugPrintln(pCharacteristic->getValue().c_str());
+  };
 
-    void onWrite(NimBLECharacteristic* pCharacteristic) {
-      debugPrint(pCharacteristic->getUUID().toString().c_str());
-      debugPrint(": onWrite(), value: ");
-      debugPrintln(pCharacteristic->getValue().c_str());
-    };
-    /** Called before notification or indication is sent,
+  void onWrite(NimBLECharacteristic *pCharacteristic)
+  {
+    debugPrint(pCharacteristic->getUUID().toString().c_str());
+    debugPrint(": onWrite(), value: ");
+    debugPrintln(pCharacteristic->getValue().c_str());
+  };
+  /** Called before notification or indication is sent,
         the value can be changed here before sending if desired.
     */
-    void onNotify(NimBLECharacteristic* pCharacteristic) {
-      debugPrintln("Sending notification to clients");
-    };
+  void onNotify(NimBLECharacteristic *pCharacteristic)
+  {
+    debugPrintln("Sending notification to clients");
+  };
 
-
-    /** The status returned in status is defined in NimBLECharacteristic.h.
+  /** The status returned in status is defined in NimBLECharacteristic.h.
         The value returned in code is the NimBLE host return code.
     */
-    void onStatus(NimBLECharacteristic* pCharacteristic, Status status, int code) {
-      debugPrint("Notification/Indication status code: ");
-      debugPrint(status);
-      debugPrint(", return code: ");
-      debugPrint( code);
-      debugPrint(", ");
-      debugPrint( NimBLEUtils::returnCodeToString(code));
-      debugPrintln("");
-    };
-
-    
+  void onStatus(NimBLECharacteristic *pCharacteristic, Status status, int code)
+  {
+    debugPrint("Notification/Indication status code: ");
+    debugPrint(status);
+    debugPrint(", return code: ");
+    debugPrint(code);
+    debugPrint(", ");
+    debugPrint(NimBLEUtils::returnCodeToString(code));
+    debugPrintln("");
+  };
 };
 
 /** Handler class for battery service actions */
-class BatteryCallbacks: public NimBLECharacteristicCallbacks {
-    void onRead(NimBLECharacteristic* pCharacteristic) {
-      debugPrint(pCharacteristic->getUUID().toString());
-      
-      pCharacteristic->setValue(_sys->getBattery());
-      debugPrint(": onRead(), value: ");
-      debugPrintln(pCharacteristic->getValue());
-      debugPrintln("getBattery received");
-    };
+class BatteryCallbacks : public NimBLECharacteristicCallbacks
+{
+  void onRead(NimBLECharacteristic *pCharacteristic)
+  {
+    debugPrint(pCharacteristic->getUUID().toString());
+
+    pCharacteristic->setValue(_sys->getBattery());
+    debugPrint(": onRead(), value: ");
+    debugPrintln(pCharacteristic->getValue());
+    debugPrintln("getBattery received");
+  };
 };
 
-class WeightCallbacks: public NimBLECharacteristicCallbacks {
-    void onRead(NimBLECharacteristic* pCharacteristic) {
-      debugPrint(pCharacteristic->getUUID().toString());
-      debugPrint(": onRead(), value: ");
-      debugPrintln(pCharacteristic->getValue());
+class WeightCallbacks : public NimBLECharacteristicCallbacks
+{
+  void onRead(NimBLECharacteristic *pCharacteristic)
+  {
+    debugPrint(pCharacteristic->getUUID().toString());
+    debugPrint(": onRead(), value: ");
+    debugPrintln(pCharacteristic->getValue());
+  };
 
-    };
-
-    /** Called before notification or indication is sent,
+  /** Called before notification or indication is sent,
         the value can be changed here before sending if desired.
     */
-    void onNotify(NimBLECharacteristic* pCharacteristic) {
-      debugPrintln("Sending notification to clients");
-      //static double temp = _sys->weight->getWeightStr();
-      pCharacteristic->setValue(_sys->weight->getWeightStr().c_str());
-    };
+  void onNotify(NimBLECharacteristic *pCharacteristic)
+  {
+    debugPrintln("Sending notification to clients");
+    //static double temp = _sys->weight->getWeightStr();
+    pCharacteristic->setValue(_sys->weight->getWeightStr().c_str());
+  };
 
-
-    /** The status returned in status is defined in NimBLECharacteristic.h.
+  /** The status returned in status is defined in NimBLECharacteristic.h.
         The value returned in code is the NimBLE host return code.
     */
-    void onStatus(NimBLECharacteristic* pCharacteristic, Status status, int code) {
-      /*String str = ("Notification/Indication status code: ");
+  void onStatus(NimBLECharacteristic *pCharacteristic, Status status, int code)
+  {
+    /*String str = ("Notification/Indication status code: ");
         str += status;
         str += ", return code: ";
         str += code;
         str += ", ";
         str += NimBLEUtils::returnCodeToString(code);
-        debugPrintln(str); */ // saves 108 bytes
-      debugPrint("Notification/Indication status code: ");
-      debugPrint(status);
-      debugPrint(", return code: ");
-      debugPrint( code);
-      debugPrint(", ");
-      debugPrintln( NimBLEUtils::returnCodeToString(code));
+        debugPrintln(str); */
+    // saves 108 bytes
+    debugPrint("Notification/Indication status code: ");
+    debugPrint(status);
+    debugPrint(", return code: ");
+    debugPrint(code);
+    debugPrint(", ");
+    debugPrintln(NimBLEUtils::returnCodeToString(code));
+  };
+};
 
-    };
+class ActionCallbacks : public NimBLECharacteristicCallbacks
+{
+  void onRead(NimBLECharacteristic *pCharacteristic)
+  {
+    debugPrint(pCharacteristic->getUUID().toString().c_str());
+    debugPrint(": onRead(), value: ");
+    debugPrintln(pCharacteristic->getValue().c_str());
+  };
 
- };
+  void onWrite(NimBLECharacteristic *pCharacteristic)
+  {
+    debugPrint(pCharacteristic->getUUID().toString().c_str());
+    debugPrint(": onWrite(), value: ");
+    debugPrintln(pCharacteristic->getValue().c_str());
+    static WiFiStruct w;
 
-class ActionCallbacks: public NimBLECharacteristicCallbacks {
-    void onRead(NimBLECharacteristic* pCharacteristic) {
-      debugPrint(pCharacteristic->getUUID().toString().c_str());
-      debugPrint(": onRead(), value: ");
-      debugPrintln(pCharacteristic->getValue().c_str());
-    };
+    // if writing new wifi info
+    if (strcmp(pCharacteristic->getUUID().toString().c_str(), "0000551d-60be-11eb-ae93-0242ac130002") == 0)
+    {
+      char line[100];
+      //WiFiStruct w;
+      strcpy(line, pCharacteristic->getValue().c_str());
+      w.active = 0;
+      strcpy(w.ssid, line);
+      //pCharacteristic->setValue(line);
+      debugPrintln("writing ssid in callback");
+      //strcpy(w.ssid, strtok(NULL, ","));
+      //strcpy(w.pswd, strtok(NULL, ","));
+      //setWiFiInfo(w);
+    }
 
-    void onWrite(NimBLECharacteristic* pCharacteristic) {
-        debugPrint(pCharacteristic->getUUID().toString().c_str());
-        debugPrint(": onWrite(), value: ");
-        debugPrintln(pCharacteristic->getValue().c_str());
-        static WiFiStruct w;
+    // if writing new wifi info
+    if (strcmp(pCharacteristic->getUUID().toString().c_str(), "0000fa55-60be-11eb-ae93-0242ac130002") == 0)
+    {
+      //char line [100];
+      //WiFiStruct w;
+      //strcpy(line, pCharacteristic->getValue().c_str());
+      //w.active = 1;
+      //strcpy(w.ssid, strtok(NULL, ","));
+      //strcpy(w.pswd, strtok(NULL, ","));
+      // only check wifi and save after password is saved
+      debugPrintln("writing password in callback");
 
-        // if writing new wifi info
-        if (strcmp(pCharacteristic->getUUID().toString().c_str(), "0000551d-60be-11eb-ae93-0242ac130002") == 0) {
-            char line [100];
-            //WiFiStruct w;
-            strcpy(line, pCharacteristic->getValue().c_str());
-            w.active = 0;
-            strcpy(w.ssid, line);
-            //pCharacteristic->setValue(line);
-            debugPrintln("writing ssid in callback");
-            //strcpy(w.ssid, strtok(NULL, ","));
-            //strcpy(w.pswd, strtok(NULL, ","));
-            //setWiFiInfo(w);
-        }
-
-        // if writing new wifi info
-        if (strcmp(pCharacteristic->getUUID().toString().c_str(), "0000fa55-60be-11eb-ae93-0242ac130002") == 0) {
-            //char line [100];
-            //WiFiStruct w;
-            //strcpy(line, pCharacteristic->getValue().c_str());
-            //w.active = 1;
-            //strcpy(w.ssid, strtok(NULL, ","));
-            //strcpy(w.pswd, strtok(NULL, ","));
-            // only check wifi and save after password is saved
-            debugPrintln("writing password in callback");
-
-            strcpy(w.pswd, pCharacteristic->getValue().c_str());
-            if(verifyWiFiInfo(*w.ssid, *w.pswd)){
-                w.active = 1;
-                setWiFiInfo(w);
-            }
-            
-        }
-    };
-    /** Called before notification or indication is sent,
+      strcpy(w.pswd, pCharacteristic->getValue().c_str());
+      if (verifyWiFiInfo(*w.ssid, *w.pswd))
+      {
+        w.active = 1;
+        setWiFiInfo(w);
+      }
+    }
+  };
+  /** Called before notification or indication is sent,
         the value can be changed here before sending if desired.
     */
-    void onNotify(NimBLECharacteristic* pCharacteristic) {
-        debugPrintln("Sending notification to clients");
-    };
+  void onNotify(NimBLECharacteristic *pCharacteristic)
+  {
+    debugPrintln("Sending notification to clients");
+  };
 
-
-    /** The status returned in status is defined in NimBLECharacteristic.h.
+  /** The status returned in status is defined in NimBLECharacteristic.h.
         The value returned in code is the NimBLE host return code.
     */
-    void onStatus(NimBLECharacteristic* pCharacteristic, Status status, int code) {
-      /*String str = ("Notification/Indication status code: ");
+  void onStatus(NimBLECharacteristic *pCharacteristic, Status status, int code)
+  {
+    /*String str = ("Notification/Indication status code: ");
         str += status;
         str += ", return code: ";
         str += code;
         str += ", ";
         str += NimBLEUtils::returnCodeToString(code);
-        debugPrintln(str); */ // saves 108 bytes
-      debugPrint("Notification/Indication status code: ");
-      debugPrint(status);
-      debugPrint(", return code: ");
-      debugPrint( code);
-      debugPrint(", ");
-      debugPrintln( NimBLEUtils::returnCodeToString(code));
-    };
-
-   
+        debugPrintln(str); */
+    // saves 108 bytes
+    debugPrint("Notification/Indication status code: ");
+    debugPrint(status);
+    debugPrint(", return code: ");
+    debugPrint(code);
+    debugPrint(", ");
+    debugPrintln(NimBLEUtils::returnCodeToString(code));
+  };
 };
 
-class OTACallbacks: public NimBLECharacteristicCallbacks {
-    void onRead(NimBLECharacteristic* pCharacteristic) {
-      debugPrint(pCharacteristic->getUUID().toString().c_str());
-      debugPrint(": onRead(), value: ");
-      debugPrintln(pCharacteristic->getValue().c_str());
-    };
+class OTACallbacks : public NimBLECharacteristicCallbacks
+{
+  void onRead(NimBLECharacteristic *pCharacteristic)
+  {
+    debugPrint(pCharacteristic->getUUID().toString().c_str());
+    debugPrint(": onRead(), value: ");
+    debugPrintln(pCharacteristic->getValue().c_str());
+  };
 
-    void onWrite(NimBLECharacteristic* pCharacteristic) {
-      debugPrint(pCharacteristic->getUUID().toString().c_str());
-      debugPrint(": onWrite(), value: ");
-      debugPrintln(pCharacteristic->getValue().c_str());
+  void onWrite(NimBLECharacteristic *pCharacteristic)
+  {
+    debugPrint(pCharacteristic->getUUID().toString().c_str());
+    debugPrint(": onWrite(), value: ");
+    debugPrintln(pCharacteristic->getValue().c_str());
 
-      //if OTA update is set to "yes" from bluetooth
-      std::string s = "yes";
-      debugPrintln(pCharacteristic->getValue().compare("yes"));
-      
-        if (strcmp(pCharacteristic->getValue().c_str(), "yes") == 0) {
-          debugPrintln("Begin updating..........");
-          // xSemaphoreTake(pageMutex, (TickType_t) 10);
-          // ePage = pUPDATE;
-          // xSemaphoreGive(pageMutex);
-          vTaskDelay(20);
-          setupOTA();
-          vTaskDelay(1000);
-          executeOTA();
-          // xSemaphoreTake(pageMutex, (TickType_t)10);
-          // ePage = WEIGHTSTREAM;
-          // xSemaphoreGive(pageMutex);
-          debugPrintln("page change");
-        } else {
-          debugPrintln("OTA Command not recognized");
-        }
-    };
+    //if OTA update is set to "yes" from bluetooth
+    std::string s = "yes";
+    debugPrintln(pCharacteristic->getValue().compare("yes"));
+
+    if (strcmp(pCharacteristic->getValue().c_str(), "yes") == 0)
+    {
+      debugPrintln("Begin updating..........");
+      // xSemaphoreTake(pageMutex, (TickType_t) 10);
+      // ePage = pUPDATE;
+      // xSemaphoreGive(pageMutex);
+      vTaskDelay(20);
+      setupOTA();
+      vTaskDelay(1000);
+      executeOTA();
+      // xSemaphoreTake(pageMutex, (TickType_t)10);
+      // ePage = WEIGHTSTREAM;
+      // xSemaphoreGive(pageMutex);
+      debugPrintln("page change");
+    }
+    else
+    {
+      debugPrintln("OTA Command not recognized");
+    }
+  };
 };
 
 static DeviceCallbacks devCallbacks;
@@ -312,44 +345,49 @@ static WeightCallbacks wgtCallbacks;
 static ActionCallbacks actCallbacks;
 static OTACallbacks otaCallbacks;
 
-void updateBTWeight(char* w) {
-  if (pServer->getConnectedCount()) {
-    NimBLEService* pSvc = pServer->getServiceByUUID("181D");
-    if (pSvc) {
-      NimBLECharacteristic* pChr = pSvc->getCharacteristic("2A9E");
-      if (pChr) {
+void updateBTWeight(char *w)
+{
+  if (pServer->getConnectedCount())
+  {
+    NimBLEService *pSvc = pServer->getServiceByUUID("181D");
+    if (pSvc)
+    {
+      NimBLECharacteristic *pChr = pSvc->getCharacteristic("2A9E");
+      if (pChr)
+      {
         pChr->setValue(w);
-        pChr->notify(true); 
+        pChr->notify(true);
       }
     }
   }
 }
 
-std::string unitsToString(Units u) { // note: call free(returned_string) after this response is saved elsewhere
-  
-  switch (u) {
-    case g:
-      return std::string("g");
-      break;
-    case kg:
-      return std::string("kg");
-      break;
-    case oz:
-      return std::string("oz");
-      break;
-    case lb:
-      return std::string("lb");
-      break;
-    default:
-      return std::string("err");
-      break;
+std::string unitsToString(Units u)
+{ // note: call free(returned_string) after this response is saved elsewhere
+
+  switch (u)
+  {
+  case g:
+    return std::string("g");
+    break;
+  case kg:
+    return std::string("kg");
+    break;
+  case oz:
+    return std::string("oz");
+    break;
+  case lb:
+    return std::string("lb");
+    break;
+  default:
+    return std::string("err");
+    break;
   }
 }
 
+void BLEsetup()
+{
 
-
-void BLEsetup() {
-  
   debugPrintln("Starting NimBLE Server");
 
   /** sets device name */
@@ -376,184 +414,175 @@ void BLEsetup() {
   pServer = NimBLEDevice::createServer();
   pServer->setCallbacks(new ServerCallbacks());
 
-
   //Holding semaphore until BT services are created...
 
-  NimBLEService* pDeviceService = pServer->createService("180A");
-  NimBLECharacteristic* pSerialNumCharacteristic = pDeviceService->createCharacteristic(
-        "2A25",
-        NIMBLE_PROPERTY::READ |
-        //NIMBLE_PROPERTY::WRITE |
-        /** Require a secure connection for read and write access */
-        NIMBLE_PROPERTY::READ_ENC  // only allow reading if paired / encrypted
-        //NIMBLE_PROPERTY::WRITE_ENC   // only allow writing if paired / encrypted
-      );
+  NimBLEService *pDeviceService = pServer->createService("180A");
+  NimBLECharacteristic *pSerialNumCharacteristic = pDeviceService->createCharacteristic(
+      "2A25",
+      NIMBLE_PROPERTY::READ |
+          //NIMBLE_PROPERTY::WRITE |
+          /** Require a secure connection for read and write access */
+          NIMBLE_PROPERTY::READ_ENC // only allow reading if paired / encrypted
+      //NIMBLE_PROPERTY::WRITE_ENC   // only allow writing if paired / encrypted
+  );
 
   // std::string sn;
   // sn = _sys->getSN();
   // pSerialNumCharacteristic->setValue(&sn);
   pSerialNumCharacteristic->setValue(_sys->getSN());
-  
+
   pSerialNumCharacteristic->setCallbacks(&devCallbacks);
 
-  
-  NimBLECharacteristic* pSoftwareCharacteristic = pDeviceService->createCharacteristic(
-        "2A28",
-        NIMBLE_PROPERTY::READ |
-        //NIMBLE_PROPERTY::WRITE |
-        /** Require a secure connection for read and write access */
-        NIMBLE_PROPERTY::READ_ENC  // only allow reading if paired / encrypted
-        //NIMBLE_PROPERTY::WRITE_ENC   // only allow writing if paired / encrypted
-      );
+  NimBLECharacteristic *pSoftwareCharacteristic = pDeviceService->createCharacteristic(
+      "2A28",
+      NIMBLE_PROPERTY::READ |
+          //NIMBLE_PROPERTY::WRITE |
+          /** Require a secure connection for read and write access */
+          NIMBLE_PROPERTY::READ_ENC // only allow reading if paired / encrypted
+      //NIMBLE_PROPERTY::WRITE_ENC   // only allow writing if paired / encrypted
+  );
 
   pSoftwareCharacteristic->setValue(_sys->getVER());
 
   pSoftwareCharacteristic->setCallbacks(&devCallbacks);
-  NimBLECharacteristic* pMfgCharacteristic = pDeviceService->createCharacteristic(
-        "2A29",
-        NIMBLE_PROPERTY::READ |
+  NimBLECharacteristic *pMfgCharacteristic = pDeviceService->createCharacteristic(
+      "2A29",
+      NIMBLE_PROPERTY::READ |
 
-        /** Require a secure connection for read and write access */
-        NIMBLE_PROPERTY::READ_ENC  // only allow reading if paired / encrypted
+          /** Require a secure connection for read and write access */
+          NIMBLE_PROPERTY::READ_ENC // only allow reading if paired / encrypted
 
-      );
+  );
 
   pMfgCharacteristic->setValue("SudoChef");
   pMfgCharacteristic->setCallbacks(&devCallbacks);
 
-  NimBLECharacteristic* pDateTimeCharacteristic = pDeviceService->createCharacteristic(
-        "2A11",
-        NIMBLE_PROPERTY::READ |
-        NIMBLE_PROPERTY::WRITE |
-        /** Require a secure connection for read and write access */
-        NIMBLE_PROPERTY::READ_ENC |  // only allow reading if paired / encrypted
-        NIMBLE_PROPERTY::WRITE_ENC   // only allow writing if paired / encrypted
-      );
+  NimBLECharacteristic *pDateTimeCharacteristic = pDeviceService->createCharacteristic(
+      "2A11",
+      NIMBLE_PROPERTY::READ |
+          NIMBLE_PROPERTY::WRITE |
+          /** Require a secure connection for read and write access */
+          NIMBLE_PROPERTY::READ_ENC | // only allow reading if paired / encrypted
+          NIMBLE_PROPERTY::WRITE_ENC  // only allow writing if paired / encrypted
+  );
 
   pDateTimeCharacteristic->setValue("02-08-2021");
   pDateTimeCharacteristic->setCallbacks(&devCallbacks);
 
-
-  /* Next Service - Battery  */ 
-  NimBLEService* pBatteryService = pServer->createService("180F");
-  NimBLECharacteristic* pBatteryCharacteristic = pBatteryService->createCharacteristic(
-        "2A19",
-        NIMBLE_PROPERTY::READ
-      );
-  char srerdsf [16];
+  /* Next Service - Battery  */
+  NimBLEService *pBatteryService = pServer->createService("180F");
+  NimBLECharacteristic *pBatteryCharacteristic = pBatteryService->createCharacteristic(
+      "2A19",
+      NIMBLE_PROPERTY::READ);
+  char srerdsf[16];
   sprintf(srerdsf, "%d %%", _sys->getBattery());
 
   pBatteryCharacteristic->setValue(srerdsf);
   pBatteryCharacteristic->setCallbacks(&batCallbacks);
 
-
   /* Next Service - Weight Scale */
-  NimBLEService* pWeightService = pServer->createService("181D");
+  NimBLEService *pWeightService = pServer->createService("181D");
 
-  NimBLECharacteristic* pWeightCharacteristic = pWeightService->createCharacteristic(
-        "2A9E",
-        NIMBLE_PROPERTY::READ |
+  NimBLECharacteristic *pWeightCharacteristic = pWeightService->createCharacteristic(
+      "2A9E",
+      NIMBLE_PROPERTY::READ |
 
-        /** Require a secure connection for read and write access */
-        NIMBLE_PROPERTY::READ_ENC  | // only allow reading if paired / encrypted
-        NIMBLE_PROPERTY::NOTIFY
-      );
+          /** Require a secure connection for read and write access */
+          NIMBLE_PROPERTY::READ_ENC | // only allow reading if paired / encrypted
+          NIMBLE_PROPERTY::NOTIFY);
 
   pWeightCharacteristic->setValue("0.0");
   pWeightCharacteristic->setCallbacks(&wgtCallbacks);
 
-  NimBLECharacteristic* pUnitsCharacteristic = pWeightService->createCharacteristic(
-        "2B46",
-        NIMBLE_PROPERTY::READ |
-        NIMBLE_PROPERTY::WRITE |
-        /** Require a secure connection for read and write access */
-        NIMBLE_PROPERTY::READ_ENC |  // only allow reading if paired / encrypted
-        NIMBLE_PROPERTY::WRITE_ENC   // only allow writing if paired / encrypted
-      );
+  NimBLECharacteristic *pUnitsCharacteristic = pWeightService->createCharacteristic(
+      "2B46",
+      NIMBLE_PROPERTY::READ |
+          NIMBLE_PROPERTY::WRITE |
+          /** Require a secure connection for read and write access */
+          NIMBLE_PROPERTY::READ_ENC | // only allow reading if paired / encrypted
+          NIMBLE_PROPERTY::WRITE_ENC  // only allow writing if paired / encrypted
+  );
   std::string u2s = unitsToString(_sys->getUnits());
   pUnitsCharacteristic->setValue(u2s);
-  
+
   pUnitsCharacteristic->setCallbacks(&wgtCallbacks);
 
   //Release Semaphore
   //xSemaphoreGive(systemMutex);
 
-  
   /* Next Service - Actions performed through connection */
 
-  NimBLEService* pActionService = pServer->createService("00005AC7-60be-11eb-ae93-0242ac130002");
-  NimBLECharacteristic* pOTACharacteristic = pActionService->createCharacteristic(
-        "0000007A-60be-11eb-ae93-0242ac130002",
-        NIMBLE_PROPERTY::READ |
-        NIMBLE_PROPERTY::WRITE |
-        /** Require a secure connection for read and write access */
-        NIMBLE_PROPERTY::READ_ENC |  // only allow reading if paired / encrypted
-        NIMBLE_PROPERTY::WRITE_ENC   // only allow writing if paired / encrypted
-      );
+  NimBLEService *pActionService = pServer->createService("00005AC7-60be-11eb-ae93-0242ac130002");
+  NimBLECharacteristic *pOTACharacteristic = pActionService->createCharacteristic(
+      "0000007A-60be-11eb-ae93-0242ac130002",
+      NIMBLE_PROPERTY::READ |
+          NIMBLE_PROPERTY::WRITE |
+          /** Require a secure connection for read and write access */
+          NIMBLE_PROPERTY::READ_ENC | // only allow reading if paired / encrypted
+          NIMBLE_PROPERTY::WRITE_ENC  // only allow writing if paired / encrypted
+  );
 
   pOTACharacteristic->setValue("no");
   pOTACharacteristic->setCallbacks(&otaCallbacks);
 
-  NimBLECharacteristic* pRebootCharacteristic = pActionService->createCharacteristic(
-        "0000B007-60be-11eb-ae93-0242ac130002",
-        NIMBLE_PROPERTY::READ |
-        NIMBLE_PROPERTY::WRITE |
-        /** Require a secure connection for read and write access */
-        NIMBLE_PROPERTY::READ_ENC |  // only allow reading if paired / encrypted
-        NIMBLE_PROPERTY::WRITE_ENC   // only allow writing if paired / encrypted
-      );
+  NimBLECharacteristic *pRebootCharacteristic = pActionService->createCharacteristic(
+      "0000B007-60be-11eb-ae93-0242ac130002",
+      NIMBLE_PROPERTY::READ |
+          NIMBLE_PROPERTY::WRITE |
+          /** Require a secure connection for read and write access */
+          NIMBLE_PROPERTY::READ_ENC | // only allow reading if paired / encrypted
+          NIMBLE_PROPERTY::WRITE_ENC  // only allow writing if paired / encrypted
+  );
 
   pRebootCharacteristic->setValue("no");
   pRebootCharacteristic->setCallbacks(&actCallbacks);
 
-  NimBLECharacteristic* pOffCharacteristic = pActionService->createCharacteristic(
-        "000000FF-60be-11eb-ae93-0242ac130002",
-        NIMBLE_PROPERTY::READ |
-        NIMBLE_PROPERTY::WRITE |
-        /** Require a secure connection for read and write access */
-        NIMBLE_PROPERTY::READ_ENC |  // only allow reading if paired / encrypted
-        NIMBLE_PROPERTY::WRITE_ENC   // only allow writing if paired / encrypted
-      );
+  NimBLECharacteristic *pOffCharacteristic = pActionService->createCharacteristic(
+      "000000FF-60be-11eb-ae93-0242ac130002",
+      NIMBLE_PROPERTY::READ |
+          NIMBLE_PROPERTY::WRITE |
+          /** Require a secure connection for read and write access */
+          NIMBLE_PROPERTY::READ_ENC | // only allow reading if paired / encrypted
+          NIMBLE_PROPERTY::WRITE_ENC  // only allow writing if paired / encrypted
+  );
 
   pOffCharacteristic->setValue("no");
   pOffCharacteristic->setCallbacks(&actCallbacks);
 
-  char wifi_read[100]={};
-  char w_ssid[32]={};
-  char w_pass[64]={};
+  char wifi_read[100] = {};
+  char w_ssid[32] = {};
+  char w_pass[64] = {};
   WiFiStruct w = _sys->getWiFiInfo();
   sprintf(w_ssid, "%s", w.ssid);
   sprintf(w_pass, "%s", w.pswd);
   //sprintf(wifi_read, "%s,%s", w.ssid, w.pswd);
   debugPrint(" wifi_read value: ");
   debugPrintln(wifi_read);
-  
-  NimBLECharacteristic* pSSIDCharacteristic = pActionService->createCharacteristic(
-          "0000551d-60be-11eb-ae93-0242ac130002",
-          NIMBLE_PROPERTY::READ |
+
+  NimBLECharacteristic *pSSIDCharacteristic = pActionService->createCharacteristic(
+      "0000551d-60be-11eb-ae93-0242ac130002",
+      NIMBLE_PROPERTY::READ |
           NIMBLE_PROPERTY::WRITE |
-          NIMBLE_PROPERTY::READ_ENC |  // only allow reading if paired / encrypted
-          NIMBLE_PROPERTY::WRITE_ENC   // only allow writing if paired / encrypted
-      );
-  
+          NIMBLE_PROPERTY::READ_ENC | // only allow reading if paired / encrypted
+          NIMBLE_PROPERTY::WRITE_ENC  // only allow writing if paired / encrypted
+  );
 
   //pSSIDCharacteristic->setValue((uint8_t*)w_ssid, strlen(w_ssid)+1);
   pSSIDCharacteristic->setValue(w_ssid);
   //pSSIDCharacteristic->setValue("nothing");
-  pSSIDCharacteristic->setCallbacks(&actCallbacks); 
+  pSSIDCharacteristic->setCallbacks(&actCallbacks);
 
-  NimBLECharacteristic* pPASSCharacteristic = pActionService->createCharacteristic(
-          "0000fa55-60be-11eb-ae93-0242ac130002",
-          NIMBLE_PROPERTY::READ |
+  NimBLECharacteristic *pPASSCharacteristic = pActionService->createCharacteristic(
+      "0000fa55-60be-11eb-ae93-0242ac130002",
+      NIMBLE_PROPERTY::READ |
           NIMBLE_PROPERTY::WRITE |
-          NIMBLE_PROPERTY::READ_ENC |  // only allow reading if paired / encrypted
-          NIMBLE_PROPERTY::WRITE_ENC   // only allow writing if paired / encrypted
-      );
-  
+          NIMBLE_PROPERTY::READ_ENC | // only allow reading if paired / encrypted
+          NIMBLE_PROPERTY::WRITE_ENC  // only allow writing if paired / encrypted
+  );
 
   pPASSCharacteristic->setValue(w_pass);
-  //pPASSCharacteristic->setValue("shortpass"); 
-  pPASSCharacteristic->setCallbacks(&actCallbacks); 
+  //pPASSCharacteristic->setValue("shortpass");
+  pPASSCharacteristic->setCallbacks(&actCallbacks);
 
   /** Start the services when finished creating all Characteristics and Descriptors */
   pDeviceService->start();
@@ -561,13 +590,13 @@ void BLEsetup() {
   pWeightService->start();
   pActionService->start();
 
-  NimBLEAdvertising* pAdvertising = NimBLEDevice::getAdvertising();
+  NimBLEAdvertising *pAdvertising = NimBLEDevice::getAdvertising();
   /** Add the services to the advertisment data **/
   pAdvertising->addServiceUUID(pDeviceService->getUUID());
   pAdvertising->addServiceUUID(pBatteryService->getUUID());
   pAdvertising->addServiceUUID(pWeightService->getUUID());
   pAdvertising->addServiceUUID(pActionService->getUUID());
-  
+
   /** If your device is battery powered you may consider setting scan response
       to false as it will extend battery life at the expense of less data sent.
   */
@@ -575,5 +604,4 @@ void BLEsetup() {
   pAdvertising->start();
 
   debugPrintln("Advertising Started");
-
 }

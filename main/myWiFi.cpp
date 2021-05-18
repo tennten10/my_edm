@@ -125,6 +125,8 @@ void wifi_init_sta()
 
     debugPrintln("wifi_init_sta finished.");
 
+    // WHAT IS GOING ON HERE??????? NOT GETTING PAST EVENT GROUP...
+
     /* Waiting until either the connection is established (WIFI_CONNECTED_BIT) or connection failed for the maximum
      * number of re-tries (WIFI_FAIL_BIT). The bits are set by event_handler() (see above) */
     EventBits_t bits = xEventGroupWaitBits(s_wifi_event_group,
@@ -132,6 +134,7 @@ void wifi_init_sta()
             pdFALSE,
             pdFALSE,
             portMAX_DELAY);
+    debugPrintln("after eventbits");
 
     /* xEventGroupWaitBits() returns the bits before the call returned, hence we can test which event actually
      * happened. */
@@ -141,16 +144,13 @@ void wifi_init_sta()
         debugPrint(" password:");
         debugPrintln(wifi.pswd);
         
-        //ESP_LOGI(TAG, "connected to ap SSID:%s password:%s",
-        //         wifi.ssid, wifi.pswd);
+        
     } else if (bits & WIFI_FAIL_BIT) {
         debugPrint("Failed to connect to SSID:");
         debugPrint(wifi.ssid);
         debugPrint(" password:");
         debugPrintln(wifi.pswd);
 
-        //ESP_LOGI(TAG, "Failed to connect to SSID:%s, password:%s",
-        //         wifi.ssid, wifi.pswd);
     } else {
         debugPrintln("UNEXPECTED EVENT");
     }
@@ -159,12 +159,11 @@ void wifi_init_sta()
     ESP_ERROR_CHECK(esp_event_handler_instance_unregister(IP_EVENT, IP_EVENT_STA_GOT_IP, instance_got_ip));
     ESP_ERROR_CHECK(esp_event_handler_instance_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID, instance_any_id));
     vEventGroupDelete(s_wifi_event_group);
-    //return (esp_netif_t){};
 }
 
 void startWiFi()
 {
-    wifi = getActiveWifiInfo();
+    wifi =  _sys->getWiFiInfo(); //getActiveWifiInfo();
     if(strcmp(wifi.ssid,"")==0){
         debugPrintln("WIFI Info NOT LOADED. Exiting WIFI Functions.");
         return; 

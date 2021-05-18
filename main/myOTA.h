@@ -3,9 +3,8 @@
 
 #ifndef MY_OTA_H
 #define MY_OTA_H
-//void setSSID(char &text);
-//void setPSWD(char &text);
-void setupOTA();
+
+int setupOTA();
 void executeOTA();
 //void resetOTA();
 // void retry();

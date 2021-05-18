@@ -4,10 +4,15 @@
 #include "globals.h"
 #include <string>
 
-esp_netif_t* startWiFi();
+void startWiFi();
+int initWiFi();
+int isInit();
+int stopWiFi();
+int connectWiFi();
+
 bool verifyWiFiInfo(char& s, char& p); //WiFiStruct wfi
-//void scanNetworks(uint16_t& num, wifi_ap_record_t* ap);
+
 void scanNetworks(uint16_t& num, std::string* ap);
-// esp_netif_t* getNetIF();
+
 
 #endif

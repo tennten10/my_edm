@@ -22,7 +22,12 @@
 #include "nvs.h"
 #include "nvs_flash.h"
 
+#include "System.h"
+#include "esp-nimble-cpp/src/NimBLEDevice.h"
+
 SemaphoreHandle_t updateMutex;
+extern SystemX *_sys;
+extern NimBLEServer *pServer;
 
 extern const uint8_t server_cert_pem_start[] asm("_binary_ca_cert_pem_start");
 extern const uint8_t server_cert_pem_end[] asm("_binary_ca_cert_pem_end");
@@ -56,6 +61,25 @@ static esp_err_t validate_image_header(esp_app_desc_t *new_app_info) // This che
 void ota_task(void *pvParameter)
 {
     debugPrintln("Starting OTA Task");
+
+        //Retrieves SSID & Password from SPIFFS filesystem
+    //Starts WiFi in STA mode    
+    debugPrintln("before startWiFi");                                                                   //Run flags here to see what goes wrong
+    startWiFi();
+    debugPrintln("after startWiFi");
+    if(esp_wifi_get_mode(NULL)==ESP_OK){
+      // if it gets in here wifi connection is successful
+      debugPrintln("inside wifi flag...");
+    }
+
+    /* Ensure to disable any WiFi power save mode, this allows best throughput
+     * and hence timings for overall OTA operation.
+     */
+    // Since WiFi and BT working together needs one not taking all the cpu time, we need some sleep time for it to work. WIFI_PS_MIN_MODEM
+    esp_wifi_set_ps(WIFI_PS_NONE); //WIFI_PS_NONE);
+
+
+
 
     esp_err_t ota_finish_err = ESP_OK;
     esp_http_client_config_t config = {
@@ -104,7 +128,9 @@ void ota_task(void *pvParameter)
         // monitor the status of OTA upgrade by calling esp_https_ota_get_image_len_read, which gives length of image
         // data read so far.
         debugPrint("Image bytes read: ");
-        debugPrintln(esp_https_ota_get_image_len_read(https_ota_handle));
+        static int temp = esp_https_ota_get_image_len_read(https_ota_handle);
+        debugPrintln(temp);
+        _sys->display->displayUpdateScreen(temp);
     }
 
     if (esp_https_ota_is_complete_data_received(https_ota_handle) != true) {
@@ -115,8 +141,10 @@ void ota_task(void *pvParameter)
 ota_end:
     ota_finish_err = esp_https_ota_finish(https_ota_handle);
     if ((err == ESP_OK) && (ota_finish_err == ESP_OK)) {
+        _sys->display->displayLogo();
         debugPrintln("ESP_HTTPS_OTA upgrade successful. Rebooting ...");
         vTaskDelay(1000 / portTICK_PERIOD_MS);
+        _sys->display->displayOff();
         esp_restart();
     } else {
         if (ota_finish_err == ESP_ERR_OTA_VALIDATE_FAILED) {
@@ -130,23 +158,33 @@ ota_end:
 
 // Make sure this is called before executeOTA()
 // This sets up the WiFi and server connection prereqs
-void setupOTA() {
+int setupOTA() {
 
     updateMutex = xSemaphoreCreateMutex();
-    //Retrieves SSID & Password from SPIFFS filesystem
-    //Starts WiFi in STA mode
-    startWiFi();
-    if(esp_wifi_get_mode(NULL)==ESP_OK){
-      // if it gets in here wifi connection is successful
-      debugPrintln("inside wifi flag...");
+    if(_sys->getBattery() < 30 ){
+        debugPrintln(" battery too low for update");
+        return -1;
     }
+    if(size_t s = NimBLEDevice::getClientListSize() ){
 
-    /* Ensure to disable any WiFi power save mode, this allows best throughput
-     * and hence timings for overall OTA operation.
-     */
-    // Since WiFi and BT working together needs one not taking all the cpu time, we need some sleep time for it to work. 
-    esp_wifi_set_ps(WIFI_PS_MIN_MODEM); //WIFI_PS_NONE);
+        std::list<NimBLEClient *> b = *NimBLEDevice::getClientList(); 
+        std::list<NimBLEClient *>::iterator it = b.begin();
 
+        for(int i = 0; i < s; i++)
+        {
+            debugPrintln("Bluetooth is connected");
+            
+            NimBLEDevice::deleteClient(*it);
+            std::advance(it,1);
+        }
+        debugPrintln("All bluetooth connections closed");
+        //return -1;
+
+    }
+    
+    pServer->stopAdvertising();
+
+    return 0;
 }
 
 void executeOTA(){
@@ -154,52 +192,6 @@ void executeOTA(){
 }
 
 
-//     esp_http_client_config_t config = 
-//     {
-//         .url = "sudo-test2.s3.us-east-2.amazonaws.com/",        /*!< HTTP URL, the information on the URL is most important, it overrides the other fields below, if any */
-//         //.host = ,           /*!< Domain or IP as string */
-//         .port = 80,/*!< Port to connect, default depend on esp_http_client_transport_t (80 or 443) */
-//         //.username = ,/*!< Using for Http authentication */
-//         //.password = ,/*!< Using for Http authentication */
-//         //.auth_type = ,/*!< Http authentication type, see `esp_http_client_auth_type_t` */
-//         //.path = ,/*!< HTTP Path, if not set, default is `/` */
-//         //.query = ,/*!< HTTP query */
-//         .cert_pem = (char *)server_cert_pem_start,/*!< SSL server certification, PEM format as string, if the client requires to verify server */
-//         //.client_cert_pem = ,/*!< SSL client certification, PEM format as string, if the server requires to verify client */
-//         //.client_key_pem = ,/*!< SSL client key, PEM format as string, if the server requires to verify client */
-//         //.method = ,/*!< HTTP Method */
-//         .timeout_ms = 3000,/*!< Network timeout in milliseconds */
-//         //.disable_auto_redirect = ,/*!< Disable HTTP automatic redirects */
-//         //.max_redirection_count = ,/*!< Max redirection number, using default value if zero*/
-//         //.event_handler = ,/*!< HTTP Event Handle */
-//         //.transport_type = ,/*!< HTTP transport type, see `esp_http_client_transport_t` */
-//         //.buffer_size = ,/*!< HTTP receive buffer size */
-//         //.buffer_size_tx = ,/*!< HTTP transmit buffer size */
-//         //.user_data = ,/*!< HTTP user_data context */
-//         //.is_async = , /*!< Set asynchronous mode, only supported with HTTPS for now */
-//         //.use_global_ca_store = ,/*!< Use a global ca_store for all the connections in which this bool is set. */
-//         //.skip_cert_common_name_check = ,/*!< Skip any validation of server certificate CN field */
-
-//     };
-//     #ifdef V1_BASE
-//       config.host = "sudo-test2.s3.us-east-2.amazonaws.com/";
-//       config.path = "/OneBoard_Beta_v1.ino.esp32.bin";
-//       config.port = 80;
-//       //.query = "esp", // really not sure what this does...
-//       //config.event_handler = _http_event_handler;
-//       //config.user_data = local_response_buffer;        // Pass address of local buffer to get response
-//       config.disable_auto_redirect = true;
-//     #endif
-//     #ifdef V3_FLIP
-//       config.host = "sudo-test2.s3.us-east-2.amazonaws.com/";
-//       config.path = "/OneBoard_Beta_v3.ino.esp32.bin";
-//       //config.port = 80;
-//       //.query = "esp", // really not sure what this does...
-//       //config.event_handler = _http_event_handler;
-//       //config.user_data = local_response_buffer;        // Pass address of local buffer to get response
-//       config.disable_auto_redirect = true;    
-    
-//     #endif
     
 // look here
 int getUpdatePercent(){
