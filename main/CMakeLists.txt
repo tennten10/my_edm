@@ -16,7 +16,7 @@ set (ulp_exp_dep_srcs "main.cpp")
 ulp_embed_binary(${ulp_app_name} "${ulp_s_sources}" "${ulp_exp_dep_srcs}")
 
 
-
+set(PROJECT_VER "0.1.0.1")
 
 
 
@@ -27,3 +27,11 @@ ulp_embed_binary(${ulp_app_name} "${ulp_s_sources}" "${ulp_exp_dep_srcs}")
 #target_add_binary_data(${COMPONENT_TARGET} "certs/certificate.pem.crt" TEXT)
 #target_add_binary_data(${COMPONENT_TARGET} "certs/private.pem.key" TEXT)
 #endif()
+
+#to add app size to binary header
+#target_link_libraries(${COMPONENT_TARGET} "-u custom_app_desc")
+
+
+
+#add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    #COMMAND arm-none-eabi-size --format=berkeley "firmware.elf")

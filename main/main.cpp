@@ -27,14 +27,23 @@
  #include "soc/sens_reg.h"
  #include "soc/rtc_periph.h"
 #include "driver/rtc_io.h"
+
+#include "driver/rtc_io.h"
+
 #include "esp32/ulp.h"
 #include "ulp_main.h"
+//#include "bootloader_support/include/esp_app_format.h"
+#include "esp_app_format.h"
 //#include "Eigen/Sparse" note: DO NOT USE in same file/namespace as any ULP library. it has naming conflicts.
 
 extern "C" {
     void app_main();
 }
 
+// struct custom_app_desc_t{
+//     char app_size[16];  
+// };
+// const __attribute__((section(".rodata_custom_desc"))) custom_app_desc_t custom_app_desc = { "1" };
 
 // TaskHandle_t battery_TH;
 TickType_t xBlockTime = pdMS_TO_TICKS(200);

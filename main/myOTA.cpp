@@ -29,6 +29,44 @@ SemaphoreHandle_t updateMutex;
 extern SystemX *_sys;
 extern NimBLEServer *pServer;
 
+// // copied from esp_https_ota.c
+// // needed to access the http header... there should be an easier way to do it 
+// typedef enum {
+//     ESP_HTTPS_OTA_INIT,
+//     ESP_HTTPS_OTA_BEGIN,
+//     ESP_HTTPS_OTA_IN_PROGRESS,
+//     ESP_HTTPS_OTA_SUCCESS,
+// } esp_https_ota_state;
+
+// struct esp_https_ota_handle {
+//     esp_ota_handle_t update_handle;
+//     const esp_partition_t *update_partition;
+//     esp_http_client_handle_t http_client;
+//     char *ota_upgrade_buf;
+//     size_t ota_upgrade_buf_size;
+//     int binary_file_len;
+//     esp_https_ota_state state;
+// };
+// // end copy
+
+// // my function to handle the weird type conversions to access http headers
+// int get_http_header(esp_https_ota_handle_t https_ota_handle){
+//     esp_https_ota_handle *handle = (esp_https_ota_handle *)https_ota_handle;
+//     if (handle == NULL)  {
+//         debugPrintln("esp_https_ota_read_img_desc: Invalid argument");
+//         return ESP_ERR_INVALID_ARG;
+//     }
+//     if (handle->state < ESP_HTTPS_OTA_BEGIN) {
+//         debugPrintln("esp_https_ota_read_img_desc: Invalid state");
+//         return ESP_FAIL;
+//     }
+//     debugPrintln("getting http headers...");
+
+//     return esp_http_client_fetch_headers(handle->http_client);
+
+// }
+// // end weird function
+
 extern const uint8_t server_cert_pem_start[] asm("_binary_ca_cert_pem_start");
 extern const uint8_t server_cert_pem_end[] asm("_binary_ca_cert_pem_end");
 
@@ -64,19 +102,25 @@ void ota_task(void *pvParameter)
 
         //Retrieves SSID & Password from SPIFFS filesystem
     //Starts WiFi in STA mode    
-    debugPrintln("before startWiFi");                                                                   //Run flags here to see what goes wrong
-    startWiFi();
-    debugPrintln("after startWiFi");
+    debugPrintln("before initWiFi");    
+    // if(!isInit()){                                                               //Run flags here to see what goes wrong
+    //     initWiFi();
+    // }
+    // debugPrintln("after initWiFi");
+    connectWiFi(_sys->getWiFiInfo());
+    debugPrintln("after connect WiFi");
     if(esp_wifi_get_mode(NULL)==ESP_OK){
       // if it gets in here wifi connection is successful
       debugPrintln("inside wifi flag...");
+    }else{
+        debugPrintln(" not in wifi thingy if statement");
     }
 
     /* Ensure to disable any WiFi power save mode, this allows best throughput
      * and hence timings for overall OTA operation.
      */
     // Since WiFi and BT working together needs one not taking all the cpu time, we need some sleep time for it to work. WIFI_PS_MIN_MODEM
-    esp_wifi_set_ps(WIFI_PS_NONE); //WIFI_PS_NONE);
+    esp_wifi_set_ps(WIFI_PS_MIN_MODEM); //WIFI_PS_NONE);
 
 
 
@@ -97,10 +141,13 @@ void ota_task(void *pvParameter)
         .http_config = &config,
     };
     debugPrintln("Set ota http config");
-    esp_https_ota_handle_t https_ota_handle = NULL;
+    esp_https_ota_handle_t https_ota_handle;// = NULL;
     debugPrintln("before beginning ota");
     //debugPrintln(ota_config.http_config);
     esp_err_t err = esp_https_ota_begin(&ota_config, &https_ota_handle);
+
+    int full_size = esp_https_ota_get_image_size(https_ota_handle);
+    
     if (err != ESP_OK) {
         debugPrintln("ESP HTTPS OTA Begin failed");
         vTaskDelete(NULL);
@@ -108,6 +155,10 @@ void ota_task(void *pvParameter)
 
     esp_app_desc_t app_desc;
     err = esp_https_ota_get_img_desc(https_ota_handle, &app_desc);
+    long long int t = 0;
+    int current = 0;
+    int last = 0;
+    
     if (err != ESP_OK) {
         debugPrintln("esp_https_ota_read_img_desc failed");
         goto ota_end;
@@ -118,7 +169,13 @@ void ota_task(void *pvParameter)
         goto ota_end;
     }
     debugPrintln("Made it past header verification so that should be fine");
-
+    if(full_size < 1){
+        debugPrintln("error reading header file size, printed from ota_task");
+        full_size = 1;
+    }else{
+        debugPrint("Full Size: ");
+        debugPrintln(full_size);
+    }
     while (1) {
         err = esp_https_ota_perform(https_ota_handle);
         if (err != ESP_ERR_HTTPS_OTA_IN_PROGRESS) {
@@ -127,10 +184,16 @@ void ota_task(void *pvParameter)
         // esp_https_ota_perform returns after every read operation which gives user the ability to
         // monitor the status of OTA upgrade by calling esp_https_ota_get_image_len_read, which gives length of image
         // data read so far.
-        debugPrint("Image bytes read: ");
-        static int temp = esp_https_ota_get_image_len_read(https_ota_handle);
-        debugPrintln(temp);
-        _sys->display->displayUpdateScreen(temp);
+        
+        t += esp_https_ota_get_image_len_read(https_ota_handle);
+        debugPrintln(std::to_string(t));
+        current = t/full_size;
+        if( current > last){
+            _sys->display->displayUpdateScreen(current);
+            last = current;
+            debugPrint("Image progress: ");
+            debugPrintln(last);
+        }
     }
 
     if (esp_https_ota_is_complete_data_received(https_ota_handle) != true) {
@@ -210,3 +273,4 @@ int getUpdatePercent(){
   return i;
   
 }
+

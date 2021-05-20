@@ -26,6 +26,7 @@ public:
         this->weight = new WeightX();
 
         this->wifiInfo = defaultWiFiInfo();
+        //this->wifiInfo = getActiveWifiInfo();
 
         
     }

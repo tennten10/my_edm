@@ -4,13 +4,14 @@
 #include "globals.h"
 #include <string>
 
-void startWiFi();
+//void startWiFi();
 int initWiFi();
 int isInit();
 int stopWiFi();
-int connectWiFi();
+int connectWiFi(WiFiStruct ws);
+int disconnectWiFi();
 
-bool verifyWiFiInfo(char& s, char& p); //WiFiStruct wfi
+bool verifyWiFiInfo(WiFiStruct w); //char& s, char& p); //WiFiStruct wfi
 
 void scanNetworks(uint16_t& num, std::string* ap);
 

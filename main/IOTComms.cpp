@@ -261,7 +261,7 @@ class ActionCallbacks : public NimBLECharacteristicCallbacks
       debugPrintln("writing password in callback");
 
       strcpy(w.pswd, pCharacteristic->getValue().c_str());
-      if (verifyWiFiInfo(*w.ssid, *w.pswd))
+      if (verifyWiFiInfo(w))
       {
         w.active = 1;
         setWiFiInfo(w);

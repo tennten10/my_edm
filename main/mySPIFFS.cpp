@@ -276,8 +276,6 @@ WiFiStruct defaultWiFiInfo(){
     }
     fclose(f);
     debugPrintln("file closed.");
-
-    debugPrintln(wfi[2].active);
     
 
     uint16_t networkNum = 20; //DEFAULT_SCAN_LIST_SIZE; // set to max number of networks, return value later is actual number
