@@ -16,7 +16,7 @@ set (ulp_exp_dep_srcs "main.cpp")
 ulp_embed_binary(${ulp_app_name} "${ulp_s_sources}" "${ulp_exp_dep_srcs}")
 
 
-set(PROJECT_VER "0.1.0.1")
+#set(PROJECT_VER "0.1.0.1")
 
 
 

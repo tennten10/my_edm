@@ -40,14 +40,9 @@ extern "C" {
     void app_main();
 }
 
-// struct custom_app_desc_t{
-//     char app_size[16];  
-// };
-// const __attribute__((section(".rodata_custom_desc"))) custom_app_desc_t custom_app_desc = { "1" };
 
-// TaskHandle_t battery_TH;
+
 TickType_t xBlockTime = pdMS_TO_TICKS(200);
-
 
 SystemX* _sys;
 
@@ -182,6 +177,9 @@ void app_main() {
     uint32_t reading=0;
     long batTime = esp_timer_get_time()/1000;
 
+    // page timeout counters
+    long timeout = 0;
+
     // loop
     for (;;)
     {
@@ -233,9 +231,10 @@ void app_main() {
                     if (event.compare(0,4,"NSNN", 0, 4) == 0)
                     {
                         //TODO: Units
-                        //xSemaphoreTake(pageMutex, (TickType_t)10);
+                        
                         _sys->setPage(UNITS);
-                        //xSemaphoreGive(pageMutex);
+                        timeout = esp_timer_get_time()/1000;
+                        
                     }
                     if (event.compare(0,4,"NLNN", 0, 4) == 0)
                     {
@@ -249,10 +248,16 @@ void app_main() {
                 }
                 else if (_sys->getPage() == UNITS)
                 {
+                    // if no button presses while on this page for a few seconds, revert back to displaying the weight
+                    if(esp_timer_get_time()/1000-timeout > 4000){
+                        _sys->setPage(WEIGHTSTREAM);
+                    }
+
                     //xSemaphoreGive(pageMutex);
                     if (event.compare(0,4, "SNNN",0,4) == 0)
                     {
                         //TODO:  FUNCTION
+                        timeout = esp_timer_get_time()/1000;
                     }
                     if (event.compare(0,4, "LNNN",0,4) == 0)
                     {
@@ -263,11 +268,10 @@ void app_main() {
                     {
                         //TODO: Units
                         _sys->incrementUnits();
+                        timeout = esp_timer_get_time()/1000;
                     }
                 }
-            }
-
-            if (_sys->getMode() == CALIBRATION)
+            } else if (_sys->getMode() == CALIBRATION)
             {
                 /*if(ePage == ){
            * xSemaphoreGive(pageMutex);

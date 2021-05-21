@@ -143,7 +143,7 @@ void ota_task(void *pvParameter)
     debugPrintln("Set ota http config");
     esp_https_ota_handle_t https_ota_handle;// = NULL;
     debugPrintln("before beginning ota");
-    //debugPrintln(ota_config.http_config);
+    
     esp_err_t err = esp_https_ota_begin(&ota_config, &https_ota_handle);
 
     int full_size = esp_https_ota_get_image_size(https_ota_handle);
@@ -176,6 +176,8 @@ void ota_task(void *pvParameter)
         debugPrint("Full Size: ");
         debugPrintln(full_size);
     }
+    // Note: I'm using a linear correction to hopefully fix the load percentage... It is from collecting a few data points and plotting a graph.
+    // I wasn't able to figure out the relationship between the variable t (return value of esp_https_ota_get_image_len_read) and the total size of the downlaod
     while (1) {
         err = esp_https_ota_perform(https_ota_handle);
         if (err != ESP_ERR_HTTPS_OTA_IN_PROGRESS) {
@@ -185,9 +187,10 @@ void ota_task(void *pvParameter)
         // monitor the status of OTA upgrade by calling esp_https_ota_get_image_len_read, which gives length of image
         // data read so far.
         
-        t += esp_https_ota_get_image_len_read(https_ota_handle);
+        t = (((esp_https_ota_get_image_len_read(https_ota_handle)-773858) / 5374) +144)/3;
+         
         debugPrintln(std::to_string(t));
-        current = t/full_size;
+        current = t / full_size;
         if( current > last){
             _sys->display->displayUpdateScreen(current);
             last = current;
