@@ -232,39 +232,56 @@ class ActionCallbacks : public NimBLECharacteristicCallbacks
     debugPrint(": onWrite(), value: ");
     debugPrintln(pCharacteristic->getValue().c_str());
     static WiFiStruct w;
+    static std::string sLine = "";
+    static std::string pLine = "";
 
     // if writing new wifi info
     if (strcmp(pCharacteristic->getUUID().toString().c_str(), "0000551d-60be-11eb-ae93-0242ac130002") == 0)
     {
-      char line[100];
-      //WiFiStruct w;
-      strcpy(line, pCharacteristic->getValue().c_str());
       w.active = 0;
-      strcpy(w.ssid, line);
-      //pCharacteristic->setValue(line);
-      debugPrintln("writing ssid in callback");
-      //strcpy(w.ssid, strtok(NULL, ","));
-      //strcpy(w.pswd, strtok(NULL, ","));
-      //setWiFiInfo(w);
+      sLine.append(pCharacteristic->getValue());
+
+      if(pCharacteristic->getValue().substr(pCharacteristic->getValue().length()-2).compare("]$") == 0){
+        strcpy(w.ssid, sLine.substr(pLine.length()-2).c_str());
+        sLine.clear();
+      }
     }
 
     // if writing new wifi info
     if (strcmp(pCharacteristic->getUUID().toString().c_str(), "0000fa55-60be-11eb-ae93-0242ac130002") == 0)
     {
-      //char line [100];
-      //WiFiStruct w;
-      //strcpy(line, pCharacteristic->getValue().c_str());
-      //w.active = 1;
-      //strcpy(w.ssid, strtok(NULL, ","));
-      //strcpy(w.pswd, strtok(NULL, ","));
       // only check wifi and save after password is saved
       debugPrintln("writing password in callback");
+      pLine.append(pCharacteristic->getValue());
 
-      strcpy(w.pswd, pCharacteristic->getValue().c_str());
-      if (verifyWiFiInfo(w))
+      if(pCharacteristic->getValue().substr(pCharacteristic->getValue().length()-2).compare("]$") == 0){
+
+        strcpy(w.pswd, pLine.substr(pLine.length()-2).c_str());
+        if (verifyWiFiInfo(w))
+        {
+          w.active = 1;
+          setWiFiInfo(w);
+        }
+        pLine.clear();
+      }
+    }
+    
+    // if turning off remotely
+    if (strcmp(pCharacteristic->getUUID().toString().c_str(), "000000FF-60be-11eb-ae93-0242ac130002" ) == 0)
+    {
+      if(pCharacteristic->getValue().compare("yes") == 0)
       {
-        w.active = 1;
-        setWiFiInfo(w);
+        _sys->goToSleep();
+      }
+    }
+
+    
+    if (strcmp(pCharacteristic->getUUID().toString().c_str(), "0000B007-60be-11eb-ae93-0242ac130002" ) == 0)
+    {
+      if(pCharacteristic->getValue().compare("yes") == 0)
+      {
+        _sys->display->displayOff();
+        esp_restart();
       }
     }
   };
@@ -314,22 +331,14 @@ class OTACallbacks : public NimBLECharacteristicCallbacks
     debugPrintln(pCharacteristic->getValue().c_str());
 
     //if OTA update is set to "yes" from bluetooth
-    std::string s = "yes";
+    //std::string s = "yes";
     debugPrintln(pCharacteristic->getValue().compare("yes"));
 
     if (strcmp(pCharacteristic->getValue().c_str(), "yes") == 0)
     {
       debugPrintln("Begin updating..........");
-      // xSemaphoreTake(pageMutex, (TickType_t) 10);
-      // ePage = pUPDATE;
-      // xSemaphoreGive(pageMutex);
       vTaskDelay(20);
-      setupOTA();
-      vTaskDelay(1000);
-      executeOTA();
-      // xSemaphoreTake(pageMutex, (TickType_t)10);
-      // ePage = WEIGHTSTREAM;
-      // xSemaphoreGive(pageMutex);
+      _sys->runUpdate();
       debugPrintln("page change");
     }
     else
@@ -502,13 +511,11 @@ void BLEsetup()
           NIMBLE_PROPERTY::READ_ENC | // only allow reading if paired / encrypted
           NIMBLE_PROPERTY::WRITE_ENC  // only allow writing if paired / encrypted
   );
-  std::string u2s = unitsToString(_sys->getUnits());
-  pUnitsCharacteristic->setValue(u2s);
+  //std::string u2s = unitsToString(_sys->getUnits());
+  pUnitsCharacteristic->setValue(unitsToString(_sys->getUnits()));
 
   pUnitsCharacteristic->setCallbacks(&wgtCallbacks);
 
-  //Release Semaphore
-  //xSemaphoreGive(systemMutex);
 
   /* Next Service - Actions performed through connection */
 
@@ -569,7 +576,6 @@ void BLEsetup()
 
   //pSSIDCharacteristic->setValue((uint8_t*)w_ssid, strlen(w_ssid)+1);
   pSSIDCharacteristic->setValue(w_ssid);
-  //pSSIDCharacteristic->setValue("nothing");
   pSSIDCharacteristic->setCallbacks(&actCallbacks);
 
   NimBLECharacteristic *pPASSCharacteristic = pActionService->createCharacteristic(
@@ -591,6 +597,7 @@ void BLEsetup()
   pActionService->start();
 
   NimBLEAdvertising *pAdvertising = NimBLEDevice::getAdvertising();
+
   /** Add the services to the advertisment data **/
   pAdvertising->addServiceUUID(pDeviceService->getUUID());
   pAdvertising->addServiceUUID(pBatteryService->getUUID());

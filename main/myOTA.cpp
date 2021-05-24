@@ -29,43 +29,6 @@ SemaphoreHandle_t updateMutex;
 extern SystemX *_sys;
 extern NimBLEServer *pServer;
 
-// // copied from esp_https_ota.c
-// // needed to access the http header... there should be an easier way to do it 
-// typedef enum {
-//     ESP_HTTPS_OTA_INIT,
-//     ESP_HTTPS_OTA_BEGIN,
-//     ESP_HTTPS_OTA_IN_PROGRESS,
-//     ESP_HTTPS_OTA_SUCCESS,
-// } esp_https_ota_state;
-
-// struct esp_https_ota_handle {
-//     esp_ota_handle_t update_handle;
-//     const esp_partition_t *update_partition;
-//     esp_http_client_handle_t http_client;
-//     char *ota_upgrade_buf;
-//     size_t ota_upgrade_buf_size;
-//     int binary_file_len;
-//     esp_https_ota_state state;
-// };
-// // end copy
-
-// // my function to handle the weird type conversions to access http headers
-// int get_http_header(esp_https_ota_handle_t https_ota_handle){
-//     esp_https_ota_handle *handle = (esp_https_ota_handle *)https_ota_handle;
-//     if (handle == NULL)  {
-//         debugPrintln("esp_https_ota_read_img_desc: Invalid argument");
-//         return ESP_ERR_INVALID_ARG;
-//     }
-//     if (handle->state < ESP_HTTPS_OTA_BEGIN) {
-//         debugPrintln("esp_https_ota_read_img_desc: Invalid state");
-//         return ESP_FAIL;
-//     }
-//     debugPrintln("getting http headers...");
-
-//     return esp_http_client_fetch_headers(handle->http_client);
-
-// }
-// // end weird function
 
 extern const uint8_t server_cert_pem_start[] asm("_binary_ca_cert_pem_start");
 extern const uint8_t server_cert_pem_end[] asm("_binary_ca_cert_pem_end");

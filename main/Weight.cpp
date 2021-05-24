@@ -22,6 +22,7 @@ extern TickType_t xBlockTime;
 
 SemaphoreHandle_t sgMutex;
 
+double aSGs[4] = {0};
 
 //weight update rate, seconds
 #define WEIGHT_UPDATE_RATE 0.5
@@ -214,14 +215,8 @@ void WeightX::Main(){
     readSensors();
     currentWeight = getWeight();
     if(abs(currentWeight - lastWeight)>0.01){
-     
-      //if (asprintf (&foo, "%.5f", currentWeight) < 0){
-      //  strcpy(foo, "0.000");
-      //}
-       
-        //snprintf(foo, 16, "%.5f", currentWeight);
         
-      foo = truncateWeight(currentWeight); // this crashes. Debug from here...
+      foo = truncateWeight(currentWeight); // this crashes. Debug from here...? Maybe not anymore?
       
       strcpy(doo, foo.c_str());
       
@@ -236,115 +231,162 @@ void WeightX::Main(){
   
 }
 
-// void strainGaugeSetup(){
-  
-//   adc1_config_width(ADC_WIDTH_BIT_12);
-//   adc1_config_channel_atten(SG1,ADC_ATTEN_DB_11); // Will need to change the attenuation when the circuit gets upgraded to auto-ranging
-//   adc1_config_channel_atten(SG2,ADC_ATTEN_DB_11);
-//   adc1_config_channel_atten(SG3,ADC_ATTEN_DB_11);
-//   adc1_config_channel_atten(SG4,ADC_ATTEN_DB_11);
-  
-  
-//   getStrainGaugeParams(mK_sg1,mK_sg2, mK_sg3, mK_sg4 );
-
-//   //mRawWeight.Fill(0);
-//   //mTareOffset.Fill(0);
-//   //mOutput.Fill(0);
-  
-  
-//   printf("after mutex creation\n");
-//   mK_sg1(2,2) = 9.9099; // V/g
-//   mK_sg2(2,2) = 9.9099;
-//   mK_sg3(2,2) = 55.8559;
-//   mK_sg4(2,2) = 64.8649;
-  
-  //pinMode(enable_165, OUTPUT);
-  //digitalWrite(enable_165, HIGH);
-  
-  //vTaskDelay(300);
-  // xSemaphoreTake(systemMutex, (TickType_t)50);
-  // setUnits(_sys.eUnits);
-  // xSemaphoreGive(systemMutex);
-  
-  //weightQueue = xQueueCreate(5, sizeof(uint32_t));
-  
-  // if(weightQueue == NULL){
-  //   debugPrintln("Error creating weightQueue");
-  // }else{
-  //   debugPrintln("Weight queue created...");
-  // }
-  
-  // xTaskCreate(    
-  //       weightHandler_,          /* Task function. */
-  //       "Weight Handler",        /* String with name of task. */
-  //       20000,            /* Stack size in words, not bytes. */
-  //       NULL,             /* Parameter passed as input of the task */
-  //       0,                /* Priority of the task. */
-  //       &weightHandler_TH              /* Task handle. */  
-  //       );  
-        
-  // debugPrintln("Weight thread created...");
-  // tare();
-  // vTaskDelay(3);
-  // debugPrintln("after tare");
-
-//}
 
 // Amplifier Gain
-double amplifier(){
-  double dV = 1;
+// differential voltage input -> voltage output
+double amplifier(double dV){
+  // double dV = 1;
   double Vout = 1.65+dV*(1+10000./5100.+2*10000./58.3);
   return Vout;
 }
+// voltage output -> differential voltage input
+double inverseAmplifier(double Vout){
+  double dV = (Vout - 1.65)/(1+10000./5100.+2*10000./58.3);
+  return dV;
+}
 
+// // converts strain value to weight value for a single 
+// // e -> w
+// double conversion(double raw_value){
+//   double h, w; // units: cm
+//   double E_aluminum = 70.3*10^9; // Pa
+//   double v_aluminum = 0.345;
+//   #ifdef CONFIG_SB_V1_HALF_ILI9341
+//   h  = .2;
+//   w = 0.8;
+//   #endif
+//   #ifdef CONFIG_SB_V3_ST7735S
+//   h = 0.25;
+//   w = 1.0; 
+//   #endif
+//   #ifdef CONFIG_SB_V6_FULL_ILI9341
+//   h = 0.2;
+//   w = 1.0; 
+//   // L = 18mm
+//   #endif
+//   double I = h^3*w/12; // cm^4
 
-// Strain Gauge Calibration
-// Calibration matrix created from setup proecdure: 
-// Place 50g, 200g, 1000g, 5000g caligration weights 3x on scale 
-// at each of 4 locations directly above the positioning of the gauges
-// 
-/*
- * physics:
- * strain at point on beam
- * 
- * converted to strain gauge
- * rated 2.0-2.2 gauge factor. Using 2.1. Defined as dR/R / e
- * ideal force conversion
- */
+// }
 
-/*   TODO: Create calibration system and matrix solution each time
- *  Use function in mySPIFFS to write settings to file for retrieval 
- *
-void Calibrate(float x, float y, float F){
-  // Calibration sequence. Input x,y coordinates from bottom edge and left edge
-  // transform into coordinate system around the center of pressure
-  FindCP();
-  [x, y] = transformCP(x, y);
-  // Solve into one force and one torque
-  Fz = F;
-  Mx = F*x;
-  My = F*y;
+// // w & (x,y) -> [w,w /n w,w] or all weights
+// // origin is in center of device
+// Eigen::Matrix2d WeightX::theoreticalWeight(double g, double x, double y){
+//   // https://www.scirp.org/pdf/am_2015032417562679.pdf
+//   Eigen::Matrix2d ret = Eigen::Zero();
   
-}
-void FindCP(){
-  // do routine thing here
-}
+//   // assuming all gauges are identical
+//   #ifdef CONFIG_SB_V1_HALF_ILI9341
+//   // Center of mass: ( millimeters )
+// 	double X = 0.81;
+// 	double Y = -11.19;
+// 	double Z = -1.41;
+//   // Note: had to switch coordinate system for this model
+  
+//   // strain gauge location, positive values ( millimeters )
+//   double dX = 192.28
+//   double dY = 109.05
+//   double surfaceZ = 30.90;
 
-float transformCP(float x, float y){
-  // change these to get from FindCP()
-  float X_cp = 180;
-  float Y_cp = 110;
+//   // equations to solve, 
+//   double Ex = 0; // sums of all reaction components
+//   double Ey = 0; // sums of all reaction components
+//   double Ez = Wself + g + Rsg1 + Rsg2 + Rsg3 + Rsg4;
+//   double Mx = Wself*Y + g*y + (Rsg1+Rsg2)*dY  -(Rsg3 + Rsg4)*dY;
+//   double My = Wself*X + g*x + (Rsg2+Rsg4)*dX  -(Rsg1 + Rsg3)*dX;
 
-  float x_c = x - X_cp;
-  float y_c = y - Y_cp;
-  return x_c, y_c;
-}
 
-void solve(){
-    BLA::Matrix<6> Input;
-    BLA::Matrix<6> Reaction;
-    BLA::Matrix<6,6> Calibration 
-        = 10^6/GE * a_ij F'
-        N / uV/v units
-}
-*/
+//   #endif
+//   #ifdef CONFIG_SB_V3_ST7735S 
+//   Eigen::Matrix4d matrix (1,1,1,1,
+//                           Y, Y, -Y, -Y,
+//                           X, -X, X, -X,
+//                           );
+//   #endif
+//   #ifdef CONFIG_SB_V6_FULL_ILI9341
+
+//   #endif
+  
+//   return ret;
+// }
+
+// void inverseWeight(){
+//   // turns weight into voltage levels
+//   // not sure if I need this... because I can compare to raw weight values
+
+// }
+
+// // Strain Gauge Calibration
+// // Calibration matrix created from setup proecdure: 
+// // Place 50g, 200g, 1000g, 5000g caligration weights 3x on scale 
+// // at each of 4 locations directly above the positioning of the gauges
+// // 
+// /*
+//  * physics:
+//  * strain at point on beam
+//  * 
+//  * converted to strain gauge
+//  * rated 2.0-2.2 gauge factor. Using 2.1. Defined as dR/R / e
+//  * ideal force conversion
+//  */
+
+// /*   TODO: Create calibration system and matrix solution each time
+//  *  Use function in mySPIFFS to write settings to file for retrieval 
+//  *
+// void Calibrate(float x, float y, float F){
+//   // Calibration sequence. Input x,y coordinates from bottom edge and left edge
+//   // transform into coordinate system around the center of pressure
+//   FindCP();
+//   [x, y] = transformCP(x, y);
+//   // Solve into one force and one torque
+//   Fz = F;
+//   Mx = F*x;
+//   My = F*y;
+  
+// }
+// void FindCP(){
+//   // do routine thing here
+// }
+
+// float transformCP(float x, float y){
+//   // change these to get from FindCP()
+//   float X_cp = 180;
+//   float Y_cp = 110;
+
+//   float x_c = x - X_cp;
+//   float y_c = y - Y_cp;
+//   return x_c, y_c;
+// }
+
+// void solve(){
+//     BLA::Matrix<6> Input;
+//     BLA::Matrix<6> Reaction;
+//     BLA::Matrix<6,6> Calibration 
+//         = 10^6/GE * a_ij F'
+//         N / uV/v units
+// }
+// */
+
+// (ex-e), gxy/2, gzx/2
+// gxy/2, ey-e, gyz/2
+// gzx/2,  gyz/2, ez-e
+
+// sx + sy = E/(1-v)(ex+ey)
+
+// (ex-e), gxy/2, 0
+// gxy/2,  ey-e,  0
+// 0,      0,     ez-e
+
+// since sg is on only one axis we'll assume all on (y?) axis 
+
+// if we want to combine it all into one, we'll transform them all into the same coordinate system then add them, but for now let's work individually
+
+// SB prototype V1 and V3 have configurations tat looks like this  i-------------i
+//                                                                 |  -       -  |
+//                                                                 |  _       _  |   y
+//                                                                 |_____________|   |__ x
+
+
+// Strain value from gauge -> stress value from material properties - > force value from geometry
+// So, V1
+
+

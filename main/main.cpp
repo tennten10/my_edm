@@ -238,12 +238,12 @@ void app_main() {
                     }
                     if (event.compare(0,4,"NLNN", 0, 4) == 0)
                     {
-                        _sys->display->displayUpdateScreen(0);
-                        if(setupOTA() == 0){
-                        // temporary for testing ota
-                            executeOTA();
-                        }
-                        
+                        // _sys->display->displayUpdateScreen(0);
+                        // if(setupOTA() == 0){
+                        // // temporary for testing ota
+                        //     executeOTA();
+                        // }
+                        _sys->runUpdate();
                     }
                 }
                 else if (_sys->getPage() == UNITS)
