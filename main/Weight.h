@@ -148,8 +148,24 @@ private:
     float a = 0.9;
 
     double conversion = 1.0;
+    double getUnitPrecision(Units local){
+        //make sure this is consistent with truncateWeight
+        switch(local){
+            case g:
+            return 0.1;
+            case kg:
+            return 0.001;
+            case oz:
+            return 0.1;
+            case lb:
+            return 0.01;
+            default:
+            return 0.1;
+        }
+    }
 
     Units localUnits;
+    int weight_update_rate = WEIGHT_UPDATE_RATE;
 
     Eigen::Matrix2d theoreticalWeight(double g, double x, double y);
     void inverseWeight();

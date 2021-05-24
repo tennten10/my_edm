@@ -126,7 +126,7 @@ std::string WeightX::truncateWeight( double d){
       return std::string(str);
     break;
     case lb: // lb.3?
-      sprintf(str, "%0.1f", d);
+      sprintf(str, "%0.2f", d);
       return std::string(str);
     break;
     default:
@@ -164,7 +164,7 @@ void WeightX::setUnits(Units m){
 double WeightX::getRawWeight(){
   // weight before conversions and tare offset
   xSemaphoreTake(sgMutex, (TickType_t)10);
-  double weight = sg1 + sg2 + sg3+ sg4;
+  double weight =  ((sg1-mTareOffset(0))*mK_sg1(2,2)+(sg2-mTareOffset(1))*mK_sg2(2,2)+(sg3-mTareOffset(2))*mK_sg3(2,2)+(sg4-mTareOffset(3))*mK_sg4(2,2));
   
   mRawWeight(1) = sg1;
   mRawWeight(2) = sg2;
@@ -177,7 +177,7 @@ double WeightX::getRawWeight(){
 double WeightX::getWeight(){
   //double weight = (getRawWeight() - tareOffset)* conversion;
   //xSemaphoreTake(systemMutex, (TickType_t)10);
-  double weight = ((sg1-mTareOffset(0))*mK_sg1(2,2)+(sg2-mTareOffset(1))*mK_sg2(2,2)+(sg3-mTareOffset(2))*mK_sg3(2,2)+(sg4-mTareOffset(3))*mK_sg4(2,2))*conversion;
+  double weight = getRawWeight()*conversion;
   /*xSemaphoreGive(sgMutex);
   debugPrint("weight: ");
   //double test = mTareOffset(0)*2.0;
@@ -203,6 +203,10 @@ void WeightX::tare(){
   xSemaphoreGive(sgMutex);
 }
 
+void WeightX::setWeightUpdateRate(int r){
+  weight_update_rate = r;
+}
+
 void WeightX::Main(){
   char doo[16];
   std::string foo;
@@ -210,23 +214,25 @@ void WeightX::Main(){
   double currentWeight= 0.0;
   weightQueue = xQueueCreate(5, sizeof(uint32_t));
   sgMutex = xSemaphoreCreateMutex();
-    
+  long t = esp_timer_get_time()/1000;
   for(;;){
     readSensors();
-    currentWeight = getWeight();
-    if(abs(currentWeight - lastWeight)>0.01){
+    if(t - esp_timer_get_time()/1000 > weight_update_rate*1000){
+      currentWeight = getWeight();
+      if(abs(currentWeight - lastWeight)> getUnitPrecision(localUnits)){
+          
+        foo = truncateWeight(currentWeight); // this crashes. Debug from here...? Maybe not anymore?
         
-      foo = truncateWeight(currentWeight); // this crashes. Debug from here...? Maybe not anymore?
-      
-      strcpy(doo, foo.c_str());
-      
-      xQueueSend(weightQueue, &doo, xBlockTime);
-      debugPrintln("Doing weight stuff");
-      debugPrintln(foo);
-      lastWeight = currentWeight;
+        strcpy(doo, foo.c_str());
+        
+        xQueueSend(weightQueue, &doo, xBlockTime);
+        debugPrintln("Doing weight stuff");
+        debugPrintln(foo);
+        lastWeight = currentWeight;
+      }
     }
     
-    vTaskDelay(WEIGHT_UPDATE_RATE*1000);
+    vTaskDelay(15);
   }
   
 }
