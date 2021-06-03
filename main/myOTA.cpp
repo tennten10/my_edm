@@ -23,11 +23,9 @@
 #include "nvs_flash.h"
 
 #include "System.h"
-#include "esp-nimble-cpp/src/NimBLEDevice.h"
-
+#include "BLE.h"
 SemaphoreHandle_t updateMutex;
 extern SystemX *_sys;
-extern NimBLEServer *pServer;
 
 
 extern const uint8_t server_cert_pem_start[] asm("_binary_ca_cert_pem_start");
@@ -194,24 +192,10 @@ int setupOTA() {
         debugPrintln(" battery too low for update");
         return -1;
     }
-    if(size_t s = NimBLEDevice::getClientListSize() ){
 
-        std::list<NimBLEClient *> b = *NimBLEDevice::getClientList(); 
-        std::list<NimBLEClient *>::iterator it = b.begin();
-
-        for(int i = 0; i < s; i++)
-        {
-            debugPrintln("Bluetooth is connected");
-            
-            NimBLEDevice::deleteClient(*it);
-            std::advance(it,1);
-        }
-        debugPrintln("All bluetooth connections closed");
-        //return -1;
-
-    }
     
-    pServer->stopAdvertising();
+   
+    BLEstop();
 
     return 0;
 }

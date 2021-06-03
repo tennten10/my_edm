@@ -6,7 +6,7 @@
 #include "debug.h"
 #include "Weight.h"
 #include "Buttons.h"
-#include "IOTComms.h"
+#include "BLE.h"
 #include "mySPIFFS.h"
 #include "display.h"
 #include "main.h"
@@ -25,8 +25,8 @@ public:
         this->buttons = new ButtonsX(true);
         this->weight = new WeightX();
 
-        this->wifiInfo = defaultWiFiInfo();
-        //this->wifiInfo = getActiveWifiInfo();
+        // this->wifiInfo = availableWiFiInfo();
+        this->wifiInfo = getActiveWifiInfo();
 
         
     }
@@ -130,6 +130,8 @@ public:
 
     void validateDataAcrossObjects();
 
+    bool callbackFlag = true;
+
 
     DisplayX *display; 
     ButtonsX *buttons; 
@@ -151,7 +153,7 @@ private:
 
     MODE eMode = STANDARD;
     PAGE ePage = WEIGHTSTREAM;
-    bool callbackFlag = true;
+    
     WiFiStruct wifiInfo;
     
 

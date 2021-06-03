@@ -12,7 +12,7 @@
 #include "myWiFi.h"
 #include "globals.h"
 #include "debug.h"
-#include "Eigen/Sparse"
+#include "Eigen/Dense"
 
 //static bool spiffs_init_flag = false;
 esp_vfs_spiffs_conf_t conf;
@@ -205,7 +205,7 @@ void setWiFiInfo(WiFiStruct wifi){
 
 
 // Compare saved wifi info to the networks that are available and set a saved one to active if it is available
-WiFiStruct defaultWiFiInfo(){
+WiFiStruct availableWiFiInfo(){
     WiFiStruct wfi[20];
     debugPrintln("default WiFi Info");
     
@@ -272,7 +272,7 @@ WiFiStruct defaultWiFiInfo(){
     if(feof(f)){
         debugPrintln("file read to end. functioning as expected.");
     }else{
-        debugPrintln("unknown file error in defaultWiFiInfo");
+        debugPrintln("unknown file error in availableWiFiInfo");
     }
     fclose(f);
     debugPrintln("file closed.");
@@ -369,7 +369,7 @@ WiFiStruct defaultWiFiInfo(){
 
 bool getStrainGaugeParams(const Eigen::Matrix3d& m0, const Eigen::Matrix3d& m1, const Eigen::Matrix3d& m2, const Eigen::Matrix3d& m3){
     // if file exists and am able to open...
-    Eigen::Matrix3d m[4] = {const_cast< Eigen::Matrix3d& >(m0), const_cast< Eigen::Matrix3d& >(m1), const_cast< Eigen::Matrix3d& >(m2), const_cast< Eigen::Matrix3d& >(m3)};
+    Eigen::Matrix3d m[4] = {const_cast<Eigen::Matrix3d&>(m0), const_cast<Eigen::Matrix3d&>(m1), const_cast<Eigen::Matrix3d&>(m2), const_cast<Eigen::Matrix3d&>(m3)};
     debugPrintln("getStrainGaugeParams");
     if(!esp_spiffs_mounted(conf.partition_label)){
         conf = {

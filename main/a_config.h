@@ -48,7 +48,9 @@ extern "C" {
 #include "configs/PinDefs_V1.h"
 // declare width and height of the display for use later
 #define SB_HORIZ 320
-#define SB_VERT 120
+#define SB_VERT 240
+#define UPDATE_URL "https://storage.googleapis.com/sb-firmware-00/proto_v1/firmware.bin"
+
 #elif defined CONFIG_SB_V3_ST7735S
 #include "configs/PinDefs_V3.h"
 // declare width and height of the display for use later
@@ -65,6 +67,7 @@ extern "C" {
 // declare width and height of the display for use later
 #define SB_HORIZ 320
 #define SB_VERT 240
+#define UPDATE_URL "https://storage.googleapis.com/sb-firmware-00/proto_v6/firmware.bin"
 #endif
 
 

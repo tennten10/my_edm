@@ -7,7 +7,7 @@ extern "C"{
 
 #include "a_config.h"
 #include "globals.h"
-#include "Eigen/Sparse"
+#include "Eigen/Dense"
 #include <string>
 #include "mySPIFFS.h"
 #include "freertos/FreeRTOS.h"
@@ -78,6 +78,8 @@ public:
 
         //pinMode(enable_165, OUTPUT);
         //digitalWrite(enable_165, HIGH);
+
+        tare();
         
     }
     ~WeightX(){} 
@@ -95,6 +97,10 @@ public:
     }
 
     void CalibrateParameters();
+
+    void runTheoreticalWeight(double a, double b, double c){
+        theoreticalWeight(a,b,c);
+    }
     void Main();
 
 private:
@@ -126,9 +132,9 @@ private:
         return ret;
     }
 
-    Eigen::Vector4d mRawWeight = Eigen::Vector4d::Zero();
-    Eigen::Vector4d mTareOffset = Eigen::Vector4d::Zero();
-    Eigen::Vector4d mOutput = Eigen::Vector4d::Zero();
+    Eigen::Array4d mRawWeight = Eigen::Array4d::Zero();
+    Eigen::Array4d mTareOffset = Eigen::Array4d::Zero();
+    Eigen::Array4d mOutput = Eigen::Array4d::Zero();
 
 
     Eigen::Matrix3d mK_sg1 = Eigen::Matrix3d::Identity();
@@ -136,18 +142,18 @@ private:
     Eigen::Matrix3d mK_sg3 = Eigen::Matrix3d::Identity();
     Eigen::Matrix3d mK_sg4 = Eigen::Matrix3d::Identity();
 
-    double sg1 = 0;
-    double sg2 = 0;
-    double sg3 = 0;
-    double sg4 = 0;
-    double sg1_last = 0;
-    double sg2_last = 0;
-    double sg3_last = 0;
-    double sg4_last = 0;
+    double sg1 = 0.;
+    double sg2 = 0.;
+    double sg3 = 0.;
+    double sg4 = 0.;
+    double sg1_last = 0.;
+    double sg2_last = 0.;
+    double sg3_last = 0.;
+    double sg4_last = 0.;
 
     float a = 0.9;
 
-    double conversion = 1.0;
+    double conversion = 300.0;
     double getUnitPrecision(Units local){
         //make sure this is consistent with truncateWeight
         switch(local){

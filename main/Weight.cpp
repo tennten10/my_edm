@@ -12,53 +12,16 @@
 #include "math.h"
 #include <string>
 #include <stdio.h>
-#include "Eigen/Sparse"
+#include "Eigen/Dense"
 #include "Weight.h"
-
+#include <iostream>
+#include "System.h"
 
 
 QueueHandle_t weightQueue;
-extern TickType_t xBlockTime;
-
-SemaphoreHandle_t sgMutex;
-
-double aSGs[4] = {0};
-
-//weight update rate, seconds
-#define WEIGHT_UPDATE_RATE 0.5
-
-// defined in Globals.h
-// typedef enum {g, kg, oz, lb} Units;
-
-// double sg1 = 0;
-// double sg2 = 0;
-// double sg3 = 0;
-// double sg4 = 0;
-// double sg1_last = 0;
-// double sg2_last = 0;
-// double sg3_last = 0;
-// double sg4_last = 0;
-
-// // filter weight
-// float a = 0.9;
-
-// float conversion = 1.0;
+extern SystemX *_sys;
 
 double tareOffset=0.0;  //[] = {0.0, 0.0, 0.0, 0.0};
-
-
-
-// Eigen::Vector4d mRawWeight = Eigen::Vector4d::Zero();
-// Eigen::Vector4d mTareOffset = Eigen::Vector4d::Zero();
-// Eigen::Vector4d mOutput = Eigen::Vector4d::Zero();
-
-
-// Eigen::Matrix3d mK_sg1 = Eigen::Matrix3d::Identity();
-// Eigen::Matrix3d mK_sg2 = Eigen::Matrix3d::Identity();
-// Eigen::Matrix3d mK_sg3 = Eigen::Matrix3d::Identity();
-// Eigen::Matrix3d mK_sg4 = Eigen::Matrix3d::Identity();
-
-
 
 double WeightX::ReadVoltage(adc1_channel_t pin){
   // from https://github.com/G6EJD/ESP32-ADC-Accuracy-Improvement-function/blob/master/ESP32_ADC_Read_Voltage_Accurate.ino
@@ -87,9 +50,9 @@ void WeightX::readSensors(){
   sg2 = ReadVoltage(SG2);
   sg3 = ReadVoltage(SG3);
   sg4 = ReadVoltage(SG4);
-  char ch[36]={};
-  sprintf(ch, "[%.5f,%.5f,%.5f,%.5f]", sg1,sg2,sg3,sg4);
-  debugPrintln(ch);
+  //char ch[36]={};
+  //sprintf(ch, "[%.5f,%.5f,%.5f,%.5f]", sg1,sg2,sg3,sg4);
+  //debugPrintln(ch);
 
   //averaging filter
   sg1 = (sg1* a) + (sg1_last * (1-a));
@@ -164,21 +127,21 @@ void WeightX::setUnits(Units m){
 double WeightX::getRawWeight(){
   // weight before conversions and tare offset
   xSemaphoreTake(sgMutex, (TickType_t)10);
-  double weight =  ((sg1-mTareOffset(0))*mK_sg1(2,2)+(sg2-mTareOffset(1))*mK_sg2(2,2)+(sg3-mTareOffset(2))*mK_sg3(2,2)+(sg4-mTareOffset(3))*mK_sg4(2,2));
+  double weight =  random()*((sg1-mTareOffset(0))*mK_sg1(2,2)+(sg2-mTareOffset(1))*mK_sg2(2,2)+(sg3-mTareOffset(2))*mK_sg3(2,2)+(sg4-mTareOffset(3))*mK_sg4(2,2));
   
-  mRawWeight(1) = sg1;
-  mRawWeight(2) = sg2;
-  mRawWeight(3) = sg3;
-  mRawWeight(4) = sg4;
+  mRawWeight(0) = sg1;
+  mRawWeight(1) = sg2;
+  mRawWeight(2) = sg3;
+  mRawWeight(3) = sg4;
   xSemaphoreGive(sgMutex);
   return weight;
 }
 
 double WeightX::getWeight(){
   //double weight = (getRawWeight() - tareOffset)* conversion;
-  //xSemaphoreTake(systemMutex, (TickType_t)10);
+  
   double weight = getRawWeight()*conversion;
-  /*xSemaphoreGive(sgMutex);
+  
   debugPrint("weight: ");
   //double test = mTareOffset(0)*2.0;
   //debugPrintln(test);*/
@@ -188,23 +151,34 @@ double WeightX::getWeight(){
 }
 
 std::string WeightX::getWeightStr(){
-  return truncateWeight(getWeight());;
+  char temp[16]; 
+  // message already truncated to proper size for units
+  if(uxQueueMessagesWaiting(weightQueue) > 0 ){
+    xQueueReceive(weightQueue, temp, (TickType_t) 10);
+    return std::string(temp);
+  }
+  return "-1";
 }
 
 void WeightX::tare(){
-  readSensors();
+  
   xSemaphoreTake(sgMutex, (TickType_t)10);
-  //tareOffset = getRawWeight();
-  //mTareOffset(0) = sg1;
-  //mTareOffset(1) = sg2;
-  //mTareOffset(2) = sg3;
-  //mTareOffset(3) = sg4;
+  tareOffset = getRawWeight();
+  mTareOffset(0) = sg1;
+  mTareOffset(1) = sg2;
+  mTareOffset(2) = sg3;
+  mTareOffset(3) = sg4;
   mTareOffset = mRawWeight;
   xSemaphoreGive(sgMutex);
 }
 
 void WeightX::setWeightUpdateRate(int r){
   weight_update_rate = r;
+}
+
+void WeightX::sleepPreparation(){
+  // TODO: turn off low voltage regulator so it doesn't waste power, maybe deinitialize other stuff?
+  return;
 }
 
 void WeightX::Main(){
@@ -224,12 +198,17 @@ void WeightX::Main(){
         foo = truncateWeight(currentWeight); // this crashes. Debug from here...? Maybe not anymore?
         
         strcpy(doo, foo.c_str());
-        
-        xQueueSend(weightQueue, &doo, xBlockTime);
+        if(isBtConnected()){
+          //updateBTWeight(foo);            
+          debugPrintln("Bluetooth is connected, from Weight");
+        }
+
+        xQueueSend(weightQueue, &doo, (TickType_t)10);
         debugPrintln("Doing weight stuff");
         debugPrintln(foo);
         lastWeight = currentWeight;
       }
+      _sys->callbackFlag = true;
     }
     
     vTaskDelay(15);
@@ -251,69 +230,96 @@ double inverseAmplifier(double Vout){
   return dV;
 }
 
-// // converts strain value to weight value for a single 
-// // e -> w
-// double conversion(double raw_value){
-//   double h, w; // units: cm
-//   double E_aluminum = 70.3*10^9; // Pa
-//   double v_aluminum = 0.345;
-//   #ifdef CONFIG_SB_V1_HALF_ILI9341
-//   h  = .2;
-//   w = 0.8;
-//   #endif
-//   #ifdef CONFIG_SB_V3_ST7735S
-//   h = 0.25;
-//   w = 1.0; 
-//   #endif
-//   #ifdef CONFIG_SB_V6_FULL_ILI9341
-//   h = 0.2;
-//   w = 1.0; 
-//   // L = 18mm
-//   #endif
-//   double I = h^3*w/12; // cm^4
+// converts strain value to weight value for a single 
+// e -> w
+double conversion(double raw_value){
+  double ret = 0;
+  double h, w; // units: cm
+  double E_aluminum = 70.3*pow(10,9); // Pa
+  double v_aluminum = 0.345;
+  #ifdef CONFIG_SB_V1_HALF_ILI9341
+  h  = .2;
+  w = 0.8;
+  #endif
+  #ifdef CONFIG_SB_V3_ST7735S
+  h = 0.25;
+  w = 1.0; 
+  #endif
+  #ifdef CONFIG_SB_V6_FULL_ILI9341
+  h = 0.2;
+  w = 1.0; 
+  // L = 18mm
+  #endif
+  double I = pow(h,3)*w/12.0; // cm^4
+  return ret;
+}
 
-// }
-
-// // w & (x,y) -> [w,w /n w,w] or all weights
-// // origin is in center of device
-// Eigen::Matrix2d WeightX::theoreticalWeight(double g, double x, double y){
-//   // https://www.scirp.org/pdf/am_2015032417562679.pdf
-//   Eigen::Matrix2d ret = Eigen::Zero();
+// w & (x,y) -> [w,w /n w,w] or all weights
+// origin is in center of device
+Eigen::Matrix2d WeightX::theoreticalWeight(double g, double x, double y){
+  // https://www.scirp.org/pdf/am_2015032417562679.pdf
+  //or...
+  //https://ntrs.nasa.gov/api/citations/20040045162/downloads/20040045162.pdf
+  Eigen::Matrix2d ret = Eigen::Matrix2d::Identity();
   
-//   // assuming all gauges are identical
-//   #ifdef CONFIG_SB_V1_HALF_ILI9341
-//   // Center of mass: ( millimeters )
-// 	double X = 0.81;
-// 	double Y = -11.19;
-// 	double Z = -1.41;
-//   // Note: had to switch coordinate system for this model
+  // assuming all gauges are identical
+  #ifdef CONFIG_SB_V1_HALF_ILI9341
+  // Center of mass: ( millimeters )
+	double CMx = 0.81;
+	double CMy = -11.19;
+	double CMz = -1.41;
+  // Note: had to switch coordinate system for this model
   
-//   // strain gauge location, positive values ( millimeters )
-//   double dX = 192.28
-//   double dY = 109.05
-//   double surfaceZ = 30.90;
+  // strain gauge location, positive values ( millimeters )
+  double X = 192.28;
+  double Y = 109.05;
+  double surfaceZ = 30.90;
 
-//   // equations to solve, 
-//   double Ex = 0; // sums of all reaction components
-//   double Ey = 0; // sums of all reaction components
-//   double Ez = Wself + g + Rsg1 + Rsg2 + Rsg3 + Rsg4;
-//   double Mx = Wself*Y + g*y + (Rsg1+Rsg2)*dY  -(Rsg3 + Rsg4)*dY;
-//   double My = Wself*X + g*x + (Rsg2+Rsg4)*dX  -(Rsg1 + Rsg3)*dX;
+  // equations to solve, 
+  // double Ex = 0; // sums of all reaction components
+  // double Ey = 0; // sums of all reaction components
+  // double Ez = Wself + g + Rsg1 + Rsg2 + Rsg3 + Rsg4;
+  // double Mx = Wself*Y + g*y + (Rsg1+Rsg2)*dY  -(Rsg3 + Rsg4)*dY;
+  // double My = Wself*X + g*x + (Rsg2+Rsg4)*dX  -(Rsg1 + Rsg3)*dX;
 
 
-//   #endif
-//   #ifdef CONFIG_SB_V3_ST7735S 
-//   Eigen::Matrix4d matrix (1,1,1,1,
-//                           Y, Y, -Y, -Y,
-//                           X, -X, X, -X,
-//                           );
-//   #endif
-//   #ifdef CONFIG_SB_V6_FULL_ILI9341
-
-//   #endif
+  #endif
+  #ifdef CONFIG_SB_V3_ST7735S 
+  // self weight
+  double W = 10; // g
+  // Center of mass: ( millimeters )
+	double CMx =  0.81;
+	double CMy = -11.19;
+	double CMz = -1.41;
+  // Note: had to switch coordinate system for this model
   
-//   return ret;
-// }
+  // strain gauge location, positive values ( millimeters )
+  double X = 192.28;
+  double Y = 109.05;
+  double surfaceZ = 30.90;
+
+  Eigen::Matrix4d matrix; 
+  matrix << 1.0, 1.0, 1.0, 1.0,
+            Y, Y, -Y, -Y,
+            X, X, X, X,
+            1.0, -1.0, -1.0, 1.0;
+  
+  Eigen::Vector4d es (g, y*g+W*CMy, x*g+W*CMx, 0);
+
+  Eigen::Vector4d Rs = matrix.colPivHouseholderQr().solve(es);
+  
+  ret.row(0) << Rs(0), Rs(1);
+  ret.row(1) << Rs(2), Rs(3);
+  // Eigen::IOFormat OctaveFmt(4, 0, ", ", ";\n", "", "", "[", "]\n");
+  // std::cout << Rs.format(OctaveFmt);
+  
+  #endif
+  #ifdef CONFIG_SB_V6_FULL_ILI9341
+
+  #endif
+  
+  return ret;
+}
 
 // void inverseWeight(){
 //   // turns weight into voltage levels

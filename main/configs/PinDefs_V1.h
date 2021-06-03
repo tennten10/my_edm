@@ -35,33 +35,37 @@ extern "C"{
  * IO6     LCD_SCK
  * IO39     SG1
  */
+#include "sdkconfig.h"
 
-#define SG1 0
-#define SG2 2
-#define SG3 4
-#define SG4 15
 
-#define but1 12
-#define but2 13
-#define but3 19
-#define but4 21
+#define SG1 ADC1_CHANNEL_3 // 39  // also called sensor_vn
+#define SG2 ADC1_CHANNEL_6 // 34
+#define SG3 ADC1_CHANNEL_7 // 35
+#define SG4 ADC1_CHANNEL_4 // 32
 
-#define batV 25
+#define but1 GPIO_NUM_13
+#define but2 GPIO_NUM_14
+#define but3 GPIO_NUM_19
+#define but4 GPIO_NUM_21
 
-// #ifdef DISPLAY_120x80_I2C
-//   #define LCD_CS  18
-//   #define LCD_DC  16
-//   #define LCD_RESET 17
-//   #define LCD_MOSI  15  // aka SDA/SD0
-//   #define LCD_SCL 5
+#define ledB GPIO_NUM_26 // 26  // can also used for lcd backlight pwm
+#define ledG GPIO_NUM_25 //25
+#define ledR GPIO_NUM_23 // 23
 
-//   //#define TFT_MISO 4
-//   //#define TFT_MOSI 15
-//   //#define TFT_SCLK 27
-//   //#define TFT_CS    18   // Chip select control pin
-//   //#define TFT_DC    16   // Data Command control pin
-//   //#define TFT_RST   17
-// #endif
+#define batV ADC1_CHANNEL_5 //GPIO_NUM_33
+
+#define enable_165 27
+#define onLED 22
+
+// Set automatically when this board is selected in MenuConfig LVGL settings
+// TFT_MISO 4
+// TFT_MOSI 15
+// TFT_SCLK 5
+// TFT_CS    18   // Chip select control pin
+// TFT_DC    16   // Data Command control pin
+// TFT_RST   17
+
+
 #ifdef __cplusplus
 }
 #endif

@@ -72,6 +72,18 @@ menu "LVGL TFT Display controller"
             bool "Wireless Tag WT32-SC01"
             select LV_TFT_DISPLAY_CONTROLLER_ST7796S
             select LV_TFT_DISPLAY_PROTOCOL_SPI
+        config LV_SB_V1_HALF_ILI9341
+            bool "V1 Half ILI9341"
+            select LV_TFT_DISPLAY_CONTROLLER_ILI9341
+            select LV_TFT_DISPLAY_PROTOCOL_SPI
+        config LV_SB_V3_ST7735S
+            bool "V3 Projector ST7735S" 
+            select LV_TFT_DISPLAY_CONTROLLER_ST7735S
+            select LV_TFT_DISPLAY_PROTOCOL_SPI 
+        config LV_SB_V6_FULL_ILI9341
+            bool "V6 Full ILI9341"
+            select LV_TFT_DISPLAY_CONTROLLER_ILI9341
+            select LV_TFT_DISPLAY_PROTOCOL_SPI
     endchoice
 
     # START of helper symbols.
@@ -769,6 +781,9 @@ menu "LVGL TFT Display controller"
             default 19 if LV_PREDEFINED_DISPLAY_TTGO
             default 19 if LV_PREDEFINED_DISPLAY_TTGO_CAMERA_PLUS
             default 13 if LV_PREDEFINED_DISPLAY_WT32_SC01
+            default 15 if LV_SB_V1_HALF_ILI9341
+            default 15 if LV_SB_V3_ST7735S
+            default 15 if LV_SB_V6_FULL_ILI9341
             default 13
 
             help
@@ -777,6 +792,8 @@ menu "LVGL TFT Display controller"
         config LV_DISPLAY_USE_SPI_MISO
             bool "GPIO for MISO (Master In Slave Out)" if LV_TFT_DISPLAY_PROTOCOL_SPI
             default y if LV_PREDEFINED_PINS_TKOALA
+            default y if LV_SB_V1_HALF_ILI9341
+            default y if LV_SB_V6_FULL_ILI9341
             help
                 Enable the MISO signal to control the display. You can disable
                 it when the display does not need MISO signal to be controlled.
@@ -788,6 +805,9 @@ menu "LVGL TFT Display controller"
             range 0 43 if IDF_TARGET_ESP32S2
 
             default 19 if LV_PREDEFINED_PINS_TKOALA
+
+            default 4 if LV_SB_V1_HALF_ILI9341
+            default 4 if LV_SB_V6_FULL_ILI9341
             default 0
 
             help
@@ -838,6 +858,9 @@ menu "LVGL TFT Display controller"
             default 18 if LV_PREDEFINED_DISPLAY_TTGO
             default 21 if LV_PREDEFINED_DISPLAY_TTGO_CAMERA_PLUS
             default 14 if LV_PREDEFINED_DISPLAY_WT32_SC01
+            default 5 if LV_SB_V1_HALF_ILI9341
+            default 5 if LV_SB_V3_ST7735S
+            default 5 if LV_SB_V6_FULL_ILI9341
             default 14
 
             help
@@ -866,6 +889,9 @@ menu "LVGL TFT Display controller"
             default 5 if LV_PREDEFINED_DISPLAY_TTGO
             default 12 if LV_PREDEFINED_DISPLAY_TTGO_CAMERA_PLUS
             default 15 if LV_PREDEFINED_DISPLAY_WT32_SC01
+            default 18 if LV_SB_V1_HALF_ILI9341
+            default 18 if LV_SB_V3_ST7735S
+            default 18 if LV_SB_V6_FULL_ILI9341
             default 15
 
             help
@@ -895,6 +921,9 @@ menu "LVGL TFT Display controller"
             default 17 if LV_PREDEFINED_DISPLAY_ATAG
             default 16 if LV_PREDEFINED_DISPLAY_TTGO
             default 15 if LV_PREDEFINED_DISPLAY_TTGO_CAMERA_PLUS
+            default 16 if SB_V1_HALF_ILI9341
+            default 16 if SB_V3_ST7735S
+            default 16 if SB_V6_FULL_ILI9341
             default 2
 
             help
@@ -916,6 +945,9 @@ menu "LVGL TFT Display controller"
             default 23 if LV_PREDEFINED_DISPLAY_TTGO
             default 33 if LV_PREDEFINED_DISPLAY_TTGO_CAMERA_PLUS
             default 22 if LV_PREDEFINED_DISPLAY_WT32_SC01
+            default 17 if LV_SB_V1_HALF_ILI9341
+            default 17 if LV_SB_V3_ST7735S
+            default 17 if LV_SB_V6_FULL_ILI9341
             default 4
 
             help
@@ -985,6 +1017,7 @@ menu "LVGL TFT Display controller"
             range 0 43 if IDF_TARGET_ESP32S2
 
             default 5 if LV_PREDEFINED_DISPLAY_WEMOS_LOLIN
+            
             default 5
 
             help
@@ -996,6 +1029,7 @@ menu "LVGL TFT Display controller"
             range 0 43 if IDF_TARGET_ESP32S2
 
             default 4 if LV_PREDEFINED_DISPLAY_WEMOS_LOLIN
+           
             default 4
 
             help
