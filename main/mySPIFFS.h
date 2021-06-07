@@ -6,7 +6,7 @@ extern "C"{
 #endif */
 
 #include "globals.h"
-#include "Eigen/Dense"
+#include "Dense" //"Eigen/Dense"
 
 
 

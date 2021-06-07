@@ -3,7 +3,7 @@
 #include "main.h"
 #include "debug.h"
 #include "mySPIFFS.h"
-#include "freertos/FreeRTOS.h"
+#include "freertos/FreeRTOS.h"  
 #include "freertos/queue.h"
 #include "freertos/task.h"
 #include "freertos/semphr.h"
@@ -12,7 +12,8 @@
 #include "math.h"
 #include <string>
 #include <stdio.h>
-#include "Eigen/Dense"
+//#include "Eigen/Dense"
+#include "Dense"
 #include "Weight.h"
 #include <iostream>
 #include "System.h"

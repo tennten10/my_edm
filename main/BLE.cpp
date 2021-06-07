@@ -3,8 +3,8 @@
 #include "myOTA.h"
 #include "System.h"
 
-#include "esp-nimble-cpp/src/NimBLELog.h"
-#include "esp-nimble-cpp/src/NimBLEDevice.h"
+#include "src/NimBLELog.h"
+#include "src/NimBLEDevice.h"
 
 
 #include <stdio.h>

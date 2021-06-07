@@ -7,7 +7,7 @@ extern "C"{
 
 #include "a_config.h"
 #include "globals.h"
-#include "Eigen/Dense"
+#include "Dense" //"Eigen/Dense"
 #include <string>
 #include "mySPIFFS.h"
 #include "freertos/FreeRTOS.h"

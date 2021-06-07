@@ -3,10 +3,17 @@
 #
 # (Uses default behaviour of compiling all source files in directory, adding 'include' to include path.)
 
-CFLAGS+= -DLV_LVGL_H_INCLUDE_SIMPLE
 
+CFLAGS += -DLV_LVGL_H_INCLUDE_SIMPLE
 
-COMPONENT_ADD_INCLUDEDIRS += configs
+COMPONENT_SRCDIRS := . \
+	configs \
+	font \
+	images 
+	#components
+
+COMPONENT_ADD_INCLUDEDIRS := $(COMPONENT_SRCDIRS) ../   
+
 # COMPONENT_EMBED_TXTFILES :=  ${PROJECT_PATH}/server_certs/ca_cert.pem
 
 $(call compile_only_if,$(CONFIG_SB_V1_HALF_ILI9341),configs/PinDefs_V1.o)

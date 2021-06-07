@@ -4,4 +4,5 @@
 #
 
 PROJECT_NAME := SudoBoard
+#EXTRA_COMPONENT_DIRS := $(abspath lvgl_esp32_drivers)	$(abspath lvgl) $(abspath esp-nimble-cpp) $(abspath Eigen)
 include $(IDF_PATH)/make/project.mk

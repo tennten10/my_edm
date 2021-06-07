@@ -12,7 +12,7 @@
 #include "myWiFi.h"
 #include "globals.h"
 #include "debug.h"
-#include "Eigen/Dense"
+#include "Dense" //"Eigen/Dense"
 
 //static bool spiffs_init_flag = false;
 esp_vfs_spiffs_conf_t conf;

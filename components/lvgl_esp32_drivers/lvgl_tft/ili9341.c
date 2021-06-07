@@ -232,7 +232,11 @@ static void ili9341_set_orientation(uint8_t orientation)
     uint8_t data[] = {0x6C, 0xEC, 0xCC, 0x4C};
 #elif defined (CONFIG_LV_PREDEFINED_DISPLAY_NONE)
     uint8_t data[] = {0x48, 0x88, 0x28, 0xE8};
-#elif defined (CONFIG_LV_SB_V6_FULL_ILI9341 || CONFIG_LV_SB_V3_ST7735S || CONFIG_LV_SB_V1_HALF_ILI9341)
+#elif defined (CONFIG_LV_SB_V6_FULL_ILI9341)  
+	uint8_t data[] = {0x48, 0x88, 0x28, 0xE8}; 
+#elif defined (CONFIG_LV_SB_V3_ST7735S)
+	uint8_t data[] = {0x48, 0x88, 0x28, 0xE8};
+#elif defined (CONFIG_LV_SB_V1_HALF_ILI9341)
 	uint8_t data[] = {0x48, 0x88, 0x28, 0xE8};
 #endif
 

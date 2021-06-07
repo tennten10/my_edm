@@ -157,8 +157,8 @@ void app_main() {
     long batTime = esp_timer_get_time()/1000;
 
     // update progress parameter
-    // int q = 0;
-    // int q_last = 0;
+    int q = 0;
+    int q_last = 0;
 
     // page timeout counters
     long timeout = 0;
