@@ -4,7 +4,6 @@
 #include "globals.h"
 #include <string>
 
-//void startWiFi();
 int initWiFi();
 int isInit();
 int stopWiFi();

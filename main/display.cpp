@@ -290,7 +290,6 @@ void DisplayX::styleInit()
     //lv_style_set_text_color(&logoStyle, LV_STATE_DEFAULT, LV_COLOR_WHITE);
     lv_style_set_bg_color(&logoStyle, LV_STATE_DEFAULT, LV_COLOR_BLACK);
 
-
     lv_style_set_bg_color(&backgroundStyle, LV_STATE_DEFAULT, LV_COLOR_BLACK);
     lv_style_set_border_opa(&backgroundStyle, LV_STATE_DEFAULT, 0);
 
@@ -919,7 +918,6 @@ void DisplayX::displayOff()
 {
   xSemaphoreTake(xGuiSemaphore, (TickType_t)10);
   lv_obj_t *bkgrnd = lv_obj_create(lv_scr_act(), NULL);
-  //lv_obj_t *img = lv_img_create(bkgrnd, NULL);
   lv_obj_set_width(bkgrnd, SB_HORIZ);
   lv_obj_set_height(bkgrnd, SB_VERT);
   lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);

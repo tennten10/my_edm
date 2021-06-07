@@ -4,8 +4,6 @@
 #include "debug.h"
 
 
-
-
 /* Based on Advanced HTTPS OTA example - 
    
 */
@@ -106,8 +104,8 @@ void ota_task(void *pvParameter)
     debugPrintln("before beginning ota");
     
     esp_err_t err = esp_https_ota_begin(&ota_config, &https_ota_handle);
-
-    int full_size = esp_https_ota_get_image_size(https_ota_handle);
+    // This function is in most recent esp-idf. For now commented out until progress bar is implemented.
+    // int full_size = esp_https_ota_get_image_size(https_ota_handle);
     
     if (err != ESP_OK) {
         debugPrintln("ESP HTTPS OTA Begin failed");
@@ -129,14 +127,15 @@ void ota_task(void *pvParameter)
         debugPrintln("image header verification failed");
         goto ota_end;
     }
-    debugPrintln("Made it past header verification so that should be fine");
-    if(full_size < 1){
-        debugPrintln("error reading header file size, printed from ota_task");
-        full_size = 1;
-    }else{
-        debugPrint("Full Size: ");
-        debugPrintln(full_size);
-    }
+    // debugPrintln("Made it past header verification so that should be fine");
+    // if(full_size < 1){
+    //     debugPrintln("error reading header file size, printed from ota_task");
+    //     full_size = 1;
+    // }else{
+    //     debugPrint("Full Size: ");
+    //     debugPrintln(full_size);
+    // }
+
     // Note: I'm using a linear correction to hopefully fix the load percentage... It is from collecting a few data points and plotting a graph.
     // I wasn't able to figure out the relationship between the variable t (return value of esp_https_ota_get_image_len_read) and the total size of the downlaod
     while (1) {
@@ -151,13 +150,13 @@ void ota_task(void *pvParameter)
         t = (((esp_https_ota_get_image_len_read(https_ota_handle)-773858) / 5374) +144)/3;
          
         debugPrintln(std::to_string(t));
-        current = t / full_size;
-        if( current > last){
-            _sys->display->displayUpdateScreen(current);
-            last = current;
-            debugPrint("Image progress: ");
-            debugPrintln(last);
-        }
+        // current = t / full_size;
+        // if( current > last){
+        //     _sys->display->displayUpdateScreen(current);
+        //     last = current;
+        //     debugPrint("Image progress: ");
+        //     debugPrintln(last);
+        // }
     }
 
     if (esp_https_ota_is_complete_data_received(https_ota_handle) != true) {
@@ -195,7 +194,7 @@ int setupOTA() {
 
     
    
-    BLEstop();
+    // BLEstop();
 
     return 0;
 }

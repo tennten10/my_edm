@@ -60,7 +60,7 @@ public:
     }
     void setBattery(int b){
         if(b > 100){
-            debugPrintln("Battery over 100% ??????");
+            debugPrintln("Battery over 100% ?????? - might be charging");
             b = 100;
         }else if(b < 0){
             debugPrintln("Battery less than 0% ???????");
@@ -148,7 +148,6 @@ private:
     SemaphoreHandle_t modeMutex = xSemaphoreCreateMutex();
     SemaphoreHandle_t weightMutex = xSemaphoreCreateMutex();
     
- 
     Units eUnits;
     int batteryLevel;
 
@@ -157,7 +156,6 @@ private:
     
     WiFiStruct wifiInfo;
     
-
 };
 
 #endif

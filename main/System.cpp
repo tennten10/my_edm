@@ -21,7 +21,7 @@ void SystemX::goToSleep(){
     weight->sleepPreparation();
     BLESleepPrep();
 
-    //init_ulp_program();
+    init_ulp_program();
 }
 
 void SystemX::incrementUnits(){

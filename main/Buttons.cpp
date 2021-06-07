@@ -10,8 +10,6 @@
 
 #define GPIO_INPUT_PIN_SEL ((1ULL<<but1) | (1ULL<<but2) | (1ULL<<but3) | (1ULL<<but4))
 
-extern TickType_t xBlockTime;
-
 long nTime = 0;
 long longTime = 0; 
 
@@ -120,8 +118,6 @@ void ButtonsX::readButtons()
     // if long flag already active, 
     // flag for execution and block from changing values until then
     
-
-    //long press works now... but not short press
 
     longTime = esp_timer_get_time()/1000;
     //printf("clock %ld :: button %ld \n", longTime, button1.buttonTimer);
@@ -309,7 +305,7 @@ void ButtonsX::verifyButtons()
         char doo[5] = {button1.cmd, button2.cmd, button3.cmd, button4.cmd, '\0'};
         //char doo[5];
         //sprintf(doo, "%s%s%s%s", button1.cmd, button2.cmd, button3.cmd, button4.cmd);
-        xQueueSend(buttonQueue, &doo, xBlockTime);
+        xQueueSend(buttonQueue, &doo, (TickType_t)10);
         // debugPrintln(doo);
         // debugPrintln("Buttons added to queue");
         button1.cmd = 'N';

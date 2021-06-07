@@ -4,11 +4,7 @@
 //extern "C" {
 //#endif
 #include "lvgl.h"
-
-#include "freertos/FreeRTOS.h"
-#include "freertos/semphr.h"
-#include "freertos/task.h"
-#include "freertos/queue.h"
+#include "globals.h"
 #include <string>
 #include "a_config.h"
 #include "debug.h"

@@ -30,9 +30,6 @@
    the config you want - ie #define EXAMPLE_WIFI_SSID "mywifissid"
 */
 
-
-//WiFiStruct wifi;
-
 static bool initFlag = false;
 wifi_init_config_t cfg;
 wifi_config_t wifi_config = {};
@@ -76,92 +73,7 @@ static void event_handler(void* arg, esp_event_base_t event_base,
     }
 }
 
-// void wifi_init_sta()
-// {
-//     s_wifi_event_group = xEventGroupCreate();
 
-    // ESP_ERROR_CHECK(esp_netif_init());
-
-    // ESP_ERROR_CHECK(esp_event_loop_create_default());
-    // esp_netif_create_default_wifi_sta();
-
-    // cfg = WIFI_INIT_CONFIG_DEFAULT();
-    // ESP_ERROR_CHECK(esp_wifi_init(&cfg));
-
-    // Not sure what this is or if it was part of the example or my attempt at transferring code over... maybe uncomment later?
-    // esp_netif_inherent_config_t esp_netif_config = ESP_NETIF_INHERENT_DEFAULT_WIFI_STA();
-    // // Prefix the interface description with the module TAG
-    // // Warning: the interface desc is used in tests to capture actual connection details (IP, gw, mask)
-    // asprintf(&desc, "%s: %s", TAG, esp_netif_config.if_desc);
-    // esp_netif_config.if_desc = desc;
-    // esp_netif_config.route_prio = 128;
-    // esp_netif_t *netif = esp_netif_create_wifi(WIFI_IF_STA, &esp_netif_config);
-
-    // esp_event_handler_instance_t instance_any_id;
-    // esp_event_handler_instance_t instance_got_ip;
-    // ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT,
-    //                                                     ESP_EVENT_ANY_ID,
-    //                                                     &event_handler,
-    //                                                     NULL,
-    //                                                     &instance_any_id));
-    // ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT,
-    //                                                     IP_EVENT_STA_GOT_IP,
-    //                                                     &event_handler,
-    //                                                     NULL,
-    //                                                     &instance_got_ip));
-  
-
-    //wifi_config_t wifi_config ={};
-
-//     memcpy(wifi_config.sta.ssid, wifi.ssid,
-//                                sizeof(wifi.ssid));
-//     memcpy(wifi_config.sta.password, wifi.pswd,
-//                                sizeof(wifi.pswd));
-//     wifi_config.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
-//     wifi_config.sta.pmf_cfg.capable = true;
-//     wifi_config.sta.pmf_cfg.required = false;
-    
-
-//     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA) ); //.
-//     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config) );
-//     ESP_ERROR_CHECK(esp_wifi_start() );
-
-//     debugPrintln("wifi_init_sta finished.");
-
-//     // WHAT IS GOING ON HERE??????? NOT GETTING PAST EVENT GROUP...
-
-//     /* Waiting until either the connection is established (WIFI_CONNECTED_BIT) or connection failed for the maximum
-//      * number of re-tries (WIFI_FAIL_BIT). The bits are set by event_handler() (see above) */
-//     EventBits_t bits = xEventGroupWaitBits(s_wifi_event_group,
-//             WIFI_CONNECTED_BIT | WIFI_FAIL_BIT,
-//             pdFALSE,
-//             pdFALSE,
-//             portMAX_DELAY);
-//     debugPrintln("after eventbits");
-
-//     /* xEventGroupWaitBits() returns the bits before the call returned, hence we can test which event actually
-//      * happened. */
-//     if (bits & WIFI_CONNECTED_BIT) {
-//         debugPrint("connected to ap SSID:");
-//         debugPrint(wifi.ssid);
-//         debugPrint(" password:");
-//         debugPrintln(wifi.pswd);
-        
-//     } else if (bits & WIFI_FAIL_BIT) {
-//         debugPrint("Failed to connect to SSID:");
-//         debugPrint(wifi.ssid);
-//         debugPrint(" password:");
-//         debugPrintln(wifi.pswd);
-
-//     } else {
-//         debugPrintln("UNEXPECTED EVENT");
-//     }
-
-//     /* The event will not be processed after unregister */
-//     ESP_ERROR_CHECK(esp_event_handler_instance_unregister(IP_EVENT, IP_EVENT_STA_GOT_IP, instance_got_ip));
-//     ESP_ERROR_CHECK(esp_event_handler_instance_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID, instance_any_id));
-//     vEventGroupDelete(s_wifi_event_group);
-// }
 
 int initWiFi(){
     //Initialize NVS
@@ -199,38 +111,6 @@ int initWiFi(){
 
 int isInit(){
     return initFlag;
-}
-
-
-void startWiFi()
-{
-
-  
-
-
-
-
-    // wifi =  getActiveWifiInfo();
-    // if(strcmp(wifi.ssid,"")==0){
-    //     debugPrintln("WIFI Info NOT LOADED. Exiting WIFI Functions.");
-    //     return; 
-    // }else{
-    //     //Initialize NVS
-    //     esp_err_t ret = nvs_flash_init();
-    //     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-    //         // 1.OTA app partition table has a smaller NVS partition size than the non-OTA
-    //         // partition table. This size mismatch may cause NVS initialization to fail.
-    //         // 2.NVS partition contains data in new format and cannot be recognized by this version of code.
-    //         // If this happens, we erase NVS partition and initialize NVS again.
-    //         ESP_ERROR_CHECK(nvs_flash_erase());
-    //         ret = nvs_flash_init();
-    //     }
-    //     ESP_ERROR_CHECK(ret);
-
-    //     debugPrintln("ESP_WIFI_MODE_STA");
-    //     wifi_init_sta();
-        
-    // }
 }
 
 int stopWiFi(){

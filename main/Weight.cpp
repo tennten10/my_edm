@@ -18,10 +18,7 @@
 #include "System.h"
 
 
-// QueueHandle_t weightQueue;
 extern SystemX *_sys;
-
-//double tareOffset=0.0;  //[] = {0.0, 0.0, 0.0, 0.0};
 
 double WeightX::ReadVoltage(adc1_channel_t pin){
   // from https://github.com/G6EJD/ESP32-ADC-Accuracy-Improvement-function/blob/master/ESP32_ADC_Read_Voltage_Accurate.ino

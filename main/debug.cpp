@@ -5,14 +5,9 @@
 #include "esp_log.h"
 //#include "driver/uart.h"
 #include <cstring>
-//#include <string.h>
 #include <string>
 #include <cstdio>
 
-#include "freertos/FreeRTOS.h"
-#include "freertos/queue.h"
-#include "freertos/task.h"
-#include "freertos/semphr.h"
 
 // debugState is defined in a_config for ease of use. 
 // Is enum so it can be changed as a program variable rather than needing to be compiled again
