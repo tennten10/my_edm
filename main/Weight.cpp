@@ -12,52 +12,13 @@
 #include "math.h"
 #include <string>
 #include <stdio.h>
-#include "Eigen/Sparse"
+#include "Eigen/Dense"
 #include "Weight.h"
+#include <iostream>
+#include "System.h"
 
 
-
-QueueHandle_t weightQueue;
-extern TickType_t xBlockTime;
-
-SemaphoreHandle_t sgMutex;
-
-
-//weight update rate, seconds
-#define WEIGHT_UPDATE_RATE 0.5
-
-// defined in Globals.h
-// typedef enum {g, kg, oz, lb} Units;
-
-// double sg1 = 0;
-// double sg2 = 0;
-// double sg3 = 0;
-// double sg4 = 0;
-// double sg1_last = 0;
-// double sg2_last = 0;
-// double sg3_last = 0;
-// double sg4_last = 0;
-
-// // filter weight
-// float a = 0.9;
-
-// float conversion = 1.0;
-
-double tareOffset=0.0;  //[] = {0.0, 0.0, 0.0, 0.0};
-
-
-
-// Eigen::Vector4d mRawWeight = Eigen::Vector4d::Zero();
-// Eigen::Vector4d mTareOffset = Eigen::Vector4d::Zero();
-// Eigen::Vector4d mOutput = Eigen::Vector4d::Zero();
-
-
-// Eigen::Matrix3d mK_sg1 = Eigen::Matrix3d::Identity();
-// Eigen::Matrix3d mK_sg2 = Eigen::Matrix3d::Identity();
-// Eigen::Matrix3d mK_sg3 = Eigen::Matrix3d::Identity();
-// Eigen::Matrix3d mK_sg4 = Eigen::Matrix3d::Identity();
-
-
+extern SystemX *_sys;
 
 double WeightX::ReadVoltage(adc1_channel_t pin){
   // from https://github.com/G6EJD/ESP32-ADC-Accuracy-Improvement-function/blob/master/ESP32_ADC_Read_Voltage_Accurate.ino
@@ -107,9 +68,7 @@ void WeightX::readSensors(){
 }
 
 std::string WeightX::truncateWeight( double d){
-  //xSemaphoreTake(systemMutex, (TickType_t)10);
-  //Units u = _sys.eUnits;
-  //xSemaphoreGive(systemMutex);
+  
   char str[16]="";
   switch(localUnits){
     case g: // g.1
@@ -125,7 +84,7 @@ std::string WeightX::truncateWeight( double d){
       return std::string(str);
     break;
     case lb: // lb.3?
-      sprintf(str, "%0.1f", d);
+      sprintf(str, "%0.2f", d);
       return std::string(str);
     break;
     default:
@@ -163,21 +122,24 @@ void WeightX::setUnits(Units m){
 double WeightX::getRawWeight(){
   // weight before conversions and tare offset
   xSemaphoreTake(sgMutex, (TickType_t)10);
-  double weight = sg1 + sg2 + sg3+ sg4;
-  
-  mRawWeight(1) = sg1;
-  mRawWeight(2) = sg2;
-  mRawWeight(3) = sg3;
-  mRawWeight(4) = sg4;
+  //double weight =  ((sg1-)*mK_sg1(2,2)+(sg2-mTareOffset(1))*mK_sg2(2,2)+(sg3-mTareOffset(2))*mK_sg3(2,2)+(sg4-mTareOffset(3))*mK_sg4(2,2));
+
+  rawWeight.w1 = sg1*mK_sg1(2,2);
+  rawWeight.w2 = sg2*mK_sg2(2,2);
+  rawWeight.w3 = sg3*mK_sg3(2,2);
+  rawWeight.w4 = sg4*mK_sg4(2,2);
   xSemaphoreGive(sgMutex);
-  return weight;
+  return (rawWeight.w1 + rawWeight.w2 + rawWeight.w3 + rawWeight.w4);
 }
 
 double WeightX::getWeight(){
+  // adjusting for tare and units
   //double weight = (getRawWeight() - tareOffset)* conversion;
-  //xSemaphoreTake(systemMutex, (TickType_t)10);
-  double weight = ((sg1-mTareOffset(0))*mK_sg1(2,2)+(sg2-mTareOffset(1))*mK_sg2(2,2)+(sg3-mTareOffset(2))*mK_sg3(2,2)+(sg4-mTareOffset(3))*mK_sg4(2,2))*conversion;
-  /*xSemaphoreGive(sgMutex);
+  double weight=0;
+  if(getRawWeight()>0){
+    weight = ((rawWeight.w1 - mTareOffset(0))+ (rawWeight.w2 - mTareOffset(1)) + (rawWeight.w3 - mTareOffset(2))+ (rawWeight.w4 - mTareOffset(3))) * conversion;
+  }
+ 
   debugPrint("weight: ");
   //double test = mTareOffset(0)*2.0;
   //debugPrintln(test);*/
@@ -187,164 +149,265 @@ double WeightX::getWeight(){
 }
 
 std::string WeightX::getWeightStr(){
-  return truncateWeight(getWeight());;
+  char temp[16]; 
+  // message already truncated to proper size for units
+  if(uxQueueMessagesWaiting(weightQueue) > 0 ){
+    xQueueReceive(weightQueue, temp, (TickType_t) 10);
+    return std::string(temp);
+  }
+  return "-1";
 }
 
 void WeightX::tare(){
-  readSensors();
+  
   xSemaphoreTake(sgMutex, (TickType_t)10);
-  //tareOffset = getRawWeight();
-  //mTareOffset(0) = sg1;
-  //mTareOffset(1) = sg2;
-  //mTareOffset(2) = sg3;
-  //mTareOffset(3) = sg4;
-  mTareOffset = mRawWeight;
+  debugPrintln(getRawWeight());
+  mTareOffset(0) = rawWeight.w1;
+  mTareOffset(1) = rawWeight.w2;
+  mTareOffset(2) = rawWeight.w3;
+  mTareOffset(3) = rawWeight.w4;
+  
   xSemaphoreGive(sgMutex);
 }
 
+void WeightX::setWeightUpdateRate(int r){
+  weight_update_rate = r;
+}
+
+void WeightX::sleepPreparation(){
+  // TODO: turn off low voltage regulator so it doesn't waste power, maybe deinitialize other stuff?
+  return;
+}
+
 void WeightX::Main(){
+  debugPrintln("Weight main");
   char doo[16];
+  char dump[16];
   std::string foo;
   double lastWeight = 0.0;
   double currentWeight= 0.0;
   weightQueue = xQueueCreate(5, sizeof(uint32_t));
   sgMutex = xSemaphoreCreateMutex();
-    
+  long t = esp_timer_get_time()/1000;
+  bool b = false;
   for(;;){
+    debugPrintln("weightLoop");
     readSensors();
-    currentWeight = getWeight();
-    if(abs(currentWeight - lastWeight)>0.01){
-     
-      //if (asprintf (&foo, "%.5f", currentWeight) < 0){
-      //  strcpy(foo, "0.000");
-      //}
-       
-        //snprintf(foo, 16, "%.5f", currentWeight);
+    b = ((esp_timer_get_time()/1000 - t) > (weight_update_rate*1000));
+    debugPrintln((int)b);
+    if(b){
+      debugPrintln("here");
+      currentWeight = getWeight();
+      if(abs(currentWeight - lastWeight)> getUnitPrecision(localUnits)){
+          
+        foo = truncateWeight(currentWeight); // this crashes. Debug from here...? Maybe not anymore?
         
-      foo = truncateWeight(currentWeight); // this crashes. Debug from here...
-      
-      strcpy(doo, foo.c_str());
-      
-      xQueueSend(weightQueue, &doo, xBlockTime);
-      debugPrintln("Doing weight stuff");
-      debugPrintln(foo);
-      lastWeight = currentWeight;
+        strcpy(doo, foo.c_str());
+        if(isBtConnected()){
+          //updateBTWeight(foo);            
+          debugPrintln("Bluetooth is connected, from Weight");
+        }
+        if(uxQueueMessagesWaiting(weightQueue) > 4){
+          xQueueReceive(weightQueue, &dump, (TickType_t)10);
+        }
+
+        xQueueSend(weightQueue, &doo, (TickType_t)10);
+        debugPrintln("Doing weight stuff");
+        debugPrintln(foo);
+        lastWeight = currentWeight;
+      }
+      _sys->callbackFlag = true;
+      t = esp_timer_get_time()/1000;
     }
     
-    vTaskDelay(WEIGHT_UPDATE_RATE*1000);
+    vTaskDelay(15);
   }
   
 }
 
-// void strainGaugeSetup(){
-  
-//   adc1_config_width(ADC_WIDTH_BIT_12);
-//   adc1_config_channel_atten(SG1,ADC_ATTEN_DB_11); // Will need to change the attenuation when the circuit gets upgraded to auto-ranging
-//   adc1_config_channel_atten(SG2,ADC_ATTEN_DB_11);
-//   adc1_config_channel_atten(SG3,ADC_ATTEN_DB_11);
-//   adc1_config_channel_atten(SG4,ADC_ATTEN_DB_11);
-  
-  
-//   getStrainGaugeParams(mK_sg1,mK_sg2, mK_sg3, mK_sg4 );
-
-//   //mRawWeight.Fill(0);
-//   //mTareOffset.Fill(0);
-//   //mOutput.Fill(0);
-  
-  
-//   printf("after mutex creation\n");
-//   mK_sg1(2,2) = 9.9099; // V/g
-//   mK_sg2(2,2) = 9.9099;
-//   mK_sg3(2,2) = 55.8559;
-//   mK_sg4(2,2) = 64.8649;
-  
-  //pinMode(enable_165, OUTPUT);
-  //digitalWrite(enable_165, HIGH);
-  
-  //vTaskDelay(300);
-  // xSemaphoreTake(systemMutex, (TickType_t)50);
-  // setUnits(_sys.eUnits);
-  // xSemaphoreGive(systemMutex);
-  
-  //weightQueue = xQueueCreate(5, sizeof(uint32_t));
-  
-  // if(weightQueue == NULL){
-  //   debugPrintln("Error creating weightQueue");
-  // }else{
-  //   debugPrintln("Weight queue created...");
-  // }
-  
-  // xTaskCreate(    
-  //       weightHandler_,          /* Task function. */
-  //       "Weight Handler",        /* String with name of task. */
-  //       20000,            /* Stack size in words, not bytes. */
-  //       NULL,             /* Parameter passed as input of the task */
-  //       0,                /* Priority of the task. */
-  //       &weightHandler_TH              /* Task handle. */  
-  //       );  
-        
-  // debugPrintln("Weight thread created...");
-  // tare();
-  // vTaskDelay(3);
-  // debugPrintln("after tare");
-
-//}
 
 // Amplifier Gain
-double amplifier(){
-  double dV = 1;
+// differential voltage input -> voltage output
+double amplifier(double dV){
+  // double dV = 1;
   double Vout = 1.65+dV*(1+10000./5100.+2*10000./58.3);
   return Vout;
 }
+// voltage output -> differential voltage input
+double inverseAmplifier(double Vout){
+  double dV = (Vout - 1.65)/(1+10000./5100.+2*10000./58.3);
+  return dV;
+}
 
+// converts strain value to weight value for a single 
+// e -> w
+double conversion(double raw_value){
+  double ret = 0;
+  double h, w; // units: cm
+  double E_aluminum = 70.3*pow(10,9); // Pa
+  double v_aluminum = 0.345;
+  #ifdef CONFIG_SB_V1_HALF_ILI9341
+  h  = .2;
+  w = 0.8;
+  #endif
+  #ifdef CONFIG_SB_V3_ST7735S
+  h = 0.25;
+  w = 1.0; 
+  #endif
+  #ifdef CONFIG_SB_V6_FULL_ILI9341
+  h = 0.2;
+  w = 1.0; 
+  // L = 18mm
+  #endif
+  double I = pow(h,3)*w/12.0; // cm^4
+  return ret;
+}
 
-// Strain Gauge Calibration
-// Calibration matrix created from setup proecdure: 
-// Place 50g, 200g, 1000g, 5000g caligration weights 3x on scale 
-// at each of 4 locations directly above the positioning of the gauges
-// 
-/*
- * physics:
- * strain at point on beam
- * 
- * converted to strain gauge
- * rated 2.0-2.2 gauge factor. Using 2.1. Defined as dR/R / e
- * ideal force conversion
- */
-
-/*   TODO: Create calibration system and matrix solution each time
- *  Use function in mySPIFFS to write settings to file for retrieval 
- *
-void Calibrate(float x, float y, float F){
-  // Calibration sequence. Input x,y coordinates from bottom edge and left edge
-  // transform into coordinate system around the center of pressure
-  FindCP();
-  [x, y] = transformCP(x, y);
-  // Solve into one force and one torque
-  Fz = F;
-  Mx = F*x;
-  My = F*y;
+// w & (x,y) -> [w,w /n w,w] or all weights
+// origin is in center of device
+Eigen::Matrix2d WeightX::theoreticalWeight(double g, double x, double y){
+  // https://www.scirp.org/pdf/am_2015032417562679.pdf
+  //or...
+  //https://ntrs.nasa.gov/api/citations/20040045162/downloads/20040045162.pdf
+  Eigen::Matrix2d ret = Eigen::Matrix2d::Identity();
   
-}
-void FindCP(){
-  // do routine thing here
+  // assuming all gauges are identical
+  #ifdef CONFIG_SB_V1_HALF_ILI9341
+  // Center of mass: ( millimeters )
+	double CMx = 0.81;
+	double CMy = -11.19;
+	double CMz = -1.41;
+  // Note: had to switch coordinate system for this model
+  
+  // strain gauge location, positive values ( millimeters )
+  double X = 192.28;
+  double Y = 109.05;
+  double surfaceZ = 30.90;
+
+  // equations to solve, 
+  // double Ex = 0; // sums of all reaction components
+  // double Ey = 0; // sums of all reaction components
+  // double Ez = Wself + g + Rsg1 + Rsg2 + Rsg3 + Rsg4;
+  // double Mx = Wself*Y + g*y + (Rsg1+Rsg2)*dY  -(Rsg3 + Rsg4)*dY;
+  // double My = Wself*X + g*x + (Rsg2+Rsg4)*dX  -(Rsg1 + Rsg3)*dX;
+
+
+  #endif
+  #ifdef CONFIG_SB_V3_ST7735S 
+  // self weight
+  double W = 10; // g
+  // Center of mass: ( millimeters )
+	double CMx =  0.81;
+	double CMy = -11.19;
+	double CMz = -1.41;
+  // Note: had to switch coordinate system for this model
+  
+  // strain gauge location, positive values ( millimeters )
+  double X = 192.28;
+  double Y = 109.05;
+  double surfaceZ = 30.90;
+
+  Eigen::Matrix4d matrix; 
+  matrix << 1.0, 1.0, 1.0, 1.0,
+            Y, Y, -Y, -Y,
+            X, X, X, X,
+            1.0, -1.0, -1.0, 1.0;
+  
+  Eigen::Vector4d es (g, y*g+W*CMy, x*g+W*CMx, 0);
+
+  Eigen::Vector4d Rs = matrix.colPivHouseholderQr().solve(es);
+  
+  ret.row(0) << Rs(0), Rs(1);
+  ret.row(1) << Rs(2), Rs(3);
+  // Eigen::IOFormat OctaveFmt(4, 0, ", ", ";\n", "", "", "[", "]\n");
+  // std::cout << Rs.format(OctaveFmt);
+  
+  #endif
+  #ifdef CONFIG_SB_V6_FULL_ILI9341
+
+  #endif
+  
+  return ret;
 }
 
-float transformCP(float x, float y){
-  // change these to get from FindCP()
-  float X_cp = 180;
-  float Y_cp = 110;
+// void inverseWeight(){
+//   // turns weight into voltage levels
+//   // not sure if I need this... because I can compare to raw weight values
 
-  float x_c = x - X_cp;
-  float y_c = y - Y_cp;
-  return x_c, y_c;
-}
+// }
 
-void solve(){
-    BLA::Matrix<6> Input;
-    BLA::Matrix<6> Reaction;
-    BLA::Matrix<6,6> Calibration 
-        = 10^6/GE * a_ij F'
-        N / uV/v units
-}
-*/
+// // Strain Gauge Calibration
+// // Calibration matrix created from setup proecdure: 
+// // Place 50g, 200g, 1000g, 5000g caligration weights 3x on scale 
+// // at each of 4 locations directly above the positioning of the gauges
+// // 
+// /*
+//  * physics:
+//  * strain at point on beam
+//  * 
+//  * converted to strain gauge
+//  * rated 2.0-2.2 gauge factor. Using 2.1. Defined as dR/R / e
+//  * ideal force conversion
+//  */
+
+// /*   TODO: Create calibration system and matrix solution each time
+//  *  Use function in mySPIFFS to write settings to file for retrieval 
+//  *
+// void Calibrate(float x, float y, float F){
+//   // Calibration sequence. Input x,y coordinates from bottom edge and left edge
+//   // transform into coordinate system around the center of pressure
+//   FindCP();
+//   [x, y] = transformCP(x, y);
+//   // Solve into one force and one torque
+//   Fz = F;
+//   Mx = F*x;
+//   My = F*y;
+  
+// }
+// void FindCP(){
+//   // do routine thing here
+// }
+
+// float transformCP(float x, float y){
+//   // change these to get from FindCP()
+//   float X_cp = 180;
+//   float Y_cp = 110;
+
+//   float x_c = x - X_cp;
+//   float y_c = y - Y_cp;
+//   return x_c, y_c;
+// }
+
+// void solve(){
+//     BLA::Matrix<6> Input;
+//     BLA::Matrix<6> Reaction;
+//     BLA::Matrix<6,6> Calibration 
+//         = 10^6/GE * a_ij F'
+//         N / uV/v units
+// }
+// */
+
+// (ex-e), gxy/2, gzx/2
+// gxy/2, ey-e, gyz/2
+// gzx/2,  gyz/2, ez-e
+
+// sx + sy = E/(1-v)(ex+ey)
+
+// (ex-e), gxy/2, 0
+// gxy/2,  ey-e,  0
+// 0,      0,     ez-e
+
+// since sg is on only one axis we'll assume all on (y?) axis 
+
+// if we want to combine it all into one, we'll transform them all into the same coordinate system then add them, but for now let's work individually
+
+// SB prototype V1 and V3 have configurations tat looks like this  i-------------i
+//                                                                 |  -       -  |
+//                                                                 |  _       _  |   y
+//                                                                 |_____________|   |__ x
+
+
+// Strain value from gauge -> stress value from material properties - > force value from geometry
+// So, V1
+
+

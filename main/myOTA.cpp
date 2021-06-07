@@ -4,8 +4,6 @@
 #include "debug.h"
 
 
-
-
 /* Based on Advanced HTTPS OTA example - 
    
 */
@@ -23,11 +21,10 @@
 #include "nvs_flash.h"
 
 #include "System.h"
-#include "esp-nimble-cpp/src/NimBLEDevice.h"
-
+#include "BLE.h"
 SemaphoreHandle_t updateMutex;
 extern SystemX *_sys;
-extern NimBLEServer *pServer;
+
 
 extern const uint8_t server_cert_pem_start[] asm("_binary_ca_cert_pem_start");
 extern const uint8_t server_cert_pem_end[] asm("_binary_ca_cert_pem_end");
@@ -64,19 +61,25 @@ void ota_task(void *pvParameter)
 
         //Retrieves SSID & Password from SPIFFS filesystem
     //Starts WiFi in STA mode    
-    debugPrintln("before startWiFi");                                                                   //Run flags here to see what goes wrong
-    startWiFi();
-    debugPrintln("after startWiFi");
+    debugPrintln("before initWiFi");    
+    // if(!isInit()){                                                               //Run flags here to see what goes wrong
+    //     initWiFi();
+    // }
+    // debugPrintln("after initWiFi");
+    connectWiFi(_sys->getWiFiInfo());
+    debugPrintln("after connect WiFi");
     if(esp_wifi_get_mode(NULL)==ESP_OK){
       // if it gets in here wifi connection is successful
       debugPrintln("inside wifi flag...");
+    }else{
+        debugPrintln(" not in wifi thingy if statement");
     }
 
     /* Ensure to disable any WiFi power save mode, this allows best throughput
      * and hence timings for overall OTA operation.
      */
     // Since WiFi and BT working together needs one not taking all the cpu time, we need some sleep time for it to work. WIFI_PS_MIN_MODEM
-    esp_wifi_set_ps(WIFI_PS_NONE); //WIFI_PS_NONE);
+    esp_wifi_set_ps(WIFI_PS_MIN_MODEM); //WIFI_PS_NONE);
 
 
 
@@ -97,10 +100,13 @@ void ota_task(void *pvParameter)
         .http_config = &config,
     };
     debugPrintln("Set ota http config");
-    esp_https_ota_handle_t https_ota_handle = NULL;
+    esp_https_ota_handle_t https_ota_handle;// = NULL;
     debugPrintln("before beginning ota");
-    //debugPrintln(ota_config.http_config);
+    
     esp_err_t err = esp_https_ota_begin(&ota_config, &https_ota_handle);
+    // This function is in most recent esp-idf. For now commented out until progress bar is implemented.
+    // int full_size = esp_https_ota_get_image_size(https_ota_handle);
+    
     if (err != ESP_OK) {
         debugPrintln("ESP HTTPS OTA Begin failed");
         vTaskDelete(NULL);
@@ -108,6 +114,10 @@ void ota_task(void *pvParameter)
 
     esp_app_desc_t app_desc;
     err = esp_https_ota_get_img_desc(https_ota_handle, &app_desc);
+    long long int t = 0;
+    int current = 0;
+    int last = 0;
+    
     if (err != ESP_OK) {
         debugPrintln("esp_https_ota_read_img_desc failed");
         goto ota_end;
@@ -117,8 +127,17 @@ void ota_task(void *pvParameter)
         debugPrintln("image header verification failed");
         goto ota_end;
     }
-    debugPrintln("Made it past header verification so that should be fine");
+    // debugPrintln("Made it past header verification so that should be fine");
+    // if(full_size < 1){
+    //     debugPrintln("error reading header file size, printed from ota_task");
+    //     full_size = 1;
+    // }else{
+    //     debugPrint("Full Size: ");
+    //     debugPrintln(full_size);
+    // }
 
+    // Note: I'm using a linear correction to hopefully fix the load percentage... It is from collecting a few data points and plotting a graph.
+    // I wasn't able to figure out the relationship between the variable t (return value of esp_https_ota_get_image_len_read) and the total size of the downlaod
     while (1) {
         err = esp_https_ota_perform(https_ota_handle);
         if (err != ESP_ERR_HTTPS_OTA_IN_PROGRESS) {
@@ -127,10 +146,17 @@ void ota_task(void *pvParameter)
         // esp_https_ota_perform returns after every read operation which gives user the ability to
         // monitor the status of OTA upgrade by calling esp_https_ota_get_image_len_read, which gives length of image
         // data read so far.
-        debugPrint("Image bytes read: ");
-        static int temp = esp_https_ota_get_image_len_read(https_ota_handle);
-        debugPrintln(temp);
-        _sys->display->displayUpdateScreen(temp);
+        
+        t = (((esp_https_ota_get_image_len_read(https_ota_handle)-773858) / 5374) +144)/3;
+         
+        debugPrintln(std::to_string(t));
+        // current = t / full_size;
+        // if( current > last){
+        //     _sys->display->displayUpdateScreen(current);
+        //     last = current;
+        //     debugPrint("Image progress: ");
+        //     debugPrintln(last);
+        // }
     }
 
     if (esp_https_ota_is_complete_data_received(https_ota_handle) != true) {
@@ -165,24 +191,10 @@ int setupOTA() {
         debugPrintln(" battery too low for update");
         return -1;
     }
-    if(size_t s = NimBLEDevice::getClientListSize() ){
 
-        std::list<NimBLEClient *> b = *NimBLEDevice::getClientList(); 
-        std::list<NimBLEClient *>::iterator it = b.begin();
-
-        for(int i = 0; i < s; i++)
-        {
-            debugPrintln("Bluetooth is connected");
-            
-            NimBLEDevice::deleteClient(*it);
-            std::advance(it,1);
-        }
-        debugPrintln("All bluetooth connections closed");
-        //return -1;
-
-    }
     
-    pServer->stopAdvertising();
+   
+    // BLEstop();
 
     return 0;
 }
@@ -210,3 +222,4 @@ int getUpdatePercent(){
   return i;
   
 }
+

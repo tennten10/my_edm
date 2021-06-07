@@ -4,17 +4,10 @@
 #include "debug.h"
 #include "Weight.h"
 #include "Buttons.h"
-#include "IOTComms.h"
+#include "BLE.h"
 #include "display.h"
 #include "main.h"
 
-//temporarily use this to test ota methods
-#include "myOTA.h"
-
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "freertos/semphr.h"
-#include "freertos/queue.h"
 
 #include "driver/gpio.h"
 #include "driver/adc.h"
@@ -27,18 +20,16 @@
  #include "soc/sens_reg.h"
  #include "soc/rtc_periph.h"
 #include "driver/rtc_io.h"
+
+#include "driver/rtc_io.h"
+
 #include "esp32/ulp.h"
 #include "ulp_main.h"
-//#include "Eigen/Sparse" note: DO NOT USE in same file/namespace as any ULP library. it has naming conflicts.
+//#include "Eigen/Dense" note: DO NOT USE in same file/namespace as any ULP library. it has naming conflicts.
 
 extern "C" {
     void app_main();
 }
-
-
-// TaskHandle_t battery_TH;
-TickType_t xBlockTime = pdMS_TO_TICKS(200);
-
 
 SystemX* _sys;
 
@@ -52,7 +43,6 @@ void ulp_deinit(){
     rtc_gpio_deinit(gpio_num);    
 }
 
-//static 
 void init_ulp_program(){
     esp_err_t err = ulp_load_binary(0, ulp_main_bin_start,
             (ulp_main_bin_end - ulp_main_bin_start) / sizeof(uint32_t));
@@ -113,7 +103,6 @@ void init_ulp_program(){
 
 Device populateStartData(){
     Device ret;
-    //char* buf;
     size_t buflen = 9;
     // read NVS flash for SN and stuff...
     
@@ -122,7 +111,7 @@ Device populateStartData(){
     nvs_open_from_partition("fctry", "fctryNamespace",  
                 NVS_READWRITE, &fctry_handle);
     nvs_get_str(fctry_handle, "serial_no", ret.SN, &buflen);
-    //strcpy(ret.SN, buf);
+    
 
 
     const esp_partition_t *running = esp_ota_get_running_partition();
@@ -147,24 +136,18 @@ void app_main() {
         
     } else {
         printf("ULP wakeup, setting everything up...\n");
-        //printPulseCount();
         ulp_deinit();
     }
 
-
     debugSetup();
     _sys = new SystemX(populateStartData());
+    vTaskDelay(200);
     BLEsetup();
-
-    
-    // temporary for testing ota
-    //setupOTA();
-
     
     std::string event;
+    PAGE page;
+    MODE mode;
     
-    debugPrintln("Before main loop...");
-
     // To print the threads/packages that are taking a lot of memory
     //heap_caps_print_heap_info( MALLOC_CAP_DEFAULT );
 
@@ -173,7 +156,18 @@ void app_main() {
     uint32_t reading=0;
     long batTime = esp_timer_get_time()/1000;
 
+    // update progress parameter
+    // int q = 0;
+    // int q_last = 0;
+
+    // page timeout counters
+    long timeout = 0;
+    //_sys->weight->runTheoreticalWeight(100., 50., 50.);
+
     // loop
+    
+    debugPrintln("Before main loop...");
+    _sys->display->displayWeight(_sys->weight->getWeightStr());
     for (;;)
     {
         //battery update moved into this loop to free up some memory
@@ -188,32 +182,34 @@ void app_main() {
             //voltage = esp_adc_cal_raw_to_voltage(reading, adc_chars);
 
             battery = (int) 100 *( reading * 3.3 / 4096.0 - 2.0) /(2.8 - 2.0); //(voltage - 2.0) / (2.8 - 2.0) ;
-            _sys->setBattery(battery);
+            //_sys->setBattery(battery);
             
             if(battery < 2){
-                _sys->goToSleep();
+                //_sys->goToSleep();
             }
             batTime = esp_timer_get_time()/1000;
         }
-        
+
         _sys->validateDataAcrossObjects();
-        
 
 
         event = _sys->buttons->getEvents();
+        
+        page = _sys->getPage();
+        mode = _sys->getMode();
         if (!(event.compare("") == 0)) 
         {
 
-            if (_sys->getMode() == STANDARD)
+            if (mode == STANDARD)
             {
                 //xSemaphoreTake(pageMutex, (TickType_t)10);
-                if (_sys->getPage() == WEIGHTSTREAM)
+                if (page == WEIGHTSTREAM)
                 {
                     //xSemaphoreGive(pageMutex);
                     if (event.compare(0,4,"SNNN",0,4) == 0)
                     {
                         //TODO: TARE FUNCTION
-                        //tare();
+                        _sys->weight->tare();
                     }
                     if (event.compare(0,4,"LNNN",0,4) == 0)
                     {
@@ -224,41 +220,99 @@ void app_main() {
                     if (event.compare(0,4,"NSNN", 0, 4) == 0)
                     {
                         //TODO: Units
-                        //xSemaphoreTake(pageMutex, (TickType_t)10);
+                        
                         _sys->setPage(UNITS);
-                        //xSemaphoreGive(pageMutex);
+                        //_sys->display->displayUnits()
+                        timeout = esp_timer_get_time()/1000;
+                        
                     }
                     if (event.compare(0,4,"NLNN", 0, 4) == 0)
                     {
-                        _sys->display->displayUpdateScreen(0);
-                        if(setupOTA() == 0){
-                        // temporary for testing ota
-                            executeOTA();
-                        }
+                        timeout = esp_timer_get_time()/1000;
+                    }
+                    if (event.compare(0,4,"NNSN", 0, 4) == 0)
+                    {
+                        
+                        timeout = esp_timer_get_time()/1000;
                         
                     }
+                    if (event.compare(0,4,"NNLN", 0, 4) == 0)
+                    {
+                        timeout = esp_timer_get_time()/1000;
+                    }
                 }
-                else if (_sys->getPage() == UNITS)
+                else if (page == UNITS)
                 {
-                    //xSemaphoreGive(pageMutex);
+                    // if no button presses while on this page for a few seconds, revert back to displaying the weight
+                    if(esp_timer_get_time()/1000-timeout > 4000){
+                        _sys->setPage(WEIGHTSTREAM);
+                    }
+
                     if (event.compare(0,4, "SNNN",0,4) == 0)
                     {
                         //TODO:  FUNCTION
+                        _sys->setPage(WEIGHTSTREAM);
+                        timeout = esp_timer_get_time()/1000;
                     }
                     if (event.compare(0,4, "LNNN",0,4) == 0)
                     {
-                        //TODO:  go to power off function
-                        _sys->goToSleep();
+                        debugPrintln("sleepy time");
+                        _sys->goToSleep(); 
                     }
                     if (event.compare(0,4,"NSNN",0,4) == 0)
-                    {
-                        //TODO: Units
-                        _sys->incrementUnits();
+                    { 
+                        timeout = esp_timer_get_time()/1000;
                     }
-                }
-            }
+                    if (event.compare(0,4,"NLNN", 0, 4) == 0)
+                    {
+                        timeout = esp_timer_get_time()/1000;
+                    }
+                    if (event.compare(0,4,"NNSN", 0, 4) == 0)
+                    {
+                        _sys->incrementUnits();
+                        timeout = esp_timer_get_time()/1000;
+                    }
+                    if (event.compare(0,4,"NNLN", 0, 4) == 0)
+                    {
+                        timeout = esp_timer_get_time()/1000;
+                    }
+                    if (event.compare(0,4,"NNNS", 0, 4) == 0)
+                    {
+                        _sys->decrementUnits();
+                        timeout = esp_timer_get_time()/1000;
+                    }
+                    if (event.compare(0,4,"NNNL", 0, 4) == 0)
+                    {
+                        timeout = esp_timer_get_time()/1000;
+                    }
+                }else if(page == pUPDATE){
+                    q = 50; //getUpdatePercent(); TODO: include update amount -> delayed for later since giving weird numbers
+                    if (q < 3 && q != q_last)
+                    {
+                    _sys->display->displayUpdateScreen(3);
+                    q_last = q;
+                    }
+                    else if (q > q_last)
+                    {
+                    _sys->display->displayUpdateScreen(q);
+                    q_last = q;
+                    }
+                    // TODO: dynamically update percentage when downloading and inistalling updated code
+                    break;
+                }else if(page == SETTINGS){
+                    // something
+                    // #ifdef CONFIG_SB_V1_HALF_ILI9341
+                    // #endif
+                    // #ifdef CONFIG_SB_V3_ST7735S
+                    // #endif
+                    // #ifdef CONFIG_SB_V6_FULL_ILI9341
+                    // #endif
+                }else if(page == INFO){
+                    // device info stuff
+                    _sys->display->displayDeviceInfo(_sys->getSN(), _sys->getVER());
+                } //else if(page == )
 
-            if (_sys->getMode() == CALIBRATION)
+            } else if (mode == CALIBRATION)
             {
                 /*if(ePage == ){
            * xSemaphoreGive(pageMutex);
@@ -287,6 +341,6 @@ void app_main() {
 
             event = "";
         }
-        vTaskDelay(20); // try reducing this to 10 if bluetooth issues come up again
+        vTaskDelay(10); // try reducing this to 10 if bluetooth issues come up again
     }
 }

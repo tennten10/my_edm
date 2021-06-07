@@ -3,25 +3,25 @@
 #include "debug.h"
 #include "Weight.h"
 #include "Buttons.h"
-#include "IOTComms.h"
+#include "BLE.h"
 #include "display.h"
 #include "System.h"
 #include "main.h"
+#include "myOTA.h"
 
 #include "nvs.h"
 #include "nvs_flash.h"
-#include "esp_ota_ops.h"
 #include "esp_sleep.h"
 
 void SystemX::goToSleep(){
-    // create shutdown function
-    // Deep sleep turned off until chip is on board
-    //esp_sleep_enable_ext0_wakeup(GPIO_NUM_13, 0); // 1 = HIGH, 0 = LOW // but1
-    //rtc_gpio_pullup_en(GPIO_NUM_13);
-    //debugPrintln("sleeping...");
-    vTaskDelay(10);
+
+    display->displayLogo();
+    vTaskDelay(100);
+    display->displaySleepPrep();
+    weight->sleepPreparation();
+    BLESleepPrep();
+
     init_ulp_program();
-  
 }
 
 void SystemX::incrementUnits(){
@@ -42,6 +42,7 @@ void SystemX::incrementUnits(){
     }
     xSemaphoreGive(unitsMutex);
     callbackFlag = true;
+    debugPrintln("increment units");
 }
 
 void SystemX::decrementUnits(){
@@ -62,6 +63,7 @@ void SystemX::decrementUnits(){
     }
     xSemaphoreGive(unitsMutex);
     callbackFlag = true;
+    debugPrintln("Decrement units");
 }
 
 void SystemX::validateDataAcrossObjects(){
@@ -76,9 +78,27 @@ void SystemX::validateDataAcrossObjects(){
         weight->setLocalUnits(eUnits);
     }
 
+    if( WEIGHTSTREAM == this->getPage()){
+        
+        static std::string current = weight->getWeightStr();
+        // checking if value changes and truncation happen in weight main loop. 
+        // If not, it passes -1 which doesn't change the display at all
+        display->displayWeight(current);
+        // bluetooth value is also updated from weight loop
+    
+        
+    }
+    
 
-
-
+    debugPrintln("verify function");
     callbackFlag = false;
+}
+
+void SystemX::runUpdate(){
+    setPage(pUPDATE);
+    this->display->displayUpdateScreen(0);
+    if(setupOTA() == 0){
+        executeOTA();
+    }
 }
 

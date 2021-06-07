@@ -12,8 +12,9 @@
 #include "a_config.h"
 #include "globals.h"
 #include "debug.h"
-#include "IOTComms.h"
+#include "BLE.h"
 #include "display.h"
+#include "System.h"
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -45,6 +46,8 @@
  *********************/
 #define LV_TICK_PERIOD_MS 1
 
+
+extern SystemX *_sys;
 /**********************
  *  STATIC PROTOTYPES
  **********************/
@@ -61,16 +64,8 @@
 
 extern TickType_t xBlockTime;
 
-extern SemaphoreHandle_t pageMutex;
-extern SemaphoreHandle_t systemMutex;
-extern QueueHandle_t weightQueue;
-// extern struct System _sys;
 
-
-//extern volatile PAGE ePage;
-
-
-ledc_channel_config_t ledc_c_config{
+ledc_channel_config_t b_ledc_c_config{
     .gpio_num = ledB,
     .speed_mode = LEDC_LOW_SPEED_MODE,
     .channel = LEDC_CHANNEL_0,
@@ -79,7 +74,24 @@ ledc_channel_config_t ledc_c_config{
     .duty = (uint32_t)10,
     .hpoint = 0,
 };
-//bool disp_flag = false;
+ledc_channel_config_t g_ledc_c_config{
+    .gpio_num = ledG,
+    .speed_mode = LEDC_LOW_SPEED_MODE,
+    .channel = LEDC_CHANNEL_1,
+    .intr_type = LEDC_INTR_DISABLE,
+    .timer_sel = LEDC_TIMER_1,
+    .duty = (uint32_t)10,
+    .hpoint = 0,
+};
+ledc_channel_config_t r_ledc_c_config{
+    .gpio_num = ledR,
+    .speed_mode = LEDC_LOW_SPEED_MODE,
+    .channel = LEDC_CHANNEL_2,
+    .intr_type = LEDC_INTR_DISABLE,
+    .timer_sel = LEDC_TIMER_1,
+    .duty = (uint32_t)10,
+    .hpoint = 0,
+};
 
 /* Initialize image files for display
 * These are stored as .c files and converted from https://lvgl.io/tools/imageconverter
@@ -89,39 +101,25 @@ LV_IMG_DECLARE(img_low_battery);
 LV_IMG_DECLARE(img_logo_black);
 LV_IMG_DECLARE(img_logo_white);
 
-// Global style variables
-//lv_style_t weightStyle;
-//lv_style_t unitStyle;
-//lv_style_t logoStyle;
-//lv_style_t backgroundStyle;
-//lv_style_t infoStyle;
-//lv_style_t transpCont;
+LV_FONT_DECLARE(montserrat_70);
+LV_FONT_DECLARE(montserrat_90);
+LV_FONT_DECLARE(montserrat_120);
 
-//lv_disp_buf_t disp_buf;
 
-// lv_color_t cbuf[LV_CANVAS_BUF_SIZE_TRUE_COLOR(SB_HORIZ, SB_VERT)];
-
-/**********************
- *   
- **********************/
-
-// void displaySetup()
-// {
 //     /* If you want to use a task to create the graphic, you NEED to create a Pinned task
 //       * Otherwise there can be problem such as memory corruption and so on.
 //       * NOTE: When not using Wi-Fi nor Bluetooth you can pin the guiTask to core 0 */
 //     xTaskCreatePinnedToCore(displayTask, "display", 4096 * 2, NULL, 0, &displayHandler_TH, 1);
-//     debugPrintln("Display thread created...");
-// }
 
-/* Creates a semaphore to handle concurrent call to lvgl stuff
- * If you wish to call *any* lvgl function from other threads/tasks
- * you should lock on the very same semaphore! */
-//SemaphoreHandle_t xGuiSemaphore;
+
+
 
 //static 
 void DisplayX::Main()
 {
+    /* Creates a semaphore to handle concurrent call to lvgl stuff
+    * If you wish to call *any* lvgl function from other threads/tasks
+    * you should lock on the very same semaphore! */
     xGuiSemaphore = xSemaphoreCreateMutex();
 
     lv_init();
@@ -138,16 +136,32 @@ void DisplayX::Main()
         .speed_mode = LEDC_LOW_SPEED_MODE,    // timer mode
         .duty_resolution = LEDC_TIMER_13_BIT, // resolution of PWM duty
         .timer_num = LEDC_TIMER_1,            // timer index
-        .freq_hz = 5000,                      // frequency of PWM signal
+        .freq_hz = 3000,                      // frequency of PWM signal
         .clk_cfg = LEDC_AUTO_CLK,             // Auto select the source clock
     };
 
     ledc_timer_config(&ledc_timer);
-    ledc_channel_config(&ledc_c_config);
+    
 
-    //ledc_set_duty(ledc_c_config.speed_mode, ledc_c_config.channel, 50);
-    //ledc_update_duty(ledc_c_config.speed_mode, ledc_c_config.channel);
-    ledc_set_duty_and_update(ledc_c_config.speed_mode, ledc_c_config.channel, 100, 0);
+#ifdef CONFIG_SB_V1_HALF_ILI9341
+  ledc_channel_config(&b_ledc_c_config);
+  ledc_set_duty_and_update(b_ledc_c_config.speed_mode, b_ledc_c_config.channel, 100, 0);
+#endif
+#ifdef CONFIG_SB_V3_ST7735S
+  ledc_channel_config(&r_ledc_c_config);
+  ledc_channel_config(&g_ledc_c_config);
+  ledc_channel_config(&b_ledc_c_config);
+  ledc_set_duty_and_update(r_ledc_c_config.speed_mode, r_ledc_c_config.channel, 100, 0);
+  ledc_set_duty_and_update(g_ledc_c_config.speed_mode, g_ledc_c_config.channel, 100, 0);
+  ledc_set_duty_and_update(b_ledc_c_config.speed_mode, b_ledc_c_config.channel, 100, 0);
+#endif
+#ifdef CONFIG_SB_V6_FULL_ILI9341
+  ledc_channel_config(&b_ledc_c_config);
+  ledc_fade_func_install(0);
+  
+  ledc_set_duty_and_update(b_ledc_c_config.speed_mode, b_ledc_c_config.channel, intensity, 0);
+#endif
+
 
     /* Use double buffered when not working with monochrome displays */
 #ifndef CONFIG_LV_TFT_DISPLAY_MONOCHROME
@@ -204,15 +218,15 @@ void DisplayX::Main()
 
     // draw my starting screen
     long t = esp_timer_get_time() / 1000;
-    int q = 0;
-    int q_last = 0;
+    xSemaphoreTake(xGuiSemaphore, (TickType_t)10);
     displayLogo();
     while (esp_timer_get_time() / 1000 - t < 1000)
     {
         lv_task_handler();
-        //xSemaphoreGive(xGuiSemaphore);
         vTaskDelay(10);
     }
+    displayWeight("0.0");
+    xSemaphoreGive(xGuiSemaphore);
 
     //pageTestRoutine((long)(esp_timer_get_time() / 1000));
 
@@ -224,7 +238,7 @@ void DisplayX::Main()
         /* Try to take the semaphore, call lvgl related function on success */
         if (disp_flag && pdTRUE == xSemaphoreTake(xGuiSemaphore, portMAX_DELAY))
         {
-          displayLoopConditions(t, q, q_last);
+          //displayLoopConditions(t, q, q_last);
           lv_task_handler();
           xSemaphoreGive(xGuiSemaphore);
         }
@@ -238,30 +252,11 @@ void DisplayX::Main()
     vTaskDelete(NULL);
 }
 
-void DisplayX::displayLoopConditions(long &t, int &q, int &q_last)
-{
-
-    // Low battery warning
-    // TODO: Move this low battery warning to another part of the code
-    // if ((esp_timer_get_time() / 1000) - t > 10000)
-    // {
-    //     xSemaphoreTake(systemMutex, (TickType_t)10);
-    //     if (_sys.batteryLevel < 20)
-    //     {
-    //       xSemaphoreGive(systemMutex);
-    //       displayLowBattery();
-    //       vTaskDelay(1000);
-    //       t = esp_timer_get_time() / 1000;
-    //     }
-    //     else
-    //     {
-    //       xSemaphoreGive(systemMutex);
-    //     }
-    // }
-
-    // Look at if the screen should change from button interactions
-    pageEventCheck(t, q, q_last);
-}
+// void DisplayX::displayLoopConditions(long &t, int &q, int &q_last)
+// {
+//     // Look at if the screen should change from button interactions
+//     eventCheck(t, q, q_last);
+// }
 
 void DisplayX::styleInit()
 {
@@ -306,6 +301,29 @@ void DisplayX::styleInit()
   
 #endif
 #ifdef CONFIG_SB_V6_FULL_ILI9341
+// TODO: just copy and pasted for now... need to change things up
+    //lv_style_set_bg_color(&weightStyle, LV_STATE_DEFAULT, LV_COLOR_BLACK);
+    lv_style_set_text_font(&weightStyle, LV_STATE_DEFAULT, &montserrat_120);
+    lv_style_set_text_color(&weightStyle, LV_STATE_DEFAULT, LV_COLOR_WHITE);
+    //lv_style_set_bg_opa(&weightStyle, LV_STATE_DEFAULT, 100);
+
+    lv_style_set_text_font(&unitStyle, LV_STATE_DEFAULT, &montserrat_120);
+    lv_style_set_text_color(&unitStyle, LV_STATE_DEFAULT, LV_COLOR_WHITE);
+    //lv_style_set_bg_color(&unitStyle, LV_STATE_DEFAULT, LV_COLOR_BLACK);
+
+    //lv_style_set_text_font(&logoStyle, LV_STATE_DEFAULT, &lv_font_montserrat_14);
+    //lv_style_set_text_color(&logoStyle, LV_STATE_DEFAULT, LV_COLOR_WHITE);
+    lv_style_set_bg_color(&logoStyle, LV_STATE_DEFAULT, LV_COLOR_BLACK);
+
+    lv_style_set_bg_color(&backgroundStyle, LV_STATE_DEFAULT, LV_COLOR_BLACK);
+    lv_style_set_border_opa(&backgroundStyle, LV_STATE_DEFAULT, 0);
+
+    lv_style_set_text_color(&infoStyle, LV_STATE_DEFAULT, LV_COLOR_WHITE);
+    lv_style_set_text_font(&unitStyle, LV_STATE_DEFAULT, &montserrat_120);
+
+    lv_style_set_bg_opa(&transpCont, LV_STATE_DEFAULT, 0);
+    lv_style_set_border_opa(&transpCont, LV_STATE_DEFAULT, 0);
+  
 #endif
 }
 
@@ -329,7 +347,7 @@ void DisplayX::pageTestRoutine(long t)
             lv_task_handler();
             xSemaphoreGive(xGuiSemaphore);
         }
-        //lv_task_handler();
+        
 
         if (esp_timer_get_time() / 1000 - t < show && flag1)
         {
@@ -420,94 +438,7 @@ void DisplayX::pageTestRoutine(long t)
         }
     }
 }
-void DisplayX::pageEventCheck(long &t, int &q, int &q_last)
-{
-    // do do dooo do do do do.
-    //xSemaphoreTake(pageMutex, (TickType_t)10);
-    switch (WEIGHTSTREAM) // TODO: add ePage link
-    { // options are {WEIGHTSTREAM, SETTINGS, INFO, UNITS, pUPDATE};
-    case WEIGHTSTREAM:
-      //xSemaphoreGive(pageMutex);
-#ifdef CONFIG_SB_V1_HALF_ILI9341
-#endif
-#ifdef CONFIG_SB_V3_ST7735S
-#endif
-#ifdef CONFIG_SB_V6_FULL_ILI9341
-#endif
 
-      //debugPrintln(uxQueueMessagesWaiting(weightQueue));
-      //if (uxQueueMessagesWaiting(weightQueue) > 0)
-      //{
-        //xQueueReceive(weightQueue, &currentWeight, xBlockTime);
-
-        //displayWeight(currentWeight);
-        //displayWeight(*currentWeight);
-      //   if (isBtConnected())
-      //   {
-      //     updateBTWeight(currentWeight);
-      //   }
-      //   debugPrintln("This is where weight would be printed");
-      // }
-      break;
-    case pUPDATE:
-        //xSemaphoreGive(pageMutex);
-
-#ifdef CONFIG_SB_V1_HALF_ILI9341
-#endif
-#ifdef CONFIG_SB_V3_ST7735S
-#endif
-#ifdef CONFIG_SB_V6_FULL_ILI9341
-#endif
-        q = 50; //getUpdatePercent(); TODO: include update file
-        if (q < 3 && q != q_last)
-        {
-          displayUpdateScreen(3);
-          q_last = q;
-        }
-        else if (q > q_last)
-        {
-          displayUpdateScreen(q);
-          q_last = q;
-        }
-        // TODO: dynamically update percentage when downloading and inistalling updated code
-        break;
-    case INFO:
-      //xSemaphoreGive(pageMutex);
-#ifdef CONFIG_SB_V1_HALF_ILI9341
-#endif
-#ifdef CONFIG_SB_V3_ST7735S
-#endif
-#ifdef CONFIG_SB_V6_FULL_ILI9341
-#endif
-
-        displayDeviceInfo("sn", "ver");
-        break;
-  case UNITS:
-      //xSemaphoreGive(pageMutex);
-#ifdef CONFIG_SB_V1_HALF_ILI9341
-#endif
-#ifdef CONFIG_SB_V3_ST7735S
-#endif
-#ifdef CONFIG_SB_V6_FULL_ILI9341
-#endif
-    displayUnits(kg);
-    break;
-  case SETTINGS:
-    //xSemaphoreGive(pageMutex);
-#ifdef CONFIG_SB_V1_HALF_ILI9341
-#endif
-#ifdef CONFIG_SB_V3_ST7735S
-#endif
-#ifdef CONFIG_SB_V6_FULL_ILI9341
-#endif
-    displaySettings();
-    break;
-  default:
-    //xSemaphoreGive(pageMutex);
-    debugPrintln("invalid page type");
-    break;
-  }
-}
 
 void DisplayX::lv_tick_task(void *arg)
 {
@@ -568,26 +499,21 @@ void DisplayX::resizeWeight(char *w)
   if (strlen(w) > 4)
   { // TODO: Figure out proper font sizes for this resizing function
     //style
-    //tft.setFont(FMB9);
-    //tft.setTextSize(3);
     debugPrintln("size 3 Font");
   }
   else if (strlen(w) > 3)
   {
-    //tft.setFont(FMB9);
-    //tft.setTextSize(3);
+    
     debugPrintln("size 3' Font");
   }
   else if (strlen(w) > 2)
   {
-    //tft.setFont(FMB9);
-    //tft.setTextSize(4);
+    
     debugPrintln("size 4 Font");
   }
   else
   {
-    //tft.setFont(FMB9);
-    //tft.setTextSize(4);
+    
     debugPrintln("size 4 default Font");
   }
 #endif
@@ -595,15 +521,16 @@ void DisplayX::resizeWeight(char *w)
 #ifdef CONFIG_SB_V6_FULL_ILI9341
   if (strlen(w) > 4)
   {
-    //tft.setFont(3);
+    lv_style_set_text_font(&weightStyle, LV_STATE_DEFAULT, &montserrat_70);
+
   }
   else if (strlen(w) > 3)
   {
-    //tft.setFont(4);
+    lv_style_set_text_font(&weightStyle, LV_STATE_DEFAULT, &montserrat_90);  
   }
   else if (strlen(w) > 2)
   {
-    //tft.setFont(5);
+    lv_style_set_text_font(&weightStyle, LV_STATE_DEFAULT, &montserrat_120);
   }
   else
   {
@@ -612,14 +539,19 @@ void DisplayX::resizeWeight(char *w)
 #endif
 }
 
-void DisplayX::displayWeight(char *weight)
+void DisplayX::displayWeight(std::string weight)
 {
+
+  if(weight.compare("-1") == 0){
+    // TODO: have a way to check if the screen already has that value so it doesn't waste time doing it again.
+    debugPrintln("breaking out of displayWeight");
+    return;
+  }
+  debugPrintln(" gets past catching -1 value in displayWeight");
+  xSemaphoreTake(xGuiSemaphore, (TickType_t)10);
   char now[32];
-  strcpy(now, weight);
-  //static lv_obj_t * canvas = lv_canvas_create(lv_scr_act(), NULL);
-  //lv_canvas_set_buffer(canvas, cbuf, SB_HORIZ, SB_VERT, LV_IMG_CF_TRUE_COLOR);
-  //lv_obj_align(canvas, NULL, LV_ALIGN_CENTER, 0, 0);
-  //lv_canvas_fill_bg(canvas, LV_COLOR_BLACK, LV_OPA_COVER);
+  strcpy(now, weight.c_str());
+  resizeWeight(now);
 
   lv_obj_t *bkgrnd = lv_obj_create(lv_scr_act(), NULL);
   lv_obj_t *cont = lv_cont_create(bkgrnd, NULL);
@@ -629,11 +561,8 @@ void DisplayX::displayWeight(char *weight)
   lv_cont_set_layout(cont, LV_LAYOUT_CENTER);
 
 #ifdef CONFIG_SB_V1_HALF_ILI9341
-
-#endif
-#ifdef CONFIG_SB_V3_ST7735S
-  lv_obj_set_width(bkgrnd, 160);
-  lv_obj_set_height(bkgrnd, 80);
+  lv_obj_set_width(bkgrnd, SB_HORIZ);
+  lv_obj_set_height(bkgrnd, SB_VERT);
   lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
 
   if (strlen(now) > 4)
@@ -656,6 +585,38 @@ void DisplayX::displayWeight(char *weight)
     lv_label_set_text_fmt(label1, "%s", now);
     debugPrintln("default font");
   }
+
+  lv_obj_align(cont, NULL, LV_ALIGN_CENTER, 0, 0);
+  lv_obj_add_style(bkgrnd, LV_OBJ_PART_MAIN, &backgroundStyle);
+  lv_obj_add_style(cont, LV_OBJ_PART_MAIN, &transpCont);
+  lv_obj_add_style(label1, LV_OBJ_PART_MAIN, &weightStyle);
+#endif
+#ifdef CONFIG_SB_V3_ST7735S
+  lv_obj_set_width(bkgrnd, SB_HORIZ);
+  lv_obj_set_height(bkgrnd, SB_VERT);
+  lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
+
+  if (strlen(now) > 4)
+  {
+    lv_label_set_text_fmt(label1, "%s", now);
+    debugPrintln("4+chars");
+  }
+  else if (strlen(now) > 3)
+  {
+    lv_label_set_text_fmt(label1, "%s", now);
+    debugPrintln("4 chars");
+  }
+  else if (strlen(now) > 2)
+  {
+    lv_label_set_text_fmt(label1, "%s", now);
+    debugPrintln("3 chars");
+  }
+  else
+  {
+    lv_label_set_text_fmt(label1, "%s", now);
+    debugPrintln("default font");
+  }
+
   lv_obj_align(cont, NULL, LV_ALIGN_CENTER, 0, 0);
   lv_obj_add_style(bkgrnd, LV_OBJ_PART_MAIN, &backgroundStyle);
   lv_obj_add_style(cont, LV_OBJ_PART_MAIN, &transpCont);
@@ -663,21 +624,45 @@ void DisplayX::displayWeight(char *weight)
 
 #endif
 #ifdef CONFIG_SB_V6_FULL_ILI9341
+  lv_obj_set_width(bkgrnd, SB_HORIZ);
+  lv_obj_set_height(bkgrnd, SB_VERT);
+  lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
+  lv_label_set_text_fmt(label1, "%s", now);
+  // if (strlen(now) > 4)
+  // {
+  //   lv_label_set_text_fmt(label1, "%s", now);
+  //   debugPrintln("4+chars");
+  // }
+  // else if (strlen(now) > 3)
+  // {
+  //   lv_label_set_text_fmt(label1, "%s", now);
+  //   debugPrintln("4 chars");
+  // }
+  // else if (strlen(now) > 2)
+  // {
+  //   lv_label_set_text_fmt(label1, "%s", now);
+  //   debugPrintln("3 chars");
+  // }
+  // else
+  // {
+  //   lv_label_set_text_fmt(label1, "%s", now);
+  //   debugPrintln("default font");
+  // }
 
-  // tft.setTextSize(6);
-  // tft.fillScreen(ST77XX_BLACK);
-  // tft.setCursor(0, 0);
-  // tft.setTextColor(ST77XX_WHITE);
-  // tft.print(weight);
-  delay(1000);
-  //canvas.println("");
-  //tft.drawBitmap(10, 10, canvas.getBuffer(), 160, 80, ST77XX_WHITE, ST77XX_BLACK);
+  lv_obj_align(cont, NULL, LV_ALIGN_CENTER, 0, 0);
+  lv_obj_add_style(bkgrnd, LV_OBJ_PART_MAIN, &backgroundStyle);
+  lv_obj_add_style(cont, LV_OBJ_PART_MAIN, &transpCont);
+  lv_obj_add_style(label1, LV_OBJ_PART_MAIN, &weightStyle);
+  
 #endif
+  xSemaphoreGive(xGuiSemaphore);
 }
 
 // Units
 void DisplayX::displayUnits(Units u)
 {
+  xSemaphoreTake(xGuiSemaphore, (TickType_t)10);
+
   //lv_obj_t *scr = lv_disp_get_scr_act(NULL);
   lv_obj_t *bkgrnd = lv_obj_create(lv_scr_act(), NULL);
   lv_obj_t *cont = lv_cont_create(bkgrnd, NULL);
@@ -689,33 +674,36 @@ void DisplayX::displayUnits(Units u)
 #ifdef CONFIG_SB_V1_HALF_ILI9341
 #endif
 #ifdef CONFIG_SB_V3_ST7735S
-  lv_obj_set_width(bkgrnd, 160);
-  lv_obj_set_height(bkgrnd, 80);
+  lv_obj_set_width(bkgrnd, SB_HORIZ);
+  lv_obj_set_height(bkgrnd, SB_VERT);
   lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
   
 #endif
 #ifdef CONFIG_SB_V6_FULL_ILI9341
+  lv_obj_set_width(bkgrnd, SB_HORIZ);
+  lv_obj_set_height(bkgrnd, SB_VERT);
+  lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
 #endif
-  xSemaphoreTake(systemMutex, (TickType_t)10);
+  //xSemaphoreTake(systemMutex, (TickType_t)10);
   switch (u)
   {
   case kg:
-    xSemaphoreGive(systemMutex);
+    //xSemaphoreGive(systemMutex);
     lv_label_set_text(label1, "KG");
 
     break;
   case g:
-    xSemaphoreGive(systemMutex);
+    //xSemaphoreGive(systemMutex);
     lv_label_set_text(label1, "G");
 
     break;
   case lb:
-    xSemaphoreGive(systemMutex);
+    //xSemaphoreGive(systemMutex);
     lv_label_set_text(label1, "LB");
 
     break;
   case oz:
-    xSemaphoreGive(systemMutex);
+    //xSemaphoreGive(systemMutex);
     lv_label_set_text(label1, "OZ");
 
     break;
@@ -726,31 +714,29 @@ void DisplayX::displayUnits(Units u)
   lv_obj_align(cont, NULL, LV_ALIGN_CENTER, 0, 0);
   lv_obj_add_style(bkgrnd, LV_OBJ_PART_MAIN, &backgroundStyle);
   lv_obj_add_style(cont, LV_OBJ_PART_MAIN, &transpCont);
-  lv_obj_add_style(label1, LV_OBJ_PART_MAIN, &weightStyle);
+  lv_obj_add_style(label1, LV_OBJ_PART_MAIN, &unitStyle);
+  xSemaphoreGive(xGuiSemaphore);
 }
 
 // Settings
 void DisplayX::displaySettings()
 {
+  xSemaphoreTake(xGuiSemaphore, (TickType_t)10);
+  // TODO: For settings menu, whenever that is implemented
 #ifdef CONFIG_SB_V1_HALF_ILI9341
 #endif
 #ifdef CONFIG_SB_V3_ST7735S
 #endif
 #ifdef CONFIG_SB_V6_FULL_ILI9341
 #endif
+  xSemaphoreGive(xGuiSemaphore);
 }
 
 // Battery & Info
 void DisplayX::displayDeviceInfo(std::string SN, std::string VER)
 {
-  // get device info from struct defined in main.cpp
-  //xSemaphoreTake(systemMutex, (TickType_t)10);
-  // char sn[9]; // = _sys.SN;
-  // strcpy(sn, SN);
-  // char ver[4]; //= _sys.VER;
-  // strcpy(ver, VER);
-  //xSemaphoreGive(systemMutex);
-
+  xSemaphoreTake(xGuiSemaphore, (TickType_t)10);
+  
   // create objects to display info
   lv_obj_t *bkgrnd = lv_obj_create(lv_scr_act(), NULL);
   lv_obj_t *label3 = lv_label_create(bkgrnd, NULL);
@@ -779,37 +765,35 @@ void DisplayX::displayDeviceInfo(std::string SN, std::string VER)
 #endif
   lv_obj_add_style(bkgrnd, LV_OBJ_PART_MAIN, &backgroundStyle);
   lv_obj_add_style(label3, LV_OBJ_PART_MAIN, &infoStyle);
+
+  xSemaphoreGive(xGuiSemaphore);
 }
 
 // Update
 void DisplayX::displayUpdateScreen(int pct)
 {
+  xSemaphoreTake(xGuiSemaphore, (TickType_t)10);
   debugPrintln("inside displayUpdateScreen");
-  if (!updateStarted)
-  {
-    //flashing using whole screen as progress bar
-    // canvas.setCursor(30, 30);
-    // canvas.setTextSize(2);
-    // canvas.print("Updating...");
-    // // outline
-    // canvas.drawFastHLine(10, 70, 120, ST7735_WHITE);
-    // canvas.drawFastHLine(10, 30, 120, ST7735_WHITE);
-    // canvas.drawFastVLine(10, 30, 40, ST7735_WHITE);
-    // canvas.drawFastVLine(140, 30, 40, ST7735_WHITE);
-    //tft.drawBitmap(0, 0, canvas.getBuffer(), 160, 80, ST77XX_WHITE, ST77XX_BLACK);
-    updateStarted = !updateStarted;
-  }
-  pct = (int)pct * 126 / 100;
-  //tft.fillRect(12, 45, pct, 24, ST7735_WHITE);
+  
+  
+  
+  xSemaphoreGive(xGuiSemaphore);
 }
 
 void DisplayX::displayLogo()
 {
+  xSemaphoreTake(xGuiSemaphore, (TickType_t)10);
   lv_obj_t *bkgrnd = lv_obj_create(lv_scr_act(), NULL);
   lv_obj_t *img = lv_img_create(bkgrnd, NULL);
   
   lv_img_set_src(img, &img_logo_white);
+
 #ifdef CONFIG_SB_V1_HALF_ILI9341
+  lv_obj_set_width(bkgrnd, SB_HORIZ);
+  lv_obj_set_height(bkgrnd, SB_VERT);
+  lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
+  lv_img_set_zoom(img, 70);
+  lv_obj_align(img, NULL, LV_ALIGN_CENTER, 0, 0);
 #endif
 #ifdef CONFIG_SB_V3_ST7735S
   lv_obj_set_width(bkgrnd, SB_HORIZ);
@@ -822,14 +806,17 @@ void DisplayX::displayLogo()
   lv_obj_set_width(bkgrnd, SB_HORIZ);
   lv_obj_set_height(bkgrnd, SB_VERT);
   lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
-  lv_img_set_zoom(img, 250);
+  lv_img_set_zoom(img, 200);
   lv_obj_align(img, NULL, LV_ALIGN_CENTER, 0, 0);
 #endif
   lv_obj_add_style(bkgrnd, LV_OBJ_PART_MAIN, &backgroundStyle);
+
+  xSemaphoreGive(xGuiSemaphore);
 }
 
 void DisplayX::displayBattery(int bat)
 {
+  xSemaphoreTake(xGuiSemaphore, (TickType_t)10);
   lv_obj_t *bkgrnd = lv_obj_create(lv_scr_act(), NULL);
   lv_obj_t *img = lv_img_create(bkgrnd, NULL);
   lv_obj_t *cont = lv_cont_create(img, NULL);
@@ -855,16 +842,34 @@ void DisplayX::displayBattery(int bat)
   lv_obj_align(cont, NULL, LV_ALIGN_CENTER, 0,0);
 #endif
 #ifdef CONFIG_SB_V6_FULL_ILI9341
+  lv_img_set_src(img, &img_battery);
+  lv_obj_set_width(bkgrnd, SB_HORIZ);
+  lv_obj_set_height(bkgrnd, SB_VERT);
+  lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
+
+  lv_img_set_zoom(img, 100);
+  lv_obj_align(img, NULL, LV_ALIGN_CENTER, 10, 0);
+  
+  
+  lv_cont_set_fit(cont, LV_FIT_PARENT);
+  lv_cont_set_layout(cont, LV_LAYOUT_CENTER);
+
+  //xSemaphoreTake(systemMutex, (TickType_t)10);
+  lv_label_set_text_fmt(label, "%d%%", bat);
+  //xSemaphoreGive(systemMutex);
+  lv_obj_align(cont, NULL, LV_ALIGN_CENTER, 0,0);
 #endif
  
   lv_obj_add_style(bkgrnd, LV_OBJ_PART_MAIN, &backgroundStyle);
   lv_obj_add_style(cont, LV_CONT_PART_MAIN, &transpCont);
   lv_obj_add_style(label, LV_CONT_PART_MAIN, &infoStyle);
+  xSemaphoreGive(xGuiSemaphore);
 }
 
 void DisplayX::displayLowBattery()
 {
- lv_obj_t *bkgrnd = lv_obj_create(lv_scr_act(), NULL);
+  xSemaphoreTake(xGuiSemaphore, (TickType_t)10);
+  lv_obj_t *bkgrnd = lv_obj_create(lv_scr_act(), NULL);
   lv_obj_t *img = lv_img_create(bkgrnd, NULL);
   lv_obj_t *cont = lv_cont_create(img, NULL);
   lv_obj_t *label = lv_label_create(cont, NULL);
@@ -887,34 +892,129 @@ void DisplayX::displayLowBattery()
   lv_obj_align(cont, NULL, LV_ALIGN_CENTER, 0,0);
 #endif
 #ifdef CONFIG_SB_V6_FULL_ILI9341
+  lv_img_set_src(img, &img_low_battery);
+  lv_obj_set_width(bkgrnd, SB_HORIZ);
+  lv_obj_set_height(bkgrnd, SB_VERT);
+  lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
+
+  lv_img_set_zoom(img, 100);
+  lv_obj_align(img, NULL, LV_ALIGN_CENTER, 10, 0);
+  
+  
+  lv_cont_set_fit(cont, LV_FIT_PARENT);
+  lv_cont_set_layout(cont, LV_LAYOUT_CENTER);
+
+  lv_label_set_text(label, "LOW");
+  lv_obj_align(cont, NULL, LV_ALIGN_CENTER, 0,0);
 #endif
  
   lv_obj_add_style(bkgrnd, LV_OBJ_PART_MAIN, &backgroundStyle);
   lv_obj_add_style(cont, LV_CONT_PART_MAIN, &transpCont);
   lv_obj_add_style(label, LV_CONT_PART_MAIN, &infoStyle);
+  xSemaphoreGive(xGuiSemaphore);
 }
 
 void DisplayX::displayOff()
 {
-#ifdef CONFIG_SB_V1_HALF_ILI9341
+  xSemaphoreTake(xGuiSemaphore, (TickType_t)10);
+  lv_obj_t *bkgrnd = lv_obj_create(lv_scr_act(), NULL);
+  lv_obj_set_width(bkgrnd, SB_HORIZ);
+  lv_obj_set_height(bkgrnd, SB_VERT);
+  lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
+  lv_obj_add_style(bkgrnd, LV_OBJ_PART_MAIN, &backgroundStyle);
+  //lv_obj_clean(lv_scr_act());
+  xSemaphoreGive(xGuiSemaphore);
+  disp_flag = false;
+  //setIntensity(0);
+  #ifdef CONFIG_SB_V1_HALF_ILI9341
+  ledc_set_duty_and_update(b_ledc_c_config.speed_mode, b_ledc_c_config.channel, 0, 0);
 #endif
 #ifdef CONFIG_SB_V3_ST7735S
+  green = green*intensity/255;
+  red = red*intensity/255;
+  
+  ledc_set_duty_and_update(r_ledc_c_config.speed_mode, r_ledc_c_config.channel, 0, 0);
+  ledc_set_duty_and_update(g_ledc_c_config.speed_mode, g_ledc_c_config.channel, 0, 0);
+  ledc_set_duty_and_update(b_ledc_c_config.speed_mode, b_ledc_c_config.channel, 0, 0);
 #endif
 #ifdef CONFIG_SB_V6_FULL_ILI9341
+  ledc_set_duty_and_update(b_ledc_c_config.speed_mode, b_ledc_c_config.channel, 0, 0);
 #endif
-  lv_obj_clean(lv_scr_act());
-  disp_flag = false;
-  ledc_set_duty_and_update(ledc_c_config.speed_mode, ledc_c_config.channel, 0, 0);
+
 }
 
 void DisplayX::displayOn()
 {
+  disp_flag = true;
+  setIntensity(intensity);
+}
+
+void DisplayX::displaySleepPrep(){
+  
+  displayOff();
+  // save color and intensity to nvs
+  
+}
+
+void DisplayX::setColor(int r, int g, int b){
+  // This pretty much is only for the projector version of the display
+  #ifndef CONFIG_SB_V3_ST7735S
+  debugPrintln("This configuration isn't set up to control color. Only for V3.");
+  return;
+  #endif
+
+  if(r>255){
+    r = 255;
+  }else if(r<0){
+    r = 0;
+  }
+  if(r>255){
+    g = 255;
+  }else if(r<0){
+    g = 0;
+  }
+  if(r>255){
+    b = 255;
+  }else if(r<0){
+    b = 0;
+  }
+
+  red = r*intensity/255;
+  green = g*intensity/255;
+  blue = b*intensity/255;
+
+  ledc_set_duty_and_update(r_ledc_c_config.speed_mode, r_ledc_c_config.channel, red, 0);
+  ledc_set_duty_and_update(g_ledc_c_config.speed_mode, g_ledc_c_config.channel, green, 0);
+  ledc_set_duty_and_update(b_ledc_c_config.speed_mode, b_ledc_c_config.channel, blue, 0);
+
+}
+
+void DisplayX::setIntensity(int i){
+  if(i>8192){
+    intensity = 8192;
+  }else if(i < 0){
+    intensity = 0;
+  }else{
+    intensity = i;
+  }
+
+
+  
+  blue = blue*intensity/255;
+  
 #ifdef CONFIG_SB_V1_HALF_ILI9341
+  ledc_set_duty_and_update(b_ledc_c_config.speed_mode, b_ledc_c_config.channel, blue, 0);
 #endif
 #ifdef CONFIG_SB_V3_ST7735S
+  green = green*intensity/255;
+  red = red*intensity/255;
+  
+  ledc_set_duty_and_update(r_ledc_c_config.speed_mode, r_ledc_c_config.channel, red, 0);
+  ledc_set_duty_and_update(g_ledc_c_config.speed_mode, g_ledc_c_config.channel, green, 0);
+  ledc_set_duty_and_update(b_ledc_c_config.speed_mode, b_ledc_c_config.channel, blue, 0);
 #endif
 #ifdef CONFIG_SB_V6_FULL_ILI9341
+  ledc_set_duty_and_update(b_ledc_c_config.speed_mode, b_ledc_c_config.channel, blue, 0);
 #endif
-  disp_flag = true;
-  ledc_set_duty_and_update(ledc_c_config.speed_mode, ledc_c_config.channel, 100, 0);
+
 }

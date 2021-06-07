@@ -4,37 +4,16 @@
 //extern "C" {
 //#endif
 #include "lvgl.h"
-
-#include "freertos/FreeRTOS.h"
-#include "freertos/semphr.h"
-#include "freertos/task.h"
-#include "freertos/queue.h"
+#include "globals.h"
 #include <string>
 #include "a_config.h"
 #include "debug.h"
 
 
-
-//void displayWeight(float weight);
-
-//void displayWeight(const char)
-
-
-//void pageEventCheck(long &t, int &q, int &q_last);
-//void pageTestRoutine(long t);
-//void displayTask(void * pvParameters);
-//void menu();
-
-
-
-//#ifdef __cplusplus
-//}
-//#endif
-
-
-
-
-
+// All functions should be thread safe and have semaphore handling 
+// inside each public function since pretty much everything will be 
+// called from other threads. Right now only the lvhandler is called 
+// from inside the thread
 /*********************************************/
 // reference this website for why we're doing it this way https://fjrg76.wordpress.com/2018/05/23/objectifying-task-creation-in-freertos-ii/
 
@@ -44,7 +23,8 @@ class ThreadXa
 public:
   ThreadXa( uint16_t _stackDepth, UBaseType_t _priority, const char *_name = "")
   {
-    xTaskCreate(task, _name, _stackDepth, this, _priority, &this->taskHandle);
+    xTaskCreatePinnedToCore(task, _name, _stackDepth, this, _priority, &this->taskHandle, 1);
+    //(displayTask, "display", 4096 * 2, NULL, 0, &displayHandler_TH, 1)
   }
 
   TaskHandle_t GetHandle()
@@ -77,7 +57,7 @@ public:
     ~DisplayX(){} 
 
 
-    void displayWeight(char* weight);
+    void displayWeight(std::string weight);
     void displayUnits(Units u);
     void displaySettings();
     void displayDeviceInfo(std::string SN, std::string VER);  
@@ -91,13 +71,15 @@ public:
     void Main();
     std::string getCurrentScreen();
 
-
+    // light functions
+    void setColor(int r, int g, int b);
+    void setIntensity(int i);
 private:
   
     void styleInit();
     void displayLoopConditions(long &t, int &q, int &q_last);
     void pageTestRoutine(long t);
-    void pageEventCheck(long &t, int &q, int &q_last);
+    
 
     // style variables
     lv_style_t weightStyle;
@@ -105,15 +87,20 @@ private:
     lv_style_t logoStyle;
     lv_style_t backgroundStyle;
     lv_style_t infoStyle;
-    lv_style_t transpCont;
+    lv_style_t transpCont; // transparent container?
 
     lv_disp_buf_t disp_buf;
-    SemaphoreHandle_t xGuiSemaphore;
+    SemaphoreHandle_t xGuiSemaphore; // use this when ...?
     static void lv_tick_task(void *arg);
-    void resizeWeight(char *w);
-    bool disp_flag = false;
+    void resizeWeight(char *w); // Not currently use? Already truncated as weight, but text size?
+    bool disp_flag = false; // this signals whether the display is on or off
+
     char currentWeight[32] = "0.0";
-    bool updateStarted = 0;
+
+    int red = 255;
+    int green = 255;
+    int blue = 255;
+    int intensity = 6000; // max 8192
 };
 
 #endif

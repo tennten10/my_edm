@@ -12,5 +12,7 @@ Units convertUnitsEnum(const char* v);
 std::string unitsToString(Units u); 
 
 void BLEsetup();
-void updateBTWeight(char * w);
+void updateBTWeight(std::string w);
 bool isBtConnected();
+void BLEstop();
+void BLESleepPrep();

@@ -6,7 +6,7 @@
 #include "debug.h"
 #include "Weight.h"
 #include "Buttons.h"
-#include "IOTComms.h"
+#include "BLE.h"
 #include "mySPIFFS.h"
 #include "display.h"
 #include "main.h"
@@ -23,9 +23,11 @@ public:
     {
         this->display = new DisplayX(); // constructor
         this->buttons = new ButtonsX(true);
+        vTaskDelay(1000);
         this->weight = new WeightX();
 
-        this->wifiInfo = defaultWiFiInfo();
+        // this->wifiInfo = availableWiFiInfo();
+        this->wifiInfo = getActiveWifiInfo();
 
         
     }
@@ -58,7 +60,7 @@ public:
     }
     void setBattery(int b){
         if(b > 100){
-            debugPrintln("Battery over 100% ??????");
+            debugPrintln("Battery over 100% ?????? - might be charging");
             b = 100;
         }else if(b < 0){
             debugPrintln("Battery less than 0% ???????");
@@ -129,6 +131,8 @@ public:
 
     void validateDataAcrossObjects();
 
+    bool callbackFlag = true;
+
 
     DisplayX *display; 
     ButtonsX *buttons; 
@@ -144,16 +148,14 @@ private:
     SemaphoreHandle_t modeMutex = xSemaphoreCreateMutex();
     SemaphoreHandle_t weightMutex = xSemaphoreCreateMutex();
     
- 
     Units eUnits;
     int batteryLevel;
 
     MODE eMode = STANDARD;
     PAGE ePage = WEIGHTSTREAM;
-    bool callbackFlag = true;
+    
     WiFiStruct wifiInfo;
     
-
 };
 
 #endif

@@ -1,9 +1,7 @@
 #ifndef BUTTONS_H
 #define BUTTONS_H
 
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "freertos/queue.h"
+
 #include "a_config.h"
 #include "debug.h"
 #include "globals.h"

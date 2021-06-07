@@ -10,19 +10,10 @@
 
 #define GPIO_INPUT_PIN_SEL ((1ULL<<but1) | (1ULL<<but2) | (1ULL<<but3) | (1ULL<<but4))
 
-extern TickType_t xBlockTime;
-
 long nTime = 0;
 long longTime = 0; 
 
 
-//#define QUEUE_LENGTH    20
-//#define ITEM_SIZE       sizeof( char )
-/* The variable used to hold the queue's data structure. */
-//static StaticQueue_t xStaticQueue;
-/* The array to use as the queue's storage area.  This must be at least
-uxQueueLength * uxItemSize bytes. */
-//uint8_t ucQueueStorageArea[ QUEUE_LENGTH * ITEM_SIZE ];
 
 void ButtonsX::readButtons()
 {   
@@ -128,8 +119,6 @@ void ButtonsX::readButtons()
     // flag for execution and block from changing values until then
     
 
-    //long press works now... but not short press
-
     longTime = esp_timer_get_time()/1000;
     //printf("clock %ld :: button %ld \n", longTime, button1.buttonTimer);
     if (button1.buttonStatus && !button1.block)
@@ -140,7 +129,7 @@ void ButtonsX::readButtons()
             button1.shortPress = false;
             button1.executeFlag = true;
             button1.block = true;
-            debugPrintln("button 1 long press");
+            // debugPrintln("button 1 long press");
         }
         else
         {
@@ -153,7 +142,7 @@ void ButtonsX::readButtons()
         if (button1.shortPress)
         {
             button1.executeFlag = true;
-            debugPrintln("button 1 shorty execute");
+            // debugPrintln("button 1 shorty execute");
         }
         if (button1.block)
         {
@@ -169,7 +158,7 @@ void ButtonsX::readButtons()
             button2.shortPress = false;
             button2.executeFlag = true;
             button2.block = true;
-            debugPrintln("button 2 long press");
+            // debugPrintln("button 2 long press");
         }
         else
         {
@@ -198,7 +187,7 @@ void ButtonsX::readButtons()
             button3.shortPress = false;
             button3.executeFlag = true;
             button3.block = true;
-            debugPrintln("button 3 long press");
+            // debugPrintln("button 3 long press");
         }
         else
         {
@@ -227,7 +216,7 @@ void ButtonsX::readButtons()
             button4.shortPress = false;
             button4.executeFlag = true;
             button4.block = true;
-            debugPrintln("button 4 long press");
+            // debugPrintln("button 4 long press");
         }
         else
         {
@@ -254,7 +243,7 @@ void ButtonsX::verifyButtons()
 {
     if (button1.executeFlag || button2.executeFlag || button3.executeFlag || button4.executeFlag)
     {
-        debugPrintln("Building execute strings");
+        // debugPrintln("Building execute strings");
         if (button1.longPress)
         {
             button1.cmd = 'L';
@@ -316,9 +305,9 @@ void ButtonsX::verifyButtons()
         char doo[5] = {button1.cmd, button2.cmd, button3.cmd, button4.cmd, '\0'};
         //char doo[5];
         //sprintf(doo, "%s%s%s%s", button1.cmd, button2.cmd, button3.cmd, button4.cmd);
-        xQueueSend(buttonQueue, &doo, xBlockTime);
-        debugPrintln(doo);
-        debugPrintln("Buttons added to queue");
+        xQueueSend(buttonQueue, &doo, (TickType_t)10);
+        // debugPrintln(doo);
+        // debugPrintln("Buttons added to queue");
         button1.cmd = 'N';
         button2.cmd = 'N';
         button3.cmd = 'N';
@@ -328,7 +317,7 @@ void ButtonsX::verifyButtons()
 }
 
 std::string ButtonsX::getEvents(){
-    debugPrintln("getButtons:   ... ");
+    //debugPrintln("getButtons:   ... ");
     char temp[5];//={};
     //std::string t ="";
     if(uxQueueMessagesWaiting(buttonQueue)){
