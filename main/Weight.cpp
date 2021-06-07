@@ -18,10 +18,10 @@
 #include "System.h"
 
 
-QueueHandle_t weightQueue;
+// QueueHandle_t weightQueue;
 extern SystemX *_sys;
 
-double tareOffset=0.0;  //[] = {0.0, 0.0, 0.0, 0.0};
+//double tareOffset=0.0;  //[] = {0.0, 0.0, 0.0, 0.0};
 
 double WeightX::ReadVoltage(adc1_channel_t pin){
   // from https://github.com/G6EJD/ESP32-ADC-Accuracy-Improvement-function/blob/master/ESP32_ADC_Read_Voltage_Accurate.ino
@@ -50,9 +50,9 @@ void WeightX::readSensors(){
   sg2 = ReadVoltage(SG2);
   sg3 = ReadVoltage(SG3);
   sg4 = ReadVoltage(SG4);
-  //char ch[36]={};
-  //sprintf(ch, "[%.5f,%.5f,%.5f,%.5f]", sg1,sg2,sg3,sg4);
-  //debugPrintln(ch);
+  char ch[36]={};
+  sprintf(ch, "[%.5f,%.5f,%.5f,%.5f]", sg1,sg2,sg3,sg4);
+  debugPrintln(ch);
 
   //averaging filter
   sg1 = (sg1* a) + (sg1_last * (1-a));
@@ -71,9 +71,7 @@ void WeightX::readSensors(){
 }
 
 std::string WeightX::truncateWeight( double d){
-  //xSemaphoreTake(systemMutex, (TickType_t)10);
-  //Units u = _sys.eUnits;
-  //xSemaphoreGive(systemMutex);
+  
   char str[16]="";
   switch(localUnits){
     case g: // g.1
@@ -127,21 +125,24 @@ void WeightX::setUnits(Units m){
 double WeightX::getRawWeight(){
   // weight before conversions and tare offset
   xSemaphoreTake(sgMutex, (TickType_t)10);
-  double weight =  random()*((sg1-mTareOffset(0))*mK_sg1(2,2)+(sg2-mTareOffset(1))*mK_sg2(2,2)+(sg3-mTareOffset(2))*mK_sg3(2,2)+(sg4-mTareOffset(3))*mK_sg4(2,2));
-  
-  mRawWeight(0) = sg1;
-  mRawWeight(1) = sg2;
-  mRawWeight(2) = sg3;
-  mRawWeight(3) = sg4;
+  //double weight =  ((sg1-)*mK_sg1(2,2)+(sg2-mTareOffset(1))*mK_sg2(2,2)+(sg3-mTareOffset(2))*mK_sg3(2,2)+(sg4-mTareOffset(3))*mK_sg4(2,2));
+
+  rawWeight.w1 = sg1*mK_sg1(2,2);
+  rawWeight.w2 = sg2*mK_sg2(2,2);
+  rawWeight.w3 = sg3*mK_sg3(2,2);
+  rawWeight.w4 = sg4*mK_sg4(2,2);
   xSemaphoreGive(sgMutex);
-  return weight;
+  return (rawWeight.w1 + rawWeight.w2 + rawWeight.w3 + rawWeight.w4);
 }
 
 double WeightX::getWeight(){
+  // adjusting for tare and units
   //double weight = (getRawWeight() - tareOffset)* conversion;
-  
-  double weight = getRawWeight()*conversion;
-  
+  double weight=0;
+  if(getRawWeight()>0){
+    weight = ((rawWeight.w1 - mTareOffset(0))+ (rawWeight.w2 - mTareOffset(1)) + (rawWeight.w3 - mTareOffset(2))+ (rawWeight.w4 - mTareOffset(3))) * conversion;
+  }
+ 
   debugPrint("weight: ");
   //double test = mTareOffset(0)*2.0;
   //debugPrintln(test);*/
@@ -163,12 +164,12 @@ std::string WeightX::getWeightStr(){
 void WeightX::tare(){
   
   xSemaphoreTake(sgMutex, (TickType_t)10);
-  tareOffset = getRawWeight();
-  mTareOffset(0) = sg1;
-  mTareOffset(1) = sg2;
-  mTareOffset(2) = sg3;
-  mTareOffset(3) = sg4;
-  mTareOffset = mRawWeight;
+  debugPrintln(getRawWeight());
+  mTareOffset(0) = rawWeight.w1;
+  mTareOffset(1) = rawWeight.w2;
+  mTareOffset(2) = rawWeight.w3;
+  mTareOffset(3) = rawWeight.w4;
+  
   xSemaphoreGive(sgMutex);
 }
 
@@ -182,16 +183,23 @@ void WeightX::sleepPreparation(){
 }
 
 void WeightX::Main(){
+  debugPrintln("Weight main");
   char doo[16];
+  char dump[16];
   std::string foo;
   double lastWeight = 0.0;
   double currentWeight= 0.0;
   weightQueue = xQueueCreate(5, sizeof(uint32_t));
   sgMutex = xSemaphoreCreateMutex();
   long t = esp_timer_get_time()/1000;
+  bool b = false;
   for(;;){
+    debugPrintln("weightLoop");
     readSensors();
-    if(t - esp_timer_get_time()/1000 > weight_update_rate*1000){
+    b = ((esp_timer_get_time()/1000 - t) > (weight_update_rate*1000));
+    debugPrintln((int)b);
+    if(b){
+      debugPrintln("here");
       currentWeight = getWeight();
       if(abs(currentWeight - lastWeight)> getUnitPrecision(localUnits)){
           
@@ -202,6 +210,9 @@ void WeightX::Main(){
           //updateBTWeight(foo);            
           debugPrintln("Bluetooth is connected, from Weight");
         }
+        if(uxQueueMessagesWaiting(weightQueue) > 4){
+          xQueueReceive(weightQueue, &dump, (TickType_t)10);
+        }
 
         xQueueSend(weightQueue, &doo, (TickType_t)10);
         debugPrintln("Doing weight stuff");
@@ -209,6 +220,7 @@ void WeightX::Main(){
         lastWeight = currentWeight;
       }
       _sys->callbackFlag = true;
+      t = esp_timer_get_time()/1000;
     }
     
     vTaskDelay(15);

@@ -8,9 +8,6 @@
 #include "display.h"
 #include "main.h"
 
-//temporarily use this to test ota methods
-#include "myOTA.h"
-
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/semphr.h"
@@ -30,10 +27,10 @@
 
 #include "driver/rtc_io.h"
 
-//#include "esp32/ulp.h"
-//#include "ulp_main.h"
-//#include "bootloader_support/include/esp_app_format.h"
-//#include "esp_app_format.h"
+// #include "esp32/ulp.h"
+// #include "ulp_main.h"
+// // #include "bootloader_support/include/esp_app_format.h"
+// #include "esp_app_format.h"
 //#include "Eigen/Dense" note: DO NOT USE in same file/namespace as any ULP library. it has naming conflicts.
 
 extern "C" {
@@ -185,6 +182,7 @@ void app_main() {
     // loop
     BLEsetup();
     debugPrintln("Before main loop...");
+    _sys->display->displayWeight(_sys->weight->getWeightStr());
     for (;;)
     {
         //battery update moved into this loop to free up some memory
@@ -226,7 +224,7 @@ void app_main() {
                     if (event.compare(0,4,"SNNN",0,4) == 0)
                     {
                         //TODO: TARE FUNCTION
-                        //tare();
+                        _sys->weight->tare();
                     }
                     if (event.compare(0,4,"LNNN",0,4) == 0)
                     {

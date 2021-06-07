@@ -600,9 +600,9 @@ void BLEsetup()
 
   /** Add the services to the advertisment data **/
   pAdvertising->addServiceUUID(pDeviceService->getUUID());
-  //pAdvertising->addServiceUUID(pBatteryService->getUUID());
-  //pAdvertising->addServiceUUID(pWeightService->getUUID());
-  //pAdvertising->addServiceUUID(pActionService->getUUID());
+  pAdvertising->addServiceUUID(pBatteryService->getUUID());
+  pAdvertising->addServiceUUID(pWeightService->getUUID());
+  pAdvertising->addServiceUUID(pActionService->getUUID());
 
   /** If your device is battery powered you may consider setting scan response
       to false as it will extend battery life at the expense of less data sent.

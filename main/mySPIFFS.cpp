@@ -485,4 +485,3 @@ bool saveStrainGaugeParams(Eigen::Matrix3d *m0, Eigen::Matrix3d *m1, Eigen::Matr
     debugPrintln("Closing spiffs file");
     return true;
 }
-

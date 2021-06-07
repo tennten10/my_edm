@@ -23,6 +23,7 @@ public:
     {
         this->display = new DisplayX(); // constructor
         this->buttons = new ButtonsX(true);
+        vTaskDelay(1000);
         this->weight = new WeightX();
 
         // this->wifiInfo = availableWiFiInfo();

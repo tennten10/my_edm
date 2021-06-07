@@ -19,9 +19,13 @@ extern "C"{
 #include "driver/gpio.h"
 #include "esp_adc_cal.h"
 
-//void strainGaugeSetup();
 
-
+struct WeightStruct{
+    double w1;
+    double w2;
+    double w3;
+    double w4;
+};
 
 
 /*   */ 
@@ -58,9 +62,9 @@ private:
 class WeightX : public ThreadXb<WeightX>
 {
 public:
-    WeightX() : ThreadXb{5000, 1, "ButtonHandler"}                               
+    WeightX() : ThreadXb{5000, 1, "WeightHandler"}                               
     {
-        
+        debugPrintln("inside weight initialization");
         adc1_config_width(ADC_WIDTH_BIT_12);
         adc1_config_channel_atten(SG1,ADC_ATTEN_DB_11); // Will need to change the attenuation when the circuit gets upgraded to auto-ranging
         adc1_config_channel_atten(SG2,ADC_ATTEN_DB_11);
@@ -71,15 +75,16 @@ public:
         getStrainGaugeParams(mK_sg1,mK_sg2, mK_sg3, mK_sg4 );
 
         // temporary calibration values
-        mK_sg1(2,2) = 9.9099; // V/g
-        mK_sg2(2,2) = 9.9099;
-        mK_sg3(2,2) = 55.8559;
-        mK_sg4(2,2) = 64.8649;
+        mK_sg1(2,2) = 9.9099*1; // V/g
+        mK_sg2(2,2) = 9.9099*1;
+        mK_sg3(2,2) = 55.8559*1;
+        mK_sg4(2,2) = 64.8649*1;
 
         //pinMode(enable_165, OUTPUT);
         //digitalWrite(enable_165, HIGH);
 
         tare();
+        debugPrintln("after weight initialization");
         
     }
     ~WeightX(){} 
@@ -113,7 +118,7 @@ private:
     void readSensors();
     double getWeight();
     std::string truncateWeight(double d);
-    //QueueHandle_t weightQueue;
+    
 
     double units2conversion(Units u){
         double ret = 0.0;
@@ -141,6 +146,9 @@ private:
     Eigen::Matrix3d mK_sg2 = Eigen::Matrix3d::Identity();
     Eigen::Matrix3d mK_sg3 = Eigen::Matrix3d::Identity();
     Eigen::Matrix3d mK_sg4 = Eigen::Matrix3d::Identity();
+
+    WeightStruct rawWeight = {0.,0.,0.,0.};
+    WeightStruct output = {0.,0.,0.,0.};
 
     double sg1 = 0.;
     double sg2 = 0.;
@@ -176,6 +184,8 @@ private:
     Eigen::Matrix2d theoreticalWeight(double g, double x, double y);
     void inverseWeight();
 };
+
+
 
 
 /* #ifdef __cplusplus

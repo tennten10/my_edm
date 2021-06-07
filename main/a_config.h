@@ -41,7 +41,7 @@ extern "C" {
 #include "sdkconfig.h"
 
 //defines for all configurations
-#define WEIGHT_UPDATE_RATE 0.5
+#define WEIGHT_UPDATE_RATE 1
 
 // defines for individual ones
 #if defined CONFIG_SB_V1_HALF_ILI9341

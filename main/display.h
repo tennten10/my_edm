@@ -101,10 +101,10 @@ private:
 
     char currentWeight[32] = "0.0";
 
-    int red = 100;
-    int green = 100;
-    int blue = 100;
-    int intensity = 255;
+    int red = 255;
+    int green = 255;
+    int blue = 255;
+    int intensity = 6000; // max 8192
 };
 
 #endif

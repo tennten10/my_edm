@@ -101,6 +101,10 @@ LV_IMG_DECLARE(img_low_battery);
 LV_IMG_DECLARE(img_logo_black);
 LV_IMG_DECLARE(img_logo_white);
 
+LV_FONT_DECLARE(montserrat_70);
+LV_FONT_DECLARE(montserrat_90);
+LV_FONT_DECLARE(montserrat_120);
+
 
 //     /* If you want to use a task to create the graphic, you NEED to create a Pinned task
 //       * Otherwise there can be problem such as memory corruption and so on.
@@ -132,7 +136,7 @@ void DisplayX::Main()
         .speed_mode = LEDC_LOW_SPEED_MODE,    // timer mode
         .duty_resolution = LEDC_TIMER_13_BIT, // resolution of PWM duty
         .timer_num = LEDC_TIMER_1,            // timer index
-        .freq_hz = 5000,                      // frequency of PWM signal
+        .freq_hz = 3000,                      // frequency of PWM signal
         .clk_cfg = LEDC_AUTO_CLK,             // Auto select the source clock
     };
 
@@ -153,7 +157,9 @@ void DisplayX::Main()
 #endif
 #ifdef CONFIG_SB_V6_FULL_ILI9341
   ledc_channel_config(&b_ledc_c_config);
-  ledc_set_duty_and_update(b_ledc_c_config.speed_mode, b_ledc_c_config.channel, 100, 0);
+  ledc_fade_func_install(0);
+  
+  ledc_set_duty_and_update(b_ledc_c_config.speed_mode, b_ledc_c_config.channel, intensity, 0);
 #endif
 
 
@@ -212,14 +218,15 @@ void DisplayX::Main()
 
     // draw my starting screen
     long t = esp_timer_get_time() / 1000;
-    
+    xSemaphoreTake(xGuiSemaphore, (TickType_t)10);
     displayLogo();
     while (esp_timer_get_time() / 1000 - t < 1000)
     {
         lv_task_handler();
-        //xSemaphoreGive(xGuiSemaphore);
         vTaskDelay(10);
     }
+    displayWeight("0.0");
+    xSemaphoreGive(xGuiSemaphore);
 
     //pageTestRoutine((long)(esp_timer_get_time() / 1000));
 
@@ -283,6 +290,7 @@ void DisplayX::styleInit()
     //lv_style_set_text_color(&logoStyle, LV_STATE_DEFAULT, LV_COLOR_WHITE);
     lv_style_set_bg_color(&logoStyle, LV_STATE_DEFAULT, LV_COLOR_BLACK);
 
+
     lv_style_set_bg_color(&backgroundStyle, LV_STATE_DEFAULT, LV_COLOR_BLACK);
     lv_style_set_border_opa(&backgroundStyle, LV_STATE_DEFAULT, 0);
 
@@ -296,11 +304,11 @@ void DisplayX::styleInit()
 #ifdef CONFIG_SB_V6_FULL_ILI9341
 // TODO: just copy and pasted for now... need to change things up
     //lv_style_set_bg_color(&weightStyle, LV_STATE_DEFAULT, LV_COLOR_BLACK);
-    lv_style_set_text_font(&weightStyle, LV_STATE_DEFAULT, &lv_font_montserrat_40);
+    lv_style_set_text_font(&weightStyle, LV_STATE_DEFAULT, &montserrat_120);
     lv_style_set_text_color(&weightStyle, LV_STATE_DEFAULT, LV_COLOR_WHITE);
     //lv_style_set_bg_opa(&weightStyle, LV_STATE_DEFAULT, 100);
 
-    lv_style_set_text_font(&unitStyle, LV_STATE_DEFAULT, &lv_font_montserrat_40);
+    lv_style_set_text_font(&unitStyle, LV_STATE_DEFAULT, &montserrat_120);
     lv_style_set_text_color(&unitStyle, LV_STATE_DEFAULT, LV_COLOR_WHITE);
     //lv_style_set_bg_color(&unitStyle, LV_STATE_DEFAULT, LV_COLOR_BLACK);
 
@@ -312,7 +320,7 @@ void DisplayX::styleInit()
     lv_style_set_border_opa(&backgroundStyle, LV_STATE_DEFAULT, 0);
 
     lv_style_set_text_color(&infoStyle, LV_STATE_DEFAULT, LV_COLOR_WHITE);
-    lv_style_set_text_font(&unitStyle, LV_STATE_DEFAULT, &lv_font_montserrat_30);
+    lv_style_set_text_font(&unitStyle, LV_STATE_DEFAULT, &montserrat_120);
 
     lv_style_set_bg_opa(&transpCont, LV_STATE_DEFAULT, 0);
     lv_style_set_border_opa(&transpCont, LV_STATE_DEFAULT, 0);
@@ -514,15 +522,16 @@ void DisplayX::resizeWeight(char *w)
 #ifdef CONFIG_SB_V6_FULL_ILI9341
   if (strlen(w) > 4)
   {
-    //tft.setFont(3);
+    lv_style_set_text_font(&weightStyle, LV_STATE_DEFAULT, &montserrat_70);
+
   }
   else if (strlen(w) > 3)
   {
-    //tft.setFont(4);
+    lv_style_set_text_font(&weightStyle, LV_STATE_DEFAULT, &montserrat_90);  
   }
   else if (strlen(w) > 2)
   {
-    //tft.setFont(5);
+    lv_style_set_text_font(&weightStyle, LV_STATE_DEFAULT, &montserrat_120);
   }
   else
   {
@@ -543,10 +552,7 @@ void DisplayX::displayWeight(std::string weight)
   xSemaphoreTake(xGuiSemaphore, (TickType_t)10);
   char now[32];
   strcpy(now, weight.c_str());
-  //static lv_obj_t * canvas = lv_canvas_create(lv_scr_act(), NULL);
-  //lv_canvas_set_buffer(canvas, cbuf, SB_HORIZ, SB_VERT, LV_IMG_CF_TRUE_COLOR);
-  //lv_obj_align(canvas, NULL, LV_ALIGN_CENTER, 0, 0);
-  //lv_canvas_fill_bg(canvas, LV_COLOR_BLACK, LV_OPA_COVER);
+  resizeWeight(now);
 
   lv_obj_t *bkgrnd = lv_obj_create(lv_scr_act(), NULL);
   lv_obj_t *cont = lv_cont_create(bkgrnd, NULL);
@@ -622,27 +628,27 @@ void DisplayX::displayWeight(std::string weight)
   lv_obj_set_width(bkgrnd, SB_HORIZ);
   lv_obj_set_height(bkgrnd, SB_VERT);
   lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
-
-  if (strlen(now) > 4)
-  {
-    lv_label_set_text_fmt(label1, "%s", now);
-    debugPrintln("4+chars");
-  }
-  else if (strlen(now) > 3)
-  {
-    lv_label_set_text_fmt(label1, "%s", now);
-    debugPrintln("4 chars");
-  }
-  else if (strlen(now) > 2)
-  {
-    lv_label_set_text_fmt(label1, "%s", now);
-    debugPrintln("3 chars");
-  }
-  else
-  {
-    lv_label_set_text_fmt(label1, "%s", now);
-    debugPrintln("default font");
-  }
+  lv_label_set_text_fmt(label1, "%s", now);
+  // if (strlen(now) > 4)
+  // {
+  //   lv_label_set_text_fmt(label1, "%s", now);
+  //   debugPrintln("4+chars");
+  // }
+  // else if (strlen(now) > 3)
+  // {
+  //   lv_label_set_text_fmt(label1, "%s", now);
+  //   debugPrintln("4 chars");
+  // }
+  // else if (strlen(now) > 2)
+  // {
+  //   lv_label_set_text_fmt(label1, "%s", now);
+  //   debugPrintln("3 chars");
+  // }
+  // else
+  // {
+  //   lv_label_set_text_fmt(label1, "%s", now);
+  //   debugPrintln("default font");
+  // }
 
   lv_obj_align(cont, NULL, LV_ALIGN_CENTER, 0, 0);
   lv_obj_add_style(bkgrnd, LV_OBJ_PART_MAIN, &backgroundStyle);
@@ -709,7 +715,7 @@ void DisplayX::displayUnits(Units u)
   lv_obj_align(cont, NULL, LV_ALIGN_CENTER, 0, 0);
   lv_obj_add_style(bkgrnd, LV_OBJ_PART_MAIN, &backgroundStyle);
   lv_obj_add_style(cont, LV_OBJ_PART_MAIN, &transpCont);
-  lv_obj_add_style(label1, LV_OBJ_PART_MAIN, &weightStyle);
+  lv_obj_add_style(label1, LV_OBJ_PART_MAIN, &unitStyle);
   xSemaphoreGive(xGuiSemaphore);
 }
 
@@ -801,7 +807,7 @@ void DisplayX::displayLogo()
   lv_obj_set_width(bkgrnd, SB_HORIZ);
   lv_obj_set_height(bkgrnd, SB_VERT);
   lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
-  lv_img_set_zoom(img, 250);
+  lv_img_set_zoom(img, 200);
   lv_obj_align(img, NULL, LV_ALIGN_CENTER, 0, 0);
 #endif
   lv_obj_add_style(bkgrnd, LV_OBJ_PART_MAIN, &backgroundStyle);
@@ -887,7 +893,7 @@ void DisplayX::displayLowBattery()
   lv_obj_align(cont, NULL, LV_ALIGN_CENTER, 0,0);
 #endif
 #ifdef CONFIG_SB_V6_FULL_ILI9341
-lv_img_set_src(img, &img_low_battery);
+  lv_img_set_src(img, &img_low_battery);
   lv_obj_set_width(bkgrnd, SB_HORIZ);
   lv_obj_set_height(bkgrnd, SB_VERT);
   lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
@@ -912,24 +918,43 @@ lv_img_set_src(img, &img_low_battery);
 void DisplayX::displayOff()
 {
   xSemaphoreTake(xGuiSemaphore, (TickType_t)10);
-  lv_obj_clean(lv_scr_act());
+  lv_obj_t *bkgrnd = lv_obj_create(lv_scr_act(), NULL);
+  //lv_obj_t *img = lv_img_create(bkgrnd, NULL);
+  lv_obj_set_width(bkgrnd, SB_HORIZ);
+  lv_obj_set_height(bkgrnd, SB_VERT);
+  lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
+  lv_obj_add_style(bkgrnd, LV_OBJ_PART_MAIN, &backgroundStyle);
+  //lv_obj_clean(lv_scr_act());
   xSemaphoreGive(xGuiSemaphore);
   disp_flag = false;
-  setIntensity(0);  
+  //setIntensity(0);
+  #ifdef CONFIG_SB_V1_HALF_ILI9341
+  ledc_set_duty_and_update(b_ledc_c_config.speed_mode, b_ledc_c_config.channel, 0, 0);
+#endif
+#ifdef CONFIG_SB_V3_ST7735S
+  green = green*intensity/255;
+  red = red*intensity/255;
+  
+  ledc_set_duty_and_update(r_ledc_c_config.speed_mode, r_ledc_c_config.channel, 0, 0);
+  ledc_set_duty_and_update(g_ledc_c_config.speed_mode, g_ledc_c_config.channel, 0, 0);
+  ledc_set_duty_and_update(b_ledc_c_config.speed_mode, b_ledc_c_config.channel, 0, 0);
+#endif
+#ifdef CONFIG_SB_V6_FULL_ILI9341
+  ledc_set_duty_and_update(b_ledc_c_config.speed_mode, b_ledc_c_config.channel, 0, 0);
+#endif
 
 }
 
 void DisplayX::displayOn()
 {
-
   disp_flag = true;
-  setIntensity(100);
-
+  setIntensity(intensity);
 }
 
 void DisplayX::displaySleepPrep(){
   
   displayOff();
+  // save color and intensity to nvs
   
 }
 
@@ -967,7 +992,13 @@ void DisplayX::setColor(int r, int g, int b){
 }
 
 void DisplayX::setIntensity(int i){
-  intensity = i;
+  if(i>8192){
+    intensity = 8192;
+  }else if(i < 0){
+    intensity = 0;
+  }else{
+    intensity = i;
+  }
 
 
   
