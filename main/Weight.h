@@ -25,6 +25,7 @@ struct WeightStruct{
     double w2;
     double w3;
     double w4;
+    double total;
 };
 
 
@@ -98,7 +99,7 @@ public:
     }
     void setLocalUnits(Units u){
         localUnits = u;
-        conversion = units2conversion(u);
+        conversion = units2conversionfactor(u);
     }
 
     void CalibrateParameters();
@@ -120,18 +121,23 @@ private:
     std::string truncateWeight(double d);
     
 
-    double units2conversion(Units u){
+    double units2conversionfactor(Units u){
         double ret = 0.0;
         switch(u){
             case g:
+                ret = 1.0;
             break;
             case kg:
+                ret = 0.001;
             break;
             case oz:
+                ret = 0.;
             break;
             case lb:
+                ret = 2.2;
             break;
             default:
+                ret = 1.0;
             break;
         }
         return ret;
@@ -147,8 +153,8 @@ private:
     Eigen::Matrix3d mK_sg3 = Eigen::Matrix3d::Identity();
     Eigen::Matrix3d mK_sg4 = Eigen::Matrix3d::Identity();
 
-    WeightStruct rawWeight = {0.,0.,0.,0.};
-    WeightStruct output = {0.,0.,0.,0.};
+    WeightStruct rawWeight = {0.,0.,0.,0.,0.};
+    WeightStruct output = {0.,0.,0.,0.,0.};
 
     double sg1 = 0.;
     double sg2 = 0.;

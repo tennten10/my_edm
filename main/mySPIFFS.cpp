@@ -485,3 +485,107 @@ bool saveStrainGaugeParams(Eigen::Matrix3d *m0, Eigen::Matrix3d *m1, Eigen::Matr
     debugPrintln("Closing spiffs file");
     return true;
 }
+
+
+
+Data getSaveData(){
+    // if file exists and am able to open...
+    Data d = {err};
+    debugPrintln("getSaveData");
+    if(!esp_spiffs_mounted(conf.partition_label)){
+        conf = {
+        .base_path = "/spiffs",
+        .partition_label = NULL,
+        .max_files = 5,
+        .format_if_mount_failed = true
+        };
+        ret = esp_vfs_spiffs_register(&conf);
+        
+        if (ret != ESP_OK) {
+            if (ret == ESP_FAIL) {
+                debugPrintln("Failed to mount or format filesystem");
+            } else if (ret == ESP_ERR_NOT_FOUND) {
+                debugPrintln("Failed to find SPIFFS partition");
+            } else if (ret == ESP_ERR_NOT_FOUND) {
+                debugPrintln("Failed to find SPIFFS partition");
+            } else {
+                debugPrint("Failed to initialize SPIFFS (");
+                debugPrint(ret);
+                debugPrint(")");
+            }
+            return d;
+        }
+        size_t total = 0, used = 0;
+        ret = esp_spiffs_info(conf.partition_label, &total, &used);
+        
+        if (ret != ESP_OK) {
+            printf( "Failed to get SPIFFS partition information (%s)", esp_err_to_name(ret));
+        } else {
+            printf("Partition size: total: %d, used: %d", total, used);
+        }
+    }
+    debugPrintln("Opening file");
+    FILE* f = fopen("/spiffs/save.txt", "r"); 
+    if (f == NULL) {
+        debugPrintln("Failed to open file for reading");
+        return d;
+        
+    }
+    
+    char line[100];
+        
+
+    fgets(line, sizeof(line), f); // throw away header line
+    debugPrintln(line);
+    strcpy(line,"");
+    fgets(line, sizeof(line), f);
+    debugPrintln(line);
+    std::string s = std::string(strtok(line, ","));
+    debugPrintln(s);
+    d.u = stringToUnits(s);
+    
+    fclose(f);
+    debugPrintln("Closing SPIFFS file");
+    return d;
+}
+
+bool setSaveData(Units u){
+    // if file exists and am able to open...
+    
+    debugPrintln("setSaveData");
+    if(!esp_spiffs_mounted(conf.partition_label)){
+        conf = {
+        .base_path = "/spiffs",
+        .partition_label = NULL,
+        .max_files = 5,
+        .format_if_mount_failed = true
+        };
+        ret = esp_vfs_spiffs_register(&conf);
+        if (ret != ESP_OK) {
+            if (ret == ESP_FAIL) {
+                debugPrintln("Failed to mount or format filesystem");
+            } else if (ret == ESP_ERR_NOT_FOUND) {
+                debugPrintln("Failed to find SPIFFS partition");
+            } else if (ret == ESP_ERR_NOT_FOUND) {
+                debugPrintln("Failed to find SPIFFS partition");
+            } else {
+                debugPrint("Failed to initialize SPIFFS (");
+                debugPrint(ret);
+                debugPrint(")");
+            }
+            return false;
+        }
+    }
+    debugPrintln("Opening file");
+    FILE* f = fopen("/spiffs/save.txt", "w"); 
+    if (f == NULL) {
+        debugPrintln("Failed to open file for reading");
+        return false;
+    }
+         
+    fprintf(f, "units,idk\n%s,%s", unitsToString(u).c_str(), "idk" );
+       
+    fclose(f);
+    debugPrintln("Closing spiffs file");
+    return true;
+}

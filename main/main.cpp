@@ -138,11 +138,13 @@ void app_main() {
         printf("ULP wakeup, setting everything up...\n");
         ulp_deinit();
     }
+    
 
     debugSetup();
     _sys = new SystemX(populateStartData());
     vTaskDelay(200);
-    BLEsetup();
+    // BLEsetup();
+    
     
     std::string event;
     PAGE page;
@@ -167,7 +169,7 @@ void app_main() {
     // loop
     
     debugPrintln("Before main loop...");
-    _sys->display->displayWeight(_sys->weight->getWeightStr());
+    //_sys->display->displayWeight((char*)_sys->weight->getWeightStr().c_str());
     for (;;)
     {
         //battery update moved into this loop to free up some memory

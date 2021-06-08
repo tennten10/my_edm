@@ -48,21 +48,6 @@
 
 
 extern SystemX *_sys;
-/**********************
- *  STATIC PROTOTYPES
- **********************/
-//static 
-//void lv_tick_task(void *arg);
-//static 
-//void displayTask(void *pvParameter);
-
-//void displayLoopConditions(long &t, int &q, int &q_last);
-
-/**********************
- *  GLOBAL VARIABLES
- **********************/
-
-extern TickType_t xBlockTime;
 
 
 ledc_channel_config_t b_ledc_c_config{
@@ -228,7 +213,7 @@ void DisplayX::Main()
     displayWeight("0.0");
     xSemaphoreGive(xGuiSemaphore);
 
-    //pageTestRoutine((long)(esp_timer_get_time() / 1000));
+    // pageTestRoutine((long)(esp_timer_get_time() / 1000));
 
     while (1)
     {
@@ -547,11 +532,14 @@ void DisplayX::displayWeight(std::string weight)
     debugPrintln("breaking out of displayWeight");
     return;
   }
-  debugPrintln(" gets past catching -1 value in displayWeight");
-  xSemaphoreTake(xGuiSemaphore, (TickType_t)10);
-  char now[32];
+  debugPrintln(weight);
+  debugPrint(" gets past catching -1 value in displayWeight: ");
+  xSemaphoreTake(xGuiSemaphore, (TickType_t)20);
+  static char now[32];
   strcpy(now, weight.c_str());
   resizeWeight(now);
+  debugPrintln(now);
+  debugPrintln(weight.c_str());
 
   lv_obj_t *bkgrnd = lv_obj_create(lv_scr_act(), NULL);
   lv_obj_t *cont = lv_cont_create(bkgrnd, NULL);
@@ -565,69 +553,6 @@ void DisplayX::displayWeight(std::string weight)
   lv_obj_set_height(bkgrnd, SB_VERT);
   lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
 
-  if (strlen(now) > 4)
-  {
-    lv_label_set_text_fmt(label1, "%s", now);
-    debugPrintln("4+chars");
-  }
-  else if (strlen(now) > 3)
-  {
-    lv_label_set_text_fmt(label1, "%s", now);
-    debugPrintln("4 chars");
-  }
-  else if (strlen(now) > 2)
-  {
-    lv_label_set_text_fmt(label1, "%s", now);
-    debugPrintln("3 chars");
-  }
-  else
-  {
-    lv_label_set_text_fmt(label1, "%s", now);
-    debugPrintln("default font");
-  }
-
-  lv_obj_align(cont, NULL, LV_ALIGN_CENTER, 0, 0);
-  lv_obj_add_style(bkgrnd, LV_OBJ_PART_MAIN, &backgroundStyle);
-  lv_obj_add_style(cont, LV_OBJ_PART_MAIN, &transpCont);
-  lv_obj_add_style(label1, LV_OBJ_PART_MAIN, &weightStyle);
-#endif
-#ifdef CONFIG_SB_V3_ST7735S
-  lv_obj_set_width(bkgrnd, SB_HORIZ);
-  lv_obj_set_height(bkgrnd, SB_VERT);
-  lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
-
-  if (strlen(now) > 4)
-  {
-    lv_label_set_text_fmt(label1, "%s", now);
-    debugPrintln("4+chars");
-  }
-  else if (strlen(now) > 3)
-  {
-    lv_label_set_text_fmt(label1, "%s", now);
-    debugPrintln("4 chars");
-  }
-  else if (strlen(now) > 2)
-  {
-    lv_label_set_text_fmt(label1, "%s", now);
-    debugPrintln("3 chars");
-  }
-  else
-  {
-    lv_label_set_text_fmt(label1, "%s", now);
-    debugPrintln("default font");
-  }
-
-  lv_obj_align(cont, NULL, LV_ALIGN_CENTER, 0, 0);
-  lv_obj_add_style(bkgrnd, LV_OBJ_PART_MAIN, &backgroundStyle);
-  lv_obj_add_style(cont, LV_OBJ_PART_MAIN, &transpCont);
-  lv_obj_add_style(label1, LV_OBJ_PART_MAIN, &weightStyle);
-
-#endif
-#ifdef CONFIG_SB_V6_FULL_ILI9341
-  lv_obj_set_width(bkgrnd, SB_HORIZ);
-  lv_obj_set_height(bkgrnd, SB_VERT);
-  lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
-  lv_label_set_text_fmt(label1, "%s", now);
   // if (strlen(now) > 4)
   // {
   //   lv_label_set_text_fmt(label1, "%s", now);
@@ -648,6 +573,49 @@ void DisplayX::displayWeight(std::string weight)
   //   lv_label_set_text_fmt(label1, "%s", now);
   //   debugPrintln("default font");
   // }
+
+  lv_obj_align(cont, NULL, LV_ALIGN_CENTER, 0, 0);
+  lv_obj_add_style(bkgrnd, LV_OBJ_PART_MAIN, &backgroundStyle);
+  lv_obj_add_style(cont, LV_OBJ_PART_MAIN, &transpCont);
+  lv_obj_add_style(label1, LV_OBJ_PART_MAIN, &weightStyle);
+#endif
+#ifdef CONFIG_SB_V3_ST7735S
+  lv_obj_set_width(bkgrnd, SB_HORIZ);
+  lv_obj_set_height(bkgrnd, SB_VERT);
+  lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
+
+  // if (strlen(now) > 4)
+  // {
+  //   lv_label_set_text_fmt(label1, "%s", now);
+  //   debugPrintln("4+chars");
+  // }
+  // else if (strlen(now) > 3)
+  // {
+  //   lv_label_set_text_fmt(label1, "%s", now);
+  //   debugPrintln("4 chars");
+  // }
+  // else if (strlen(now) > 2)
+  // {
+  //   lv_label_set_text_fmt(label1, "%s", now);
+  //   debugPrintln("3 chars");
+  // }
+  // else
+  // {
+  //   lv_label_set_text_fmt(label1, "%s", now);
+  //   debugPrintln("default font");
+  // }
+
+  lv_obj_align(cont, NULL, LV_ALIGN_CENTER, 0, 0);
+  lv_obj_add_style(bkgrnd, LV_OBJ_PART_MAIN, &backgroundStyle);
+  lv_obj_add_style(cont, LV_OBJ_PART_MAIN, &transpCont);
+  lv_obj_add_style(label1, LV_OBJ_PART_MAIN, &weightStyle);
+
+#endif
+#ifdef CONFIG_SB_V6_FULL_ILI9341
+  lv_obj_set_width(bkgrnd, SB_HORIZ);
+  lv_obj_set_height(bkgrnd, SB_VERT);
+  lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
+  lv_label_set_text_fmt(label1, "%s", now);
 
   lv_obj_align(cont, NULL, LV_ALIGN_CENTER, 0, 0);
   lv_obj_add_style(bkgrnd, LV_OBJ_PART_MAIN, &backgroundStyle);

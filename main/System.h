@@ -25,9 +25,12 @@ public:
         this->buttons = new ButtonsX(true);
         vTaskDelay(1000);
         this->weight = new WeightX();
+        this->getSavedVals();
+        this->weight->setLocalUnits(eUnits);
 
         // this->wifiInfo = availableWiFiInfo();
         this->wifiInfo = getActiveWifiInfo();
+        
 
         
     }
@@ -58,6 +61,7 @@ public:
         xSemaphoreGive(batteryMutex);
         return ret;
     }
+
     void setBattery(int b){
         if(b > 100){
             debugPrintln("Battery over 100% ?????? - might be charging");
@@ -147,8 +151,11 @@ private:
     SemaphoreHandle_t batteryMutex = xSemaphoreCreateMutex();
     SemaphoreHandle_t modeMutex = xSemaphoreCreateMutex();
     SemaphoreHandle_t weightMutex = xSemaphoreCreateMutex();
+
+    void getSavedVals(); // initialize values saved across boots from NVS
+    void saveVals();
     
-    Units eUnits;
+    Units eUnits = kg;
     int batteryLevel;
 
     MODE eMode = STANDARD;

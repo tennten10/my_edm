@@ -17,6 +17,9 @@ WiFiStruct availableWiFiInfo();
 bool saveStrainGaugeParams(const Eigen::Matrix3d *m0, const Eigen::Matrix3d *m1, const Eigen::Matrix3d *m2, const Eigen::Matrix3d *m3);
 bool getStrainGaugeParams(const Eigen::Matrix3d& m0, const Eigen::Matrix3d& m1, const Eigen::Matrix3d& m2,const Eigen::Matrix3d& m3);
 
+Data getSaveData();
+bool setSaveData(Units u);
+
 /* #ifdef __cplusplus
 }
 #endif */

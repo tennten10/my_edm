@@ -69,7 +69,9 @@ void WeightX::readSensors(){
 }
 
 std::string WeightX::truncateWeight( double d){
-  
+  debugPrint("this is passed to truncate: ");
+  debugPrintln(d);
+  debugPrintln(unitsToString(localUnits));
   char str[16]="";
   switch(localUnits){
     case g: // g.1
@@ -89,8 +91,8 @@ std::string WeightX::truncateWeight( double d){
       return std::string(str);
     break;
     default:
-    debugPrintln("something wrong with truncate... made it to default");
-    return "";
+      debugPrintln("something wrong with truncate... made it to default");
+      return "";
     break;
   }
   
@@ -129,22 +131,23 @@ double WeightX::getRawWeight(){
   rawWeight.w2 = sg2*mK_sg2(2,2);
   rawWeight.w3 = sg3*mK_sg3(2,2);
   rawWeight.w4 = sg4*mK_sg4(2,2);
+  rawWeight.total = rawWeight.w1 + rawWeight.w2 + rawWeight.w3 + rawWeight.w4;
   xSemaphoreGive(sgMutex);
-  return (rawWeight.w1 + rawWeight.w2 + rawWeight.w3 + rawWeight.w4);
+  return rawWeight.total;
 }
 
 double WeightX::getWeight(){
   // adjusting for tare and units
   //double weight = (getRawWeight() - tareOffset)* conversion;
-  double weight=0;
+  static double weight=0;
   if(getRawWeight()>0){
-    weight = ((rawWeight.w1 - mTareOffset(0))+ (rawWeight.w2 - mTareOffset(1)) + (rawWeight.w3 - mTareOffset(2))+ (rawWeight.w4 - mTareOffset(3))) * conversion;
+    weight = (abs(rawWeight.w1 - mTareOffset(0)) + abs(rawWeight.w2 - mTareOffset(1)) + abs(rawWeight.w3 - mTareOffset(2)) + abs(rawWeight.w4 - mTareOffset(3)));//  * conversion;
   }
+  debugPrint("rawWeight: ");
+  debugPrintln(rawWeight.total);
  
   debugPrint("weight: ");
-  //double test = mTareOffset(0)*2.0;
-  //debugPrintln(test);*/
-  debugPrint( weight);
+  debugPrintln( weight);
   
   return weight;
 }
@@ -152,11 +155,16 @@ double WeightX::getWeight(){
 std::string WeightX::getWeightStr(){
   char temp[16]; 
   // message already truncated to proper size for units
-  if(uxQueueMessagesWaiting(weightQueue) > 0 ){
-    xQueueReceive(weightQueue, temp, (TickType_t) 10);
+  int qWaiting = (int)uxQueueMessagesWaiting(weightQueue);
+  debugPrint("queue waiting: ");
+  debugPrintln(qWaiting);
+  if( qWaiting > 0 ){
+    xQueueReceive(weightQueue, &temp, (TickType_t) 20);
+    debugPrint("weight from getweightstr: ");
+    debugPrintln(temp);
     return std::string(temp);
   }
-  return "-1";
+  return std::string("-1");
 }
 
 void WeightX::tare(){
@@ -187,7 +195,10 @@ void WeightX::Main(){
   std::string foo;
   double lastWeight = 0.0;
   double currentWeight= 0.0;
-  weightQueue = xQueueCreate(5, sizeof(uint32_t));
+  weightQueue = xQueueCreate(7, 16*sizeof(char));
+  if(weightQueue == 0){
+    debugPrintln("________________FAILED TO CREATE WEIGHTQUEUE__________________________________");
+  }
   sgMutex = xSemaphoreCreateMutex();
   long t = esp_timer_get_time()/1000;
   bool b = false;
@@ -195,13 +206,13 @@ void WeightX::Main(){
     debugPrintln("weightLoop");
     readSensors();
     b = ((esp_timer_get_time()/1000 - t) > (weight_update_rate*1000));
-    debugPrintln((int)b);
     if(b){
-      debugPrintln("here");
+      debugPrint("here ");
       currentWeight = getWeight();
-      if(abs(currentWeight - lastWeight)> getUnitPrecision(localUnits)){
+      debugPrintln(currentWeight);
+      if(abs(currentWeight - lastWeight) > getUnitPrecision(localUnits)){
           
-        foo = truncateWeight(currentWeight); // this crashes. Debug from here...? Maybe not anymore?
+        foo = truncateWeight(currentWeight); 
         
         strcpy(doo, foo.c_str());
         if(isBtConnected()){
@@ -209,10 +220,14 @@ void WeightX::Main(){
           debugPrintln("Bluetooth is connected, from Weight");
         }
         if(uxQueueMessagesWaiting(weightQueue) > 4){
-          xQueueReceive(weightQueue, &dump, (TickType_t)10);
+          debugPrintln("weightqueueoverflowreceive");
+          debugPrintln((int)uxQueueMessagesWaiting(weightQueue));
+          xQueueReceive(weightQueue, &dump, (TickType_t)20);
+          strcpy(dump, "");
         }
-
-        xQueueSend(weightQueue, &doo, (TickType_t)10);
+        debugPrint("weightqueuesend: ");
+        debugPrintln(doo);
+        xQueueSend(weightQueue, &doo, (TickType_t)0);
         debugPrintln("Doing weight stuff");
         debugPrintln(foo);
         lastWeight = currentWeight;

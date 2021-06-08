@@ -1,5 +1,6 @@
-#include "a_config.h"
+
 #include "globals.h"
+#include "a_config.h"
 #include "debug.h"
 #include "Weight.h"
 #include "Buttons.h"
@@ -8,6 +9,7 @@
 #include "System.h"
 #include "main.h"
 #include "myOTA.h"
+#include "mySPIFFS.h"
 
 #include "nvs.h"
 #include "nvs_flash.h"
@@ -16,6 +18,7 @@
 void SystemX::goToSleep(){
 
     display->displayLogo();
+    saveVals();
     vTaskDelay(100);
     display->displaySleepPrep();
     weight->sleepPreparation();
@@ -39,6 +42,9 @@ void SystemX::incrementUnits(){
         case lb:
         eUnits = g;
         break;
+        default:
+        debugPrintln("error in increment units");
+        break;
     }
     xSemaphoreGive(unitsMutex);
     callbackFlag = true;
@@ -60,10 +66,29 @@ void SystemX::decrementUnits(){
         case lb:
         eUnits = oz;
         break;
+        default:
+        debugPrintln("error in decrement units");
+        break;
     }
     xSemaphoreGive(unitsMutex);
     callbackFlag = true;
     debugPrintln("Decrement units");
+}
+
+void SystemX::getSavedVals(){
+    
+    Data d = getSaveData();
+
+    this->setUnits(d.u);
+
+    debugPrint("Units set to: ");
+    debugPrintln(unitsToString(d.u));
+   
+}
+
+void SystemX::saveVals(){
+    setSaveData(getUnits());
+
 }
 
 void SystemX::validateDataAcrossObjects(){
@@ -72,31 +97,35 @@ void SystemX::validateDataAcrossObjects(){
     if(!callbackFlag){
         return;
     }
+    debugPrintln("verify function");
     /******************************************/
     // on units change
-    if (eUnits != this->weight->getLocalUnits()){
+    static Units t = this->weight->getLocalUnits();
+    debugPrint("local units: ");
+    debugPrintln(unitsToString(t));
+    if (eUnits != t){
         weight->setLocalUnits(eUnits);
     }
-
-    if( WEIGHTSTREAM == this->getPage()){
-        
-        static std::string current = weight->getWeightStr();
+    static std::string current;
+    if( WEIGHTSTREAM == this->getPage() ){
+        debugPrintln("weight update");
+        current = this->weight->getWeightStr();
         // checking if value changes and truncation happen in weight main loop. 
         // If not, it passes -1 which doesn't change the display at all
+        debugPrint("current: ");
+        debugPrintln(current);
         display->displayWeight(current);
         // bluetooth value is also updated from weight loop
-    
         
     }
     
-
-    debugPrintln("verify function");
     callbackFlag = false;
 }
 
 void SystemX::runUpdate(){
     setPage(pUPDATE);
     this->display->displayUpdateScreen(0);
+    saveVals();
     if(setupOTA() == 0){
         executeOTA();
     }

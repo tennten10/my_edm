@@ -18,32 +18,7 @@
 static NimBLEServer *pServer;
 //extern SystemX *_sys;
 
-Units convertUnitsEnum(std::string v)
-{
-  Units retVal;
-  if (v.compare("g"))
-  {
-    retVal = g;
-    return retVal;
-  }
-  else if (v.compare("kg"))
-  {
-    retVal = kg;
-    return retVal;
-  }
-  else if (v.compare("oz"))
-  {
-    retVal = oz;
-    return retVal;
-  }
-  else if (v.compare("lb"))
-  {
-    retVal = lb;
-    return retVal;
-  }
-  return (Units)NULL;
-  // g, kg, oz, lb
-}
+
 
 bool isBtConnected()
 {
@@ -375,28 +350,6 @@ void updateBTWeight(std::string w)
   }
 }
 
-std::string unitsToString(Units u)
-{ // note: call free(returned_string) after this response is saved elsewhere
-
-  switch (u)
-  {
-  case g:
-    return std::string("g");
-    break;
-  case kg:
-    return std::string("kg");
-    break;
-  case oz:
-    return std::string("oz");
-    break;
-  case lb:
-    return std::string("lb");
-    break;
-  default:
-    return std::string("err");
-    break;
-  }
-}
 
 void BLEsetup()
 {
@@ -512,7 +465,7 @@ void BLEsetup()
           NIMBLE_PROPERTY::WRITE_ENC  // only allow writing if paired / encrypted
   );
   
-  pUnitsCharacteristic->setValue(unitsToString(kg));//_sys->getUnits()));
+  pUnitsCharacteristic->setValue(unitsToString(kg)); //_sys->getUnits()));
 
   pUnitsCharacteristic->setCallbacks(&wgtCallbacks);
 

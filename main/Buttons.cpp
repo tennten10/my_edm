@@ -305,7 +305,7 @@ void ButtonsX::verifyButtons()
         char doo[5] = {button1.cmd, button2.cmd, button3.cmd, button4.cmd, '\0'};
         //char doo[5];
         //sprintf(doo, "%s%s%s%s", button1.cmd, button2.cmd, button3.cmd, button4.cmd);
-        xQueueSend(buttonQueue, &doo, (TickType_t)10);
+        xQueueSend(buttonQueue, &doo, (TickType_t)0);
         // debugPrintln(doo);
         // debugPrintln("Buttons added to queue");
         button1.cmd = 'N';
@@ -322,7 +322,7 @@ std::string ButtonsX::getEvents(){
     //std::string t ="";
     if(uxQueueMessagesWaiting(buttonQueue)){
         //vTaskDelay(5);
-        xQueueReceive(buttonQueue, &temp, (TickType_t)50);
+        xQueueReceive(buttonQueue, &temp, (TickType_t)20);
         //debugPrintln("Getting buttons from queue");
         //debugPrintln(temp);
         std::string t = std::string(temp, sizeof(temp+1));

@@ -7,10 +7,6 @@
 #endif
 
 
-
-Units convertUnitsEnum(const char* v);
-std::string unitsToString(Units u); 
-
 void BLEsetup();
 void updateBTWeight(std::string w);
 bool isBtConnected();

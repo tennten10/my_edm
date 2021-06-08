@@ -6,13 +6,15 @@
 // #endif
 #include <string>
 #include <cstring>
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "freertos/task.h"
 #include "freertos/semphr.h"
+
 // Data Type Definitions
  
-typedef enum {g, kg, oz, lb} Units;
+typedef enum {g, kg, oz, lb, err} Units;
 typedef enum{BOOT, SHUTDOWN, CALIBRATION, sUPDATE, STANDARD } MODE; 
 typedef enum{WEIGHTSTREAM, SETTINGS, INFO, UNITS, pUPDATE} PAGE;
 typedef enum{ debugBT, debugSERIAL, debugTELNET, PRODUCTION} DEBUG;
@@ -36,21 +38,15 @@ struct Device{
   char VER[32];  // starting at 0.1  
 };
 
+struct Data{
+  Units u;
+};
 
-// Global Variable and Structures
+Units stringToUnits(std::string v);
+std::string unitsToString(Units u);
 
-//System _sys = {"10011001", "0.1", g, 80};
-//extern System _sys; //defined in main
 
-//Main
-//extern STATE eState;
 
-//Debug
-// probably don't need this?
-//extern DEBUG eDebugState;
-
-//Main? used to be Display 
-//extern volatile PAGE ePage;
 // #ifdef __cplusplus
 // }
 // #endif
