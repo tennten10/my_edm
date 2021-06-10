@@ -22,9 +22,9 @@ public:
     SystemX(Device _device) : device{_device}
     {
         this->buttons = new ButtonsX(true);
-        this->display = new DisplayX(); // constructor
+        //this->display = new DisplayX(); // constructor
         
-        vTaskDelay(500);
+        vTaskDelay(200);
         this->weight = new WeightX();
         this->getSavedVals();
         this->weight->setLocalUnits(eUnits);
@@ -33,6 +33,11 @@ public:
         
     }
     ~SystemX(){}
+    
+    // temp
+    void initDisplay(){
+        this->display = new DisplayX(); // constructor
+    }
 
     void incrementUnits();
     void decrementUnits();
@@ -85,7 +90,6 @@ public:
         }else{
             debugPrintln("could not get batteryMutex in setBattery");
         }
-        
     }
 
     void goToSleep();

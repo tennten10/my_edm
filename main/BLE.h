@@ -7,7 +7,7 @@
 #endif
 
 
-void BLEsetup();
+void BLEsetup(std::string SN, std::string Version, int battery, Units units, WiFiStruct w);
 void updateBTWeight(std::string w);
 bool isBtConnected();
 void BLEstop();

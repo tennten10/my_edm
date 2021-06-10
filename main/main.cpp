@@ -142,10 +142,12 @@ void app_main() {
 
     debugSetup();
     _sys = new SystemX(populateStartData());
-    vTaskDelay(200);
-    //BLEsetup();
-    
-    
+    vTaskDelay(100);
+    BLEsetup(_sys->getSN(), _sys->getVER(), _sys->getBattery(), _sys->getUnits(), _sys->getWiFiInfo());
+    vTaskDelay(400);
+    _sys->initDisplay(); // this needs to be after BLE setup for some reason
+
+    vTaskDelay(1000);
     std::string event;
     PAGE page;
     MODE mode;
@@ -182,7 +184,13 @@ void app_main() {
             //voltage = esp_adc_cal_raw_to_voltage(reading, adc_chars);
 
             battery = (int) 100 *( reading * 3.3 / 4096.0 - 2.0) /(2.8 - 2.0); //(voltage - 2.0) / (2.8 - 2.0) ;
-            //_sys->setBattery(battery);
+            if(battery != _sys->getBattery()){
+                _sys->setBattery(battery);
+                if(isBtConnected()){
+                    
+                }
+            }
+            
             
             if(battery < 2){
                 //_sys->goToSleep();
@@ -343,6 +351,6 @@ void app_main() {
             }
 
         }
-        vTaskDelay(10); 
+        vTaskDelay(20); 
     }
 }

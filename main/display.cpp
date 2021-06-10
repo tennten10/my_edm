@@ -502,7 +502,7 @@ void DisplayX::resizeWeight(char *w)
       //lv_style_reset(&weightStyle);
       lv_style_remove_prop(&weightStyle, LV_STYLE_TEXT_FONT);
       lv_style_set_text_font(&weightStyle, LV_STATE_DEFAULT, &montserrat_70);
-      lv_style_set_text_color(&weightStyle, LV_STATE_DEFAULT, LV_COLOR_WHITE);
+      //lv_style_set_text_color(&weightStyle, LV_STATE_DEFAULT, LV_COLOR_WHITE);
     }
   }
   else if (strlen(w) > 4)
@@ -511,7 +511,7 @@ void DisplayX::resizeWeight(char *w)
       //lv_style_reset(&weightStyle);
       lv_style_remove_prop(&weightStyle, LV_STYLE_TEXT_FONT);
       lv_style_set_text_font(&weightStyle, LV_STATE_DEFAULT, &montserrat_90);
-      lv_style_set_text_color(&weightStyle, LV_STATE_DEFAULT, LV_COLOR_WHITE);
+      //lv_style_set_text_color(&weightStyle, LV_STATE_DEFAULT, LV_COLOR_WHITE);
     }  
   }
   else if (strlen(w) > 0 )
@@ -520,7 +520,7 @@ void DisplayX::resizeWeight(char *w)
       //lv_style_reset(&weightStyle);
       lv_style_remove_prop(&weightStyle, LV_STYLE_TEXT_FONT);
       lv_style_set_text_font(&weightStyle, LV_STATE_DEFAULT, &montserrat_120);
-      lv_style_set_text_color(&weightStyle, LV_STATE_DEFAULT, LV_COLOR_WHITE);
+      //lv_style_set_text_color(&weightStyle, LV_STATE_DEFAULT, LV_COLOR_WHITE);
     } 
   }
   else
@@ -529,19 +529,22 @@ void DisplayX::resizeWeight(char *w)
   }
 #endif
   lastLen = strlen(w);
+  debugPrintln("end of resizeWeight");
 }
 
 // displayWeight should be called first. This only updates the number value
 void DisplayX::updateWeight(std::string weight){
   if(xSemaphoreTake(xGuiSemaphore, portMAX_DELAY)==pdTRUE){
     static char now[16];
-    strcpy(now, weight.c_str());
-    debugPrintln(now);
-    resizeWeight(now);
-    lv_label_set_text_fmt(weightLabel, "%s", now);
-    //lv_obj_remove_style(weightLabel, LV_OBJ_PART_MAIN, &weightStyle);
-    //lv_obj_add_style(weightLabel, LV_OBJ_PART_MAIN, &weightStyle);
-    // lv_label_set_text(weightLabel, weight.c_str());
+    if(weightLabel != NULL){
+      strcpy(now, weight.c_str());
+      debugPrintln(now);
+      resizeWeight(now);
+      lv_label_set_text_fmt(weightLabel, "%s", now);
+      //lv_obj_remove_style(weightLabel, LV_OBJ_PART_MAIN, &weightStyle);
+      //lv_obj_add_style(weightLabel, LV_OBJ_PART_MAIN, &weightStyle);
+      // lv_label_set_text(weightLabel, weight.c_str());
+    }
     xSemaphoreGive(xGuiSemaphore);
   }else{
     debugPrintln("could not get xGuiSemaphore in updateWeight");
@@ -567,13 +570,16 @@ void DisplayX::displayWeight(std::string weight)
     //debugPrintln(now);
     //debugPrintln(weight.c_str());
     
-
+    debugPrintln("umm here 1");
     lv_obj_t *bkgrnd = lv_obj_create(lv_scr_act(), NULL);
+    debugPrintln("umm here 1.1");
     lv_obj_t *cont = lv_cont_create(bkgrnd, NULL);
+    debugPrintln("umm here 1.2");
     weightLabel = lv_label_create(cont, NULL);
-
+    debugPrintln("umm here 2");
     lv_cont_set_fit(cont, LV_FIT_PARENT);
     lv_cont_set_layout(cont, LV_LAYOUT_CENTER);
+    debugPrintln("umm here 3");
 
   #ifdef CONFIG_SB_V1_HALF_ILI9341
     lv_obj_set_width(bkgrnd, SB_HORIZ);
@@ -602,12 +608,13 @@ void DisplayX::displayWeight(std::string weight)
     lv_obj_set_height(bkgrnd, SB_VERT);
     lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
     lv_label_set_text_fmt(weightLabel, "%s", now);
+  debugPrintln("umm here 4");
 
     lv_obj_align(cont, NULL, LV_ALIGN_CENTER, 0, 0);
     lv_obj_add_style(bkgrnd, LV_OBJ_PART_MAIN, &backgroundStyle);
     lv_obj_add_style(cont, LV_OBJ_PART_MAIN, &transpCont);
     lv_obj_add_style(weightLabel, LV_OBJ_PART_MAIN, &weightStyle);
-    
+    debugPrintln("umm here 5");
   #endif
     xSemaphoreGive(xGuiSemaphore);
     debugPrintln("gave back xGuiSemaphore in displayWeight");
