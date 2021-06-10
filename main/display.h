@@ -51,13 +51,13 @@ class DisplayX : public ThreadXa<DisplayX>
 public:
   DisplayX() : ThreadXa{5000, 1, "DisplayHandler"}
     {
-        //Main();
-        //displaySetup();
+        
     }
     ~DisplayX(){} 
 
 
     void displayWeight(std::string weight);
+    void updateWeight(std::string weight);
     void displayUnits(Units u);
     void displaySettings();
     void displayDeviceInfo(std::string SN, std::string VER);  
@@ -83,6 +83,8 @@ private:
 
     // style variables
     lv_style_t weightStyle;
+    // lv_style_t weightStyle_m;
+    // lv_style_t weightStyle_l;
     lv_style_t unitStyle;
     lv_style_t logoStyle;
     lv_style_t backgroundStyle;
@@ -101,6 +103,7 @@ private:
     int green = 255;
     int blue = 255;
     int intensity = 6000; // max 8192
+    lv_obj_t *weightLabel;
 };
 
 #endif

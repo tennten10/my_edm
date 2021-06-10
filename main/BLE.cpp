@@ -2,6 +2,7 @@
 #include "debug.h"
 #include "myOTA.h"
 #include "System.h"
+#include "main.h"
 
 #include "src/NimBLELog.h"
 #include "src/NimBLEDevice.h"
@@ -260,6 +261,7 @@ class ActionCallbacks : public NimBLECharacteristicCallbacks
       if(pCharacteristic->getValue().compare("yes") == 0)
       {
         //_sys->display->displayOff();
+        
         esp_restart();
       }
     }
@@ -357,7 +359,7 @@ void BLEsetup()
   debugPrintln("Starting NimBLE Server");
 
   /** sets device name */
-  NimBLEDevice::init("SudoBoard");
+  NimBLEDevice::init("SudoBoard2");
 
   /** Optional: set the transmit power, default is 3db */
   NimBLEDevice::setPower(ESP_PWR_LVL_P3); /** +9db */
@@ -421,7 +423,7 @@ void BLEsetup()
 
   NimBLECharacteristic *pDateTimeCharacteristic = pDeviceService->createCharacteristic(
       "2A11",
-      NIMBLE_PROPERTY::READ |
+          NIMBLE_PROPERTY::READ |
           NIMBLE_PROPERTY::WRITE |
           /** Require a secure connection for read and write access */
           NIMBLE_PROPERTY::READ_ENC | // only allow reading if paired / encrypted
@@ -435,7 +437,7 @@ void BLEsetup()
   NimBLEService *pBatteryService = pServer->createService("180F");
   NimBLECharacteristic *pBatteryCharacteristic = pBatteryService->createCharacteristic(
       "2A19",
-      NIMBLE_PROPERTY::READ);
+      NIMBLE_PROPERTY::READ_ENC);
   //char srerdsf[16];
   //sprintf(srerdsf, "%d %%", _sys->getBattery());
 

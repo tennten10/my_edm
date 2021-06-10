@@ -143,7 +143,7 @@ void app_main() {
     debugSetup();
     _sys = new SystemX(populateStartData());
     vTaskDelay(200);
-    // BLEsetup();
+    //BLEsetup();
     
     
     std::string event;
@@ -166,10 +166,8 @@ void app_main() {
     long timeout = 0;
     //_sys->weight->runTheoreticalWeight(100., 50., 50.);
 
-    // loop
     
     debugPrintln("Before main loop...");
-    //_sys->display->displayWeight((char*)_sys->weight->getWeightStr().c_str());
     for (;;)
     {
         //battery update moved into this loop to free up some memory
@@ -196,18 +194,18 @@ void app_main() {
 
 
         event = _sys->buttons->getEvents();
-        
+        //debugPrint("event: ");
+        //debugPrintln(event);
         page = _sys->getPage();
         mode = _sys->getMode();
-        if (!(event.compare("") == 0)) 
+        if (event.compare("") != 0) 
         {
 
             if (mode == STANDARD)
             {
-                //xSemaphoreTake(pageMutex, (TickType_t)10);
                 if (page == WEIGHTSTREAM)
                 {
-                    //xSemaphoreGive(pageMutex);
+                    
                     if (event.compare(0,4,"SNNN",0,4) == 0)
                     {
                         //TODO: TARE FUNCTION
@@ -224,7 +222,7 @@ void app_main() {
                         //TODO: Units
                         
                         _sys->setPage(UNITS);
-                        //_sys->display->displayUnits()
+                        
                         timeout = esp_timer_get_time()/1000;
                         
                     }
@@ -248,12 +246,14 @@ void app_main() {
                     // if no button presses while on this page for a few seconds, revert back to displaying the weight
                     if(esp_timer_get_time()/1000-timeout > 4000){
                         _sys->setPage(WEIGHTSTREAM);
+                        _sys->display->displayWeight(_sys->weight->getWeightStr());
                     }
 
                     if (event.compare(0,4, "SNNN",0,4) == 0)
                     {
                         //TODO:  FUNCTION
                         _sys->setPage(WEIGHTSTREAM);
+                        _sys->display->displayWeight(_sys->weight->getWeightStr());
                         timeout = esp_timer_get_time()/1000;
                     }
                     if (event.compare(0,4, "LNNN",0,4) == 0)
@@ -288,10 +288,11 @@ void app_main() {
                         timeout = esp_timer_get_time()/1000;
                     }
                 }else if(page == pUPDATE){
+                    // NOT SURE IF I WANT TO DO THIS HERE OR IN A DIFFERENT LOOP. STAY TUNED.
                     q = 50; //getUpdatePercent(); TODO: include update amount -> delayed for later since giving weird numbers
                     if (q < 3 && q != q_last)
                     {
-                    _sys->display->displayUpdateScreen(3);
+                    //_sys->display->displayUpdateScreen(3);
                     q_last = q;
                     }
                     else if (q > q_last)
@@ -341,8 +342,7 @@ void app_main() {
             }*/
             }
 
-            event = "";
         }
-        vTaskDelay(10); // try reducing this to 10 if bluetooth issues come up again
+        vTaskDelay(10); 
     }
 }

@@ -43,35 +43,40 @@ double WeightX::ReadVoltage(adc1_channel_t pin){
 
 void WeightX::readSensors(){
   // read sensors Using dummy values until sensors are hooked up
-  xSemaphoreTake(sgMutex, (TickType_t)10);
-  sg1 = ReadVoltage(SG1);
-  sg2 = ReadVoltage(SG2);
-  sg3 = ReadVoltage(SG3);
-  sg4 = ReadVoltage(SG4);
-  char ch[36]={};
-  sprintf(ch, "[%.5f,%.5f,%.5f,%.5f]", sg1,sg2,sg3,sg4);
-  debugPrintln(ch);
+  if(xSemaphoreTake(sgMutex, (TickType_t)10)==pdTRUE){
+    sg1 = ReadVoltage(SG1);
+    sg2 = ReadVoltage(SG2);
+    sg3 = ReadVoltage(SG3);
+    sg4 = ReadVoltage(SG4);
+    //char ch[36]={};
+    //sprintf(ch, "[%.5f,%.5f,%.5f,%.5f]", sg1,sg2,sg3,sg4);
+    //debugPrintln(ch);
 
-  //averaging filter
-  sg1 = (sg1* a) + (sg1_last * (1-a));
-  sg2 = (sg2* a) + (sg2_last * (1-a));
-  sg3 = (sg3* a) + (sg3_last * (1-a));
-  sg4 = (sg4* a) + (sg4_last * (1-a));
+    //averaging filter
+    sg1 = (sg1* a) + (sg1_last * (1-a));
+    sg2 = (sg2* a) + (sg2_last * (1-a));
+    sg3 = (sg3* a) + (sg3_last * (1-a));
+    sg4 = (sg4* a) + (sg4_last * (1-a));
+    
+    sg1_last = sg1;
+    sg2_last = sg2;
+    sg3_last = sg3;
+    sg4_last = sg4;
+    xSemaphoreGive(sgMutex);
+
+  }else{
+    debugPrintln("could not get sgMutex in readSensors");
+  }
   
-  sg1_last = sg1;
-  sg2_last = sg2;
-  sg3_last = sg3;
-  sg4_last = sg4;
-  xSemaphoreGive(sgMutex);
   // 4095 0-3.3V
   // 0 and 0.1V, or between 3.2 and 3.3V
   // expect between 1.15 and 2.8V
 }
 
 std::string WeightX::truncateWeight( double d){
-  debugPrint("this is passed to truncate: ");
-  debugPrintln(d);
-  debugPrintln(unitsToString(localUnits));
+  //debugPrint("this is passed to truncate: ");
+  //debugPrintln(d);
+  //debugPrintln(unitsToString(localUnits));
   char str[16]="";
   switch(localUnits){
     case g: // g.1
@@ -124,30 +129,37 @@ void WeightX::setUnits(Units m){
 
 double WeightX::getRawWeight(){
   // weight before conversions and tare offset
-  xSemaphoreTake(sgMutex, (TickType_t)10);
-  //double weight =  ((sg1-)*mK_sg1(2,2)+(sg2-mTareOffset(1))*mK_sg2(2,2)+(sg3-mTareOffset(2))*mK_sg3(2,2)+(sg4-mTareOffset(3))*mK_sg4(2,2));
-
-  rawWeight.w1 = sg1*mK_sg1(2,2);
-  rawWeight.w2 = sg2*mK_sg2(2,2);
-  rawWeight.w3 = sg3*mK_sg3(2,2);
-  rawWeight.w4 = sg4*mK_sg4(2,2);
-  rawWeight.total = rawWeight.w1 + rawWeight.w2 + rawWeight.w3 + rawWeight.w4;
-  xSemaphoreGive(sgMutex);
-  return rawWeight.total;
+  static double ret = 0;
+  if(xSemaphoreTake(sgMutex, (TickType_t)10) == pdTRUE){
+    rawWeight.w1 = sg1*mK_sg1(2,2);
+    rawWeight.w2 = sg2*mK_sg2(2,2);
+    rawWeight.w3 = sg3*mK_sg3(2,2);
+    rawWeight.w4 = sg4*mK_sg4(2,2);
+    rawWeight.total = rawWeight.w1 + rawWeight.w2 + rawWeight.w3 + rawWeight.w4;
+    ret = rawWeight.total;
+    xSemaphoreGive(sgMutex);
+  }else{
+    debugPrintln("unable to get weight semaphore in getRawWeight. Returning last value?");
+  }
+  return ret;
 }
 
 double WeightX::getWeight(){
   // adjusting for tare and units
-  //double weight = (getRawWeight() - tareOffset)* conversion;
   static double weight=0;
-  if(getRawWeight()>0){
-    weight = (abs(rawWeight.w1 - mTareOffset(0)) + abs(rawWeight.w2 - mTareOffset(1)) + abs(rawWeight.w3 - mTareOffset(2)) + abs(rawWeight.w4 - mTareOffset(3)));//  * conversion;
+  if(getRawWeight() > 0.0){ // just checking that it's returning something non-zero
+    if(xSemaphoreTake(sgMutex, (TickType_t)10) == pdTRUE){
+      weight = (abs(rawWeight.w1 - mTareOffset(0)) + abs(rawWeight.w2 - mTareOffset(1)) + abs(rawWeight.w3 - mTareOffset(2)) + abs(rawWeight.w4 - mTareOffset(3)));//  * conversion;
+      xSemaphoreGive(sgMutex);
+    }else{
+      debugPrintln("could not get sgMutex in getWeight");
+    }
   }
-  debugPrint("rawWeight: ");
-  debugPrintln(rawWeight.total);
+  //debugPrint("rawWeight: ");
+  //debugPrintln(rawWeight.total);
  
-  debugPrint("weight: ");
-  debugPrintln( weight);
+  //debugPrint("weight: ");
+  //debugPrintln( weight);
   
   return weight;
 }
@@ -156,8 +168,8 @@ std::string WeightX::getWeightStr(){
   char temp[16]; 
   // message already truncated to proper size for units
   int qWaiting = (int)uxQueueMessagesWaiting(weightQueue);
-  debugPrint("queue waiting: ");
-  debugPrintln(qWaiting);
+  // debugPrint("queue waiting: ");
+  // debugPrintln(qWaiting);
   if( qWaiting > 0 ){
     xQueueReceive(weightQueue, &temp, (TickType_t) 20);
     debugPrint("weight from getweightstr: ");
@@ -168,15 +180,20 @@ std::string WeightX::getWeightStr(){
 }
 
 void WeightX::tare(){
-  
-  xSemaphoreTake(sgMutex, (TickType_t)10);
+  debugPrintln("start of Tare. Raw weight: ");
   debugPrintln(getRawWeight());
-  mTareOffset(0) = rawWeight.w1;
-  mTareOffset(1) = rawWeight.w2;
-  mTareOffset(2) = rawWeight.w3;
-  mTareOffset(3) = rawWeight.w4;
+  if (xSemaphoreTake(sgMutex, (TickType_t)50) == pdTRUE){
+    debugPrintln("after tare semaphore.");
+    mTareOffset(0) = rawWeight.w1;
+    mTareOffset(1) = rawWeight.w2;
+    mTareOffset(2) = rawWeight.w3;
+    mTareOffset(3) = rawWeight.w4;
+    xSemaphoreGive(sgMutex);
+  }else{
+    debugPrintln("Could not get sgMutex in tare function");
+  }
   
-  xSemaphoreGive(sgMutex);
+  debugPrintln("end of tare");
 }
 
 void WeightX::setWeightUpdateRate(int r){
@@ -203,13 +220,12 @@ void WeightX::Main(){
   long t = esp_timer_get_time()/1000;
   bool b = false;
   for(;;){
-    debugPrintln("weightLoop");
+    //debugPrintln("weightLoop");
     readSensors();
     b = ((esp_timer_get_time()/1000 - t) > (weight_update_rate*1000));
     if(b){
-      debugPrint("here ");
       currentWeight = getWeight();
-      debugPrintln(currentWeight);
+      //debugPrintln(currentWeight);
       if(abs(currentWeight - lastWeight) > getUnitPrecision(localUnits)){
           
         foo = truncateWeight(currentWeight); 
@@ -221,15 +237,15 @@ void WeightX::Main(){
         }
         if(uxQueueMessagesWaiting(weightQueue) > 4){
           debugPrintln("weightqueueoverflowreceive");
-          debugPrintln((int)uxQueueMessagesWaiting(weightQueue));
+          //debugPrintln((int)uxQueueMessagesWaiting(weightQueue));
           xQueueReceive(weightQueue, &dump, (TickType_t)20);
           strcpy(dump, "");
         }
         debugPrint("weightqueuesend: ");
         debugPrintln(doo);
         xQueueSend(weightQueue, &doo, (TickType_t)0);
-        debugPrintln("Doing weight stuff");
-        debugPrintln(foo);
+        //debugPrintln("Doing weight stuff");
+        //debugPrintln(foo);
         lastWeight = currentWeight;
       }
       _sys->callbackFlag = true;

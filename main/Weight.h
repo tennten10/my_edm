@@ -143,9 +143,9 @@ private:
         return ret;
     }
 
-    Eigen::Array4d mRawWeight = Eigen::Array4d::Zero();
+    //Eigen::Array4d mRawWeight = Eigen::Array4d::Zero();
     Eigen::Array4d mTareOffset = Eigen::Array4d::Zero();
-    Eigen::Array4d mOutput = Eigen::Array4d::Zero();
+    //Eigen::Array4d mOutput = Eigen::Array4d::Zero();
 
 
     Eigen::Matrix3d mK_sg1 = Eigen::Matrix3d::Identity();
@@ -153,10 +153,10 @@ private:
     Eigen::Matrix3d mK_sg3 = Eigen::Matrix3d::Identity();
     Eigen::Matrix3d mK_sg4 = Eigen::Matrix3d::Identity();
 
-    WeightStruct rawWeight = {0.,0.,0.,0.,0.};
+    WeightStruct rawWeight = {0.,0.,0.,0.,0.}; // use sgMutex when using this
     WeightStruct output = {0.,0.,0.,0.,0.};
 
-    double sg1 = 0.;
+    double sg1 = 0.; // use sgMutex when using these
     double sg2 = 0.;
     double sg3 = 0.;
     double sg4 = 0.;

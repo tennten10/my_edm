@@ -305,9 +305,11 @@ void ButtonsX::verifyButtons()
         char doo[5] = {button1.cmd, button2.cmd, button3.cmd, button4.cmd, '\0'};
         //char doo[5];
         //sprintf(doo, "%s%s%s%s", button1.cmd, button2.cmd, button3.cmd, button4.cmd);
+        debugPrint("Button Queue messages: ");
+        debugPrintln((int)uxQueueMessagesWaiting(buttonQueue));
         xQueueSend(buttonQueue, &doo, (TickType_t)0);
-        // debugPrintln(doo);
-        // debugPrintln("Buttons added to queue");
+        debugPrintln(doo);
+        debugPrintln("Buttons added to queue");
         button1.cmd = 'N';
         button2.cmd = 'N';
         button3.cmd = 'N';
@@ -319,16 +321,17 @@ void ButtonsX::verifyButtons()
 std::string ButtonsX::getEvents(){
     //debugPrintln("getButtons:   ... ");
     char temp[5];//={};
-    //std::string t ="";
+    std::string t ="";
     if(uxQueueMessagesWaiting(buttonQueue)){
         //vTaskDelay(5);
-        xQueueReceive(buttonQueue, &temp, (TickType_t)20);
-        //debugPrintln("Getting buttons from queue");
-        //debugPrintln(temp);
-        std::string t = std::string(temp, sizeof(temp+1));
-        return t;
+        xQueueReceive(buttonQueue, &temp, (TickType_t)10);
+        debugPrintln("Getting buttons from queue");
+        debugPrintln(temp);
+         
+        t = std::string(temp);//, sizeof(temp+1));
+        
     }
-    return std::string("");
+    return t;//std::string("");
 }
 
 void ButtonsX::sleepPreparation() 
@@ -349,7 +352,8 @@ void ButtonsX::Main() // loop
                                  ITEM_SIZE,
                                  ucQueueStorageArea,
                                  &xStaticQueue); */
-    configASSERT(buttonQueue);
+    debugPrintln("Button assert???");                             
+    configASSERT(buttonQueue); // why is this here? don't remember, but is it throwing the assert failed error? No. It still throws the error when this is commented out. 
     debugPrintln("Button thread created...");
     if(debounce){
         debugPrintln("Using Software Debounce");

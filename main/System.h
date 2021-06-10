@@ -21,17 +21,15 @@ class SystemX
 public: 
     SystemX(Device _device) : device{_device}
     {
-        this->display = new DisplayX(); // constructor
         this->buttons = new ButtonsX(true);
-        vTaskDelay(1000);
+        this->display = new DisplayX(); // constructor
+        
+        vTaskDelay(500);
         this->weight = new WeightX();
         this->getSavedVals();
         this->weight->setLocalUnits(eUnits);
 
-        // this->wifiInfo = availableWiFiInfo();
         this->wifiInfo = getActiveWifiInfo();
-        
-
         
     }
     ~SystemX(){}
@@ -40,25 +38,36 @@ public:
     void decrementUnits();
 
     Units getUnits(){
-        Units ret;
-        xSemaphoreTake(unitsMutex, (TickType_t) 20);
-        ret = eUnits;
-        xSemaphoreGive(unitsMutex);
+        Units ret = err;
+        if(xSemaphoreTake(unitsMutex, (TickType_t) 20)==pdTRUE){
+            ret = eUnits;
+            xSemaphoreGive(unitsMutex);
+        }else{
+            debugPrintln("could not get unitsMutex in getUnits");
+        }
+        
         return ret;
     }
 
     void setUnits(Units u){
-        xSemaphoreTake(unitsMutex, (TickType_t) 20);
-        eUnits = u;
-        xSemaphoreGive(unitsMutex);
-        callbackFlag = true;
+        if(xSemaphoreTake(unitsMutex, (TickType_t) 20)==pdTRUE){
+            eUnits = u;
+            xSemaphoreGive(unitsMutex);
+            callbackFlag = true;
+        }else{
+            debugPrintln("could not get unitsMutex in setUnits");
+        }
+        
     }
 
     int getBattery(){
-        int ret;
-        xSemaphoreTake(batteryMutex, (TickType_t) 20);
-        ret = batteryLevel;
-        xSemaphoreGive(batteryMutex);
+        int ret = 0;
+        if(xSemaphoreTake(batteryMutex, (TickType_t) 20)==pdTRUE){
+            ret = batteryLevel;
+            xSemaphoreGive(batteryMutex);
+        }else{
+            debugPrintln("could not get batteryMutex in getBattery");
+        }
         return ret;
     }
 
@@ -70,9 +79,13 @@ public:
             debugPrintln("Battery less than 0% ???????");
             b = 0;
         }
-        xSemaphoreTake(batteryMutex, (TickType_t)10);
-        batteryLevel = b;
-        xSemaphoreGive(batteryMutex);
+        if(xSemaphoreTake(batteryMutex, (TickType_t)10)==pdTRUE){
+            batteryLevel = b;
+            xSemaphoreGive(batteryMutex);
+        }else{
+            debugPrintln("could not get batteryMutex in setBattery");
+        }
+        
     }
 
     void goToSleep();
@@ -80,56 +93,86 @@ public:
     void runUpdate();
     
     PAGE getPage(){
-        PAGE ret;
-        xSemaphoreTake(pageMutex, (TickType_t) 20);
-        ret = ePage;
-        xSemaphoreGive(pageMutex);
+        PAGE ret = WEIGHTSTREAM;
+        if(xSemaphoreTake(pageMutex, (TickType_t) 20)==pdTRUE){
+            ret = ePage;
+            xSemaphoreGive(pageMutex);
+        }else{
+            debugPrintln("could not get pageMutex in getPage");
+        }
         return ret;
     }
 
     void setPage(PAGE p){
-        xSemaphoreTake(pageMutex, (TickType_t) 20);
-        ePage = p;
-        xSemaphoreGive(pageMutex);
-        callbackFlag = true;
+        if(xSemaphoreTake(pageMutex, (TickType_t) 20)==pdTRUE){
+            ePage = p;
+            xSemaphoreGive(pageMutex);
+            callbackFlag = true;
+        }else{
+            debugPrintln("could not get pageMutex in setPage");
+        }
+        
     }
 
     MODE getMode(){
-        MODE ret;
-        xSemaphoreTake(modeMutex, (TickType_t) 10);
-        ret = eMode;
-        xSemaphoreGive(modeMutex);
+        MODE ret= STANDARD;
+        if(xSemaphoreTake(modeMutex, (TickType_t) 20)==pdTRUE){        
+            ret = eMode;
+            xSemaphoreGive(modeMutex);
+        }else{
+            debugPrintln("could not get modeMutex in getMode");
+        }
         return ret;
     }
     void setMode(MODE m){
-        xSemaphoreTake(modeMutex, (TickType_t) 10);
-        eMode = m;
-        xSemaphoreGive(modeMutex);
-        callbackFlag = true;
+        if(xSemaphoreTake(modeMutex, (TickType_t) 20)==pdTRUE){
+            eMode = m;
+            xSemaphoreGive(modeMutex);
+            callbackFlag = true;
+        }else{
+            debugPrintln("could not get modeMutex in setMode");
+        }
     }
+
     std::string getSN(){
-        xSemaphoreTake(deviceMutex, (TickType_t) 10);
-        std::string ret = std::string(device.SN);
-        xSemaphoreGive(deviceMutex);
+        std::string ret = "";
+        if(xSemaphoreTake(deviceMutex, (TickType_t) 10)==pdTRUE){
+            ret = std::string(device.SN);
+            xSemaphoreGive(deviceMutex);
+        }else{
+            debugPrintln("could not get deviceMutex in getSN");
+        }
         return ret;
     }
 
     std::string getVER(){
-        xSemaphoreTake(deviceMutex, (TickType_t) 10);
-        static std::string ret = std::string(this->device.VER);
-        xSemaphoreGive(deviceMutex);
+        std::string ret = "";
+        if(xSemaphoreTake(deviceMutex, (TickType_t) 10)==pdTRUE){
+            ret = std::string(this->device.VER);
+            xSemaphoreGive(deviceMutex);
+        }else{
+            debugPrintln("could not get deviceMutex in getVER");
+        }
         return ret;
     }
 
     void setWiFiInfo(WiFiStruct w){
-        xSemaphoreTake(deviceMutex, (TickType_t) 10);
-        wifiInfo = w;
-        xSemaphoreGive(deviceMutex);
+        if(xSemaphoreTake(deviceMutex, (TickType_t) 10)==pdTRUE){
+            wifiInfo = w;
+            xSemaphoreGive(deviceMutex);
+        }else{
+            debugPrintln("could not get deviceMutex in setWiFiInfo");
+        }
+        
     }
     WiFiStruct getWiFiInfo(){
-        xSemaphoreTake(deviceMutex, (TickType_t) 10);
-        static WiFiStruct ret = wifiInfo;
-        xSemaphoreGive(deviceMutex);
+        static WiFiStruct ret = WiFiStruct();
+        if(xSemaphoreTake(deviceMutex, (TickType_t) 10)==pdTRUE){
+            ret = wifiInfo;
+            xSemaphoreGive(deviceMutex);
+        }else{
+            debugPrintln("could not get deviceMutex in getWiFiInfo");
+        }
         return ret;
     }
 

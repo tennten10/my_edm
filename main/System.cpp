@@ -28,51 +28,59 @@ void SystemX::goToSleep(){
 }
 
 void SystemX::incrementUnits(){
-    xSemaphoreTake(unitsMutex, (TickType_t)10);
-    switch(eUnits){
-        case g:
-        eUnits = kg;
-        break;
-        case kg: 
-        eUnits = oz;
-        break;
-        case oz:
-        eUnits = lb;
-        break;
-        case lb:
-        eUnits = g;
-        break;
-        default:
-        debugPrintln("error in increment units");
-        break;
-    }
-    xSemaphoreGive(unitsMutex);
-    callbackFlag = true;
     debugPrintln("increment units");
+    if(xSemaphoreTake(unitsMutex, (TickType_t)10)==pdTRUE){
+        switch(eUnits){
+            case g:
+            eUnits = kg;
+            break;
+            case kg: 
+            eUnits = oz;
+            break;
+            case oz:
+            eUnits = lb;
+            break;
+            case lb:
+            eUnits = g;
+            break;
+            default:
+            debugPrintln("error in increment units");
+            break;
+        }
+        xSemaphoreGive(unitsMutex);
+        callbackFlag = true;
+    }else{
+        debugPrintln("could not get unitsMutex in incrementUnits");
+    }
+    
+    
 }
 
 void SystemX::decrementUnits(){
-    xSemaphoreTake(unitsMutex, (TickType_t)10);
-    switch(eUnits){
-        case g:
-        eUnits = lb;
-        break;
-        case kg: 
-        eUnits = g;
-        break;
-        case oz:
-        eUnits = kg;
-        break;
-        case lb:
-        eUnits = oz;
-        break;
-        default:
-        debugPrintln("error in decrement units");
-        break;
-    }
-    xSemaphoreGive(unitsMutex);
-    callbackFlag = true;
     debugPrintln("Decrement units");
+    if(xSemaphoreTake(unitsMutex, (TickType_t)10)==pdTRUE){
+        switch(eUnits){
+            case g:
+            eUnits = lb;
+            break;
+            case kg: 
+            eUnits = g;
+            break;
+            case oz:
+            eUnits = kg;
+            break;
+            case lb:
+            eUnits = oz;
+            break;
+            default:
+            debugPrintln("error in decrement units");
+            break;
+        }
+        xSemaphoreGive(unitsMutex);
+        callbackFlag = true;
+    }else{
+        debugPrintln("could not get unitsMutex in decrementUnits");
+    }
 }
 
 void SystemX::getSavedVals(){
@@ -101,8 +109,8 @@ void SystemX::validateDataAcrossObjects(){
     /******************************************/
     // on units change
     static Units t = this->weight->getLocalUnits();
-    debugPrint("local units: ");
-    debugPrintln(unitsToString(t));
+    //debugPrint("local units: ");
+    //debugPrintln(unitsToString(t));
     if (eUnits != t){
         weight->setLocalUnits(eUnits);
     }
@@ -114,7 +122,7 @@ void SystemX::validateDataAcrossObjects(){
         // If not, it passes -1 which doesn't change the display at all
         debugPrint("current: ");
         debugPrintln(current);
-        display->displayWeight(current);
+        display->updateWeight(current);
         // bluetooth value is also updated from weight loop
         
     }
@@ -130,4 +138,3 @@ void SystemX::runUpdate(){
         executeOTA();
     }
 }
-
