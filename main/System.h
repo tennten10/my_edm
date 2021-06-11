@@ -21,12 +21,15 @@ class SystemX
 public: 
     SystemX(Device _device) : device{_device}
     {
+        debugPrintln("inside system constructor");
         this->buttons = new ButtonsX(true);
         this->weight = new WeightX();
         this->wifiInfo = getActiveWifiInfo();
         
     }
-    ~SystemX(){}
+    ~SystemX(){
+        
+    }
     
     // temp
     void init(){
@@ -92,6 +95,7 @@ public:
     }
 
     void goToSleep();
+    void reboot();
 
     void runUpdate();
     
@@ -178,6 +182,7 @@ public:
         }
         return ret;
     }
+    
 
     void validateDataAcrossObjects();
 

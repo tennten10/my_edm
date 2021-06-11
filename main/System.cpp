@@ -22,9 +22,32 @@ void SystemX::goToSleep(){
     vTaskDelay(100);
     display->displaySleepPrep();
     weight->sleepPreparation();
-    BLESleepPrep();
+    BLEstop();
+    
+    // These dont' reinitialize on reboot for some reason...
+    // delete weight;
+    // delete display;
+    // delete buttons;
 
     init_ulp_program();
+}
+
+void SystemX::reboot(){
+
+    display->displayLogo();
+    saveVals();
+    vTaskDelay(100);
+    display->displaySleepPrep();
+    weight->sleepPreparation();
+    BLEstop();
+
+    // These dont' reinitialize on reboot for some reason...
+    // delete display;
+    // delete buttons;
+    // delete weight;
+    // vTaskDelay(1000);
+    // delete this;
+    esp_restart();
 }
 
 void SystemX::incrementUnits(){
@@ -98,7 +121,8 @@ void SystemX::getSavedVals(){
 }
 
 void SystemX::saveVals(){
-    setSaveData(getUnits());
+    Data d = {getUnits(), display->getIntensity(), display->getRed(), display->getGreen(), display->getBlue()};
+    setSaveData(d);
 
 }
 
@@ -114,8 +138,12 @@ void SystemX::validateDataAcrossObjects(){
     static Units t = this->weight->getLocalUnits();
     //debugPrint("local units: ");
     //debugPrintln(unitsToString(t));
-    if (eUnits != t){
-        weight->setLocalUnits(eUnits);
+    if (getUnits() != t){
+        weight->setLocalUnits(getUnits());
+        if(isBtConnected()){
+            updateBTUnits(getUnits());
+        }
+            
     }
     static std::string current;
     if( WEIGHTSTREAM == this->getPage() ){
@@ -126,7 +154,7 @@ void SystemX::validateDataAcrossObjects(){
         debugPrint("current: ");
         debugPrintln(current);
         display->updateWeight(current);
-        // bluetooth value is also updated from weight loop
+        // bluetooth value is also updated from here
         
     }
     

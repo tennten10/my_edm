@@ -142,9 +142,11 @@ void app_main() {
 
     debugSetup(); // always goes first
     _sys = new SystemX(populateStartData());
-    BLEsetup(_sys->getSN(), _sys->getVER(), _sys->getBattery(), _sys->getUnits(), _sys->getWiFiInfo());
+    preBLEsetup();
     vTaskDelay(5);
     _sys->init(); // this needs to be after BLE setup otherwise throws eFuse/NVS errors
+    BLEsetup(_sys->getSN(), _sys->getVER(), _sys->getBattery(), _sys->getUnits(), _sys->getWiFiInfo());
+    
 
     //vTaskDelay(300);
     std::string event;
@@ -187,7 +189,7 @@ void app_main() {
             if(battery != _sys->getBattery()){
                 _sys->setBattery(battery);
                 if(isBtConnected()){
-                    
+                    updateBTBattery(battery);
                 }
             }
             

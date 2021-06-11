@@ -202,6 +202,7 @@ void WeightX::setWeightUpdateRate(int r){
 
 void WeightX::sleepPreparation(){
   // TODO: turn off low voltage regulator so it doesn't waste power, maybe deinitialize other stuff?
+
   return;
 }
 
@@ -235,7 +236,7 @@ void WeightX::Main(){
         
         strcpy(doo, foo.c_str());
         if(isBtConnected()){
-          //updateBTWeight(foo);            
+          updateBTWeight(foo);            
           debugPrintln("Bluetooth is connected, from Weight");
         }
         if(uxQueueMessagesWaiting(weightQueue) > 4){

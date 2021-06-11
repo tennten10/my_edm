@@ -34,6 +34,10 @@ public:
   {
     xTaskCreate(task, _name, _stackDepth, this, _priority, &this->taskHandle);
   }
+  virtual ~ThreadX(){
+    vTaskDelete(taskHandle);
+    printf("Button task deleted");
+  }
 
   TaskHandle_t GetHandle()
   {
@@ -62,7 +66,9 @@ public:
   {
     //Main();
   }
-  ~ButtonsX(){} 
+  virtual ~ButtonsX(){
+    vQueueDelete(buttonQueue);
+  } 
   
   void sleepPreparation();
   std::string getEvents();

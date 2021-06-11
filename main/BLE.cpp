@@ -24,6 +24,7 @@ TaskHandle_t BLETask_h;
 QueueHandle_t bleWeightQueue;
 QueueHandle_t bleUnitsQueue;
 QueueHandle_t bleBatteryQueue;
+QueueHandle_t bleStatusQueue;
 
 
 void BLETask(void * parameter){
@@ -54,6 +55,14 @@ void BLETask(void * parameter){
                   NimBLECharacteristic* b = pSvc->getCharacteristic("2A19");
                   xQueueReceive(bleWeightQueue, &buff, (TickType_t) 10);
                   if(b){
+                    b->setValue(std::to_string(buff));
+                  }
+              }
+              if(uxQueueMessagesWaiting(bleStatusQueue) > 0 ){
+                  int buff;
+                  NimBLECharacteristic* b = pSvc->getCharacteristic("000057a7-60be-11eb-ae93-0242ac130002");
+                  xQueueReceive(bleWeightQueue, &buff, (TickType_t) 10);
+                  if(b){
                     b->setValue(buff);
                   }
               }
@@ -68,7 +77,7 @@ void BLETask(void * parameter){
 void updateBTWeight(std::string w)
 {
   char* ch = (char*)w.c_str();
-  if (pServer->getConnectedCount())
+  if (pServer!= NULL && pServer->getConnectedCount())
   {
     xQueueSend(bleWeightQueue, &ch , (TickType_t)10);
   }
@@ -76,7 +85,7 @@ void updateBTWeight(std::string w)
 
 void updateBTUnits(Units unit){
   Units ch = unit;
-  if (pServer->getConnectedCount())
+  if (pServer!= NULL && pServer->getConnectedCount())
   {
     xQueueSend(bleUnitsQueue, &ch , (TickType_t)10);
   }
@@ -84,15 +93,22 @@ void updateBTUnits(Units unit){
 
 void updateBTBattery(int bat){
   int b = bat;
-  if (pServer->getConnectedCount())
+  if (pServer!= NULL && pServer->getConnectedCount())
   {
     xQueueSend(bleBatteryQueue, &b , (TickType_t)10);
   }
 }
 
+void updateBTStatus(int status){
+  int s = status;
+  if( pServer!= NULL && pServer->getConnectedCount()){
+    xQueueSend(bleStatusQueue, &status, (TickType_t)10);
+  }
+}
+
 bool isBtConnected()
 {
-  if ( false) //pServer->getConnectedCount() > 0)
+  if ( pServer!= NULL && pServer->getConnectedCount() > 0 )
   {
     return true;
   }
@@ -100,11 +116,6 @@ bool isBtConnected()
   {
     return false;
   }
-}
-
-void BLESleepPrep(){
-  NimBLEDevice::deinit(true);
-  
 }
 
 
@@ -284,7 +295,7 @@ class ActionCallbacks : public NimBLECharacteristicCallbacks
     static std::string sLine = "";
     static std::string pLine = "";
 
-    // if writing new wifi info
+    // if writing new wifi ssid
     if (strcmp(pCharacteristic->getUUID().toString().c_str(), "0000551d-60be-11eb-ae93-0242ac130002") == 0)
     {
       w.active = 0;
@@ -296,7 +307,7 @@ class ActionCallbacks : public NimBLECharacteristicCallbacks
       }
     }
 
-    // if writing new wifi info
+    // if writing new wifi password
     if (strcmp(pCharacteristic->getUUID().toString().c_str(), "0000fa55-60be-11eb-ae93-0242ac130002") == 0)
     {
       // only check wifi and save after password is saved
@@ -316,24 +327,38 @@ class ActionCallbacks : public NimBLECharacteristicCallbacks
     }
     
     // if turning off remotely
-    if (strcmp(pCharacteristic->getUUID().toString().c_str(), "000000FF-60be-11eb-ae93-0242ac130002" ) == 0)
+    if (strcmp(pCharacteristic->getUUID().toString().c_str(), "000000ff-60be-11eb-ae93-0242ac130002" ) == 0)
     {
       if(pCharacteristic->getValue().compare("yes") == 0)
       {
-        //_sys->goToSleep();
+        _sys->goToSleep();
       }
     }
 
-    
-    if (strcmp(pCharacteristic->getUUID().toString().c_str(), "0000B007-60be-11eb-ae93-0242ac130002" ) == 0)
+    // if restarting remotely
+    if (strcmp(pCharacteristic->getUUID().toString().c_str(), "0000b007-60be-11eb-ae93-0242ac130002" ) == 0)
     {
+      debugPrintln("Action onwrite callback. Correct UUID.");
       if(pCharacteristic->getValue().compare("yes") == 0)
       {
-        //_sys->display->displayOff();
         
-        esp_restart();
+        debugPrintln("reboot compare is correct");
+        _sys->reboot();
       }
     }
+
+    // if starting OTA update
+    if (strcmp(pCharacteristic->getUUID().toString().c_str(), "0000007a-60be-11eb-ae93-0242ac130002" ) == 0)
+    {
+      debugPrintln("Action onwrite callback. Correct UUID.");
+      if(pCharacteristic->getValue().compare("yes") == 0)
+      {
+        
+        debugPrintln("OTA compare is correct");
+        _sys->reboot();
+      }
+    }
+
   };
   /** Called before notification or indication is sent,
         the value can be changed here before sending if desired.
@@ -406,18 +431,22 @@ static OTACallbacks otaCallbacks;
 
 
 
+void preBLEsetup(){
+  NimBLEDevice::init("SudoBoard2");
+}
 
 void BLEsetup(std::string SN, std::string Version, int battery, Units units, WiFiStruct w)
 {
   debugPrint("Starting NimBLE Server: ");
   debugPrintln((int)esp_timer_get_time()/1000);
-  
+
   bleWeightQueue = xQueueCreate(5, 10*sizeof(char));
   bleUnitsQueue = xQueueCreate(5, sizeof(Units));
   bleBatteryQueue = xQueueCreate(5, sizeof(int));
+  bleStatusQueue = xQueueCreate(5, sizeof(int)); 
 
   /** sets device name */
-  NimBLEDevice::init("SudoBoard2");
+  //NimBLEDevice::init("SudoBoard2");
   debugPrintln("1");
   /** Optional: set the transmit power, default is 3db */
   NimBLEDevice::setPower(ESP_PWR_LVL_P3); /** +9db */
@@ -536,9 +565,9 @@ void BLEsetup(std::string SN, std::string Version, int battery, Units units, WiF
   debugPrintln("12");
   /* Next Service - Actions performed through connection */
 
-  NimBLEService *pActionService = pServer->createService("00005AC7-60be-11eb-ae93-0242ac130002");
+  NimBLEService *pActionService = pServer->createService("00005ac7-60be-11eb-ae93-0242ac130002");
   NimBLECharacteristic *pOTACharacteristic = pActionService->createCharacteristic(
-      "0000007A-60be-11eb-ae93-0242ac130002",
+      "0000007a-60be-11eb-ae93-0242ac130002",
           NIMBLE_PROPERTY::WRITE// |
           /** Require a secure connection for read and write access */
           //NIMBLE_PROPERTY::WRITE_ENC  // only allow writing if paired / encrypted
@@ -549,7 +578,7 @@ void BLEsetup(std::string SN, std::string Version, int battery, Units units, WiF
   debugPrintln("13");
 
   NimBLECharacteristic *pRebootCharacteristic = pActionService->createCharacteristic(
-      "0000B007-60be-11eb-ae93-0242ac130002",
+      "0000b007-60be-11eb-ae93-0242ac130002",
           NIMBLE_PROPERTY::WRITE// |
           /** Require a secure connection for read and write access */
           //NIMBLE_PROPERTY::WRITE_ENC  // only allow writing if paired / encrypted
@@ -560,7 +589,7 @@ void BLEsetup(std::string SN, std::string Version, int battery, Units units, WiF
 
   debugPrintln("14");
   NimBLECharacteristic *pOffCharacteristic = pActionService->createCharacteristic(
-      "000000FF-60be-11eb-ae93-0242ac130002",
+      "000000ff-60be-11eb-ae93-0242ac130002",
           NIMBLE_PROPERTY::WRITE //|
           /** Require a secure connection for read and write access */
          // NIMBLE_PROPERTY::WRITE_ENC  // only allow writing if paired / encrypted
@@ -605,6 +634,19 @@ void BLEsetup(std::string SN, std::string Version, int battery, Units units, WiF
   pPASSCharacteristic->setCallbacks(&actCallbacks);
   debugPrintln("17");
 
+  NimBLECharacteristic *pStatusCharacteristic = pActionService->createCharacteristic(
+      "000057a7-60be-11eb-ae93-0242ac130002",
+      NIMBLE_PROPERTY::READ |
+          //NIMBLE_PROPERTY::WRITE //|
+          //NIMBLE_PROPERTY::READ_ENC | // only allow reading if paired / encrypted
+          //NIMBLE_PROPERTY::WRITE_ENC  // only allow writing if paired / encrypted
+          NIMBLE_PROPERTY::NOTIFY
+  );
+
+  pStatusCharacteristic->setValue("100");
+  pStatusCharacteristic->setCallbacks(&actCallbacks);
+  debugPrintln("17");
+
   /** Start the services when finished creating all Characteristics and Descriptors */
   pDeviceService->start();
   pBatteryService->start();
@@ -634,15 +676,15 @@ void BLEsetup(std::string SN, std::string Version, int battery, Units units, WiF
 
 
 void BLEstop(){
-  
+  debugPrintln("after BLEstop");
   if(size_t s = NimBLEDevice::getClientListSize() ){
-
+    debugPrintln("inside disconnecting ble");
   std::list<NimBLEClient *> b = *NimBLEDevice::getClientList(); 
   std::list<NimBLEClient *>::iterator it = b.begin();
 
   for(int i = 0; i < s; i++)
   {
-      debugPrintln("Bluetooth is connected");
+      debugPrintln("Bluetooth is connected - disconnect iterator");
       
       NimBLEDevice::deleteClient(*it);
       std::advance(it,1);
@@ -651,7 +693,17 @@ void BLEstop(){
   //return -1;
 
   }
+  debugPrintln("after BLEstop1");
   pServer->stopAdvertising();
-
+  debugPrintln("after BLEstop2");
+  // NimBLEDevice::deinit(true);
+  debugPrintln("after BLEsto3");
   vTaskDelete(BLETask_h);
+  vQueueDelete( bleWeightQueue);
+  vQueueDelete(bleUnitsQueue);
+  vQueueDelete (bleBatteryQueue);
+  vQueueDelete( bleStatusQueue);
+
+  debugPrintln("after BLEstop4");
+
 }

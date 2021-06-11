@@ -26,6 +26,10 @@ public:
     xTaskCreatePinnedToCore(task, _name, _stackDepth, this, _priority, &this->taskHandle, 1);
     //(displayTask, "display", 4096 * 2, NULL, 0, &displayHandler_TH, 1)
   }
+  virtual ~ThreadXa(){
+    printf("ThreadXa destructor");
+    vTaskDelete(taskHandle);
+  }
 
   TaskHandle_t GetHandle()
   {
@@ -53,7 +57,11 @@ public:
     {
         
     }
-    ~DisplayX(){} 
+    virtual ~DisplayX(){
+      printf("display destructor");
+      onDelete();
+      printf("display destructor end");
+    }
 
 
     void displayWeight(std::string weight);
@@ -74,15 +82,28 @@ public:
     // light functions
     void setColor(int r, int g, int b);
     void setIntensity(int i);
+    int getRed(){
+      return red;
+    }
+    int getGreen(){
+      return green;
+    }
+    int getBlue(){
+      return blue;
+    }
+    int getIntensity(){
+      return intensity;
+    }
 
     bool ready = false;
-    
+
 private:
   
     void styleInit();
     void displayLoopConditions(long &t, int &q, int &q_last);
     void pageTestRoutine(long t);
     
+    void onDelete();
 
     // style variables
     lv_style_t weightStyle;

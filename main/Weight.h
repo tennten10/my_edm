@@ -39,6 +39,9 @@ public:
     {
         xTaskCreate(task, _name, _stackDepth, this, _priority, &this->taskHandle);
     }
+    virtual ~ThreadXb(){
+        vTaskDelete(taskHandle);
+    }
 
     TaskHandle_t GetHandle()
     {
@@ -89,7 +92,10 @@ public:
         debugPrintln("after weight initialization");
         
     }
-    ~WeightX(){} 
+    
+    virtual ~WeightX(){
+        vQueueDelete(weightQueue);
+    }
     
     void tare();
     void sleepPreparation();

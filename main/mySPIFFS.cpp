@@ -552,7 +552,7 @@ Data getSaveData(){
     return d;
 }
 
-bool setSaveData(Units u){
+bool setSaveData(Data d){
     // if file exists and am able to open...
     
     debugPrintln("setSaveData");
@@ -586,7 +586,7 @@ bool setSaveData(Units u){
         return false;
     }
          
-    fprintf(f, "units,idk\n%s,%s", unitsToString(u).c_str(), "idk" );
+    fprintf(f, "units,intensity,red,blue,green\n%s,%d,%d,%d,%d", unitsToString(d.u).c_str(), d.intensity, d.red, d.green, d.blue );
        
     fclose(f);
     debugPrintln("Closing spiffs file");

@@ -57,6 +57,7 @@ ledc_channel_config_t b_ledc_c_config{
     .duty = (uint32_t)10,
     .hpoint = 0,
 };
+#ifdef CONFIG_SB_V3_ST7735S
 ledc_channel_config_t g_ledc_c_config{
     .gpio_num = ledG,
     .speed_mode = LEDC_LOW_SPEED_MODE,
@@ -75,6 +76,9 @@ ledc_channel_config_t r_ledc_c_config{
     .duty = (uint32_t)10,
     .hpoint = 0,
 };
+#endif
+
+esp_timer_handle_t periodic_timer;
 
 /* Initialize image files for display
 * These are stored as .c files and converted from https://lvgl.io/tools/imageconverter
@@ -127,9 +131,11 @@ void DisplayX::Main()
     ledc_timer_config(&ledc_timer);
     
 
-#ifdef CONFIG_SB_V1_HALF_ILI9341
+#if defined(CONFIG_SB_V1_HALF_ILI9341) || defined(CONFIG_SB_V6_FULL_ILI9341)
   ledc_channel_config(&b_ledc_c_config);
-  ledc_set_duty_and_update(b_ledc_c_config.speed_mode, b_ledc_c_config.channel, 100, 0);
+  ledc_fade_func_install(0);
+  
+  ledc_set_duty_and_update(b_ledc_c_config.speed_mode, b_ledc_c_config.channel, intensity, 0);
 #endif
 #ifdef CONFIG_SB_V3_ST7735S
   ledc_channel_config(&r_ledc_c_config);
@@ -139,12 +145,7 @@ void DisplayX::Main()
   ledc_set_duty_and_update(g_ledc_c_config.speed_mode, g_ledc_c_config.channel, 100, 0);
   ledc_set_duty_and_update(b_ledc_c_config.speed_mode, b_ledc_c_config.channel, 100, 0);
 #endif
-#ifdef CONFIG_SB_V6_FULL_ILI9341
-  ledc_channel_config(&b_ledc_c_config);
-  ledc_fade_func_install(0);
-  
-  ledc_set_duty_and_update(b_ledc_c_config.speed_mode, b_ledc_c_config.channel, intensity, 0);
-#endif
+
 
 
     /* Use double buffered when not working with monochrome displays */
@@ -192,7 +193,7 @@ void DisplayX::Main()
     const esp_timer_create_args_t periodic_timer_args = {
         .callback = &lv_tick_task,
         .name = "periodic_gui"};
-    esp_timer_handle_t periodic_timer;
+    //esp_timer_handle_t periodic_timer;
     ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args, &periodic_timer));
     ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer, LV_TICK_PERIOD_MS * 1000));
 
@@ -237,12 +238,6 @@ void DisplayX::Main()
 #endif
     vTaskDelete(NULL);
 }
-
-// void DisplayX::displayLoopConditions(long &t, int &q, int &q_last)
-// {
-//     // Look at if the screen should change from button interactions
-//     eventCheck(t, q, q_last);
-// }
 
 void DisplayX::styleInit()
 {
@@ -970,11 +965,11 @@ void DisplayX::setColor(int r, int g, int b){
   red = r*intensity/255;
   green = g*intensity/255;
   blue = b*intensity/255;
-
+  #ifdef CONFIG_SB_V3_ST7735S
   ledc_set_duty_and_update(r_ledc_c_config.speed_mode, r_ledc_c_config.channel, red, 0);
   ledc_set_duty_and_update(g_ledc_c_config.speed_mode, g_ledc_c_config.channel, green, 0);
+  #endif
   ledc_set_duty_and_update(b_ledc_c_config.speed_mode, b_ledc_c_config.channel, blue, 0);
-
 }
 
 void DisplayX::setIntensity(int i){
@@ -1005,4 +1000,19 @@ void DisplayX::setIntensity(int i){
   ledc_set_duty_and_update(b_ledc_c_config.speed_mode, b_ledc_c_config.channel, blue, 0);
 #endif
 
+}
+
+void DisplayX::onDelete(){
+  #if defined(CONFIG_SB_V1_HALF_ILI9341) || defined(CONFIG_SB_V6_FULL_ILI9341)
+  ledc_stop(b_ledc_c_config.speed_mode, b_ledc_c_config.channel, 0); 
+  #endif
+  #ifdef CONFIG_SB_V3_ST7735S
+  ledc_stop(r_ledc_c_config.speed_mode, r_ledc_c_config.channel, 0);
+  ledc_stop(g_ledc_c_config.speed_mode, g_ledc_c_config.channel, 0);
+  
+  #endif
+  ledc_timer_pause(LEDC_LOW_SPEED_MODE , LEDC_TIMER_1); //ledc_timer
+  esp_timer_delete(periodic_timer);
+  debugPrintln("finished display onDelete");
+  
 }
