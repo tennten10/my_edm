@@ -490,7 +490,7 @@ bool saveStrainGaugeParams(Eigen::Matrix3d *m0, Eigen::Matrix3d *m1, Eigen::Matr
 
 Data getSaveData(){
     // if file exists and am able to open...
-    Data d = {err};
+    Data d = {err,0,0,0,0};
     debugPrintln("getSaveData");
     if(!esp_spiffs_mounted(conf.partition_label)){
         conf = {
@@ -533,7 +533,6 @@ Data getSaveData(){
     }
     
     char line[100];
-        
 
     fgets(line, sizeof(line), f); // throw away header line
     debugPrintln(line);
@@ -541,9 +540,13 @@ Data getSaveData(){
     fgets(line, sizeof(line), f);
     debugPrintln(line);
     std::string s = std::string(strtok(line, ","));
-    debugPrintln(s);
+    // debugPrintln(s);
     d.u = stringToUnits(s);
-    
+    d.intensity = std::stoi(strtok(NULL, ",")); // intensity
+    d.red = std::stoi(strtok(NULL, ",")); // red
+    d.green = std::stoi(strtok(NULL, ",")); // green
+    d.blue = std::stoi(strtok(NULL, ",")); // blue
+
     fclose(f);
     debugPrintln("Closing SPIFFS file");
     return d;

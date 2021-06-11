@@ -409,8 +409,9 @@ static OTACallbacks otaCallbacks;
 
 void BLEsetup(std::string SN, std::string Version, int battery, Units units, WiFiStruct w)
 {
-
-  debugPrintln("Starting NimBLE Server");
+  debugPrint("Starting NimBLE Server: ");
+  debugPrintln((int)esp_timer_get_time()/1000);
+  
   bleWeightQueue = xQueueCreate(5, 10*sizeof(char));
   bleUnitsQueue = xQueueCreate(5, sizeof(Units));
   bleBatteryQueue = xQueueCreate(5, sizeof(int));
@@ -625,7 +626,8 @@ void BLEsetup(std::string SN, std::string Version, int battery, Units units, WiF
   debugPrintln("20");
   pAdvertising->start();
 
-  debugPrintln("Advertising Started");
+  debugPrint("Advertising Started: ");
+  debugPrintln((int)esp_timer_get_time()/1000);
 
   xTaskCreatePinnedToCore(BLETask, "BLETask", 5000, NULL, 1, &BLETask_h, 0);
 }

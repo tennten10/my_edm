@@ -74,6 +74,9 @@ public:
     // light functions
     void setColor(int r, int g, int b);
     void setIntensity(int i);
+
+    bool ready = false;
+    
 private:
   
     void styleInit();
@@ -102,8 +105,10 @@ private:
     int red = 255;
     int green = 255;
     int blue = 255;
-    int intensity = 6000; // max 8192
-    lv_obj_t *weightLabel;
+    int intensity = 8192; // max 8192
+    lv_obj_t *weightLabel = NULL;
+
+    
 };
 
 #endif

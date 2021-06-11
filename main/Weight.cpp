@@ -206,7 +206,8 @@ void WeightX::sleepPreparation(){
 }
 
 void WeightX::Main(){
-  debugPrintln("Weight main");
+  debugPrint("Weight main begin: ");
+  debugPrintln((int)esp_timer_get_time()/1000);
   char doo[16];
   char dump[16];
   std::string foo;
@@ -214,11 +215,13 @@ void WeightX::Main(){
   double currentWeight= 0.0;
   weightQueue = xQueueCreate(7, 16*sizeof(char));
   if(weightQueue == 0){
-    debugPrintln("________________FAILED TO CREATE WEIGHTQUEUE__________________________________");
+    debugPrintln("________________FAILED TO CREATE WEIGHTQUEUE_____________________________");
   }
   sgMutex = xSemaphoreCreateMutex();
   long t = esp_timer_get_time()/1000;
   bool b = false;
+  debugPrint("Weight main end: ");
+  debugPrintln((int)esp_timer_get_time()/1000);
   for(;;){
     //debugPrintln("weightLoop");
     readSensors();

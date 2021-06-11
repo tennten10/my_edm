@@ -40,6 +40,10 @@ struct Device{
 
 struct Data{
   Units u;
+  int intensity;
+  int red;
+  int green;
+  int blue;
 };
 
 Units stringToUnits(std::string v);

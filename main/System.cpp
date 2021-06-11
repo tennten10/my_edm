@@ -88,6 +88,9 @@ void SystemX::getSavedVals(){
     Data d = getSaveData();
 
     this->setUnits(d.u);
+    // note: make sure display is created before this
+    this->display->setIntensity(d.intensity);
+    this->display->setColor(d.red,d.green,d.blue);
 
     debugPrint("Units set to: ");
     debugPrintln(unitsToString(d.u));

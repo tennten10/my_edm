@@ -104,7 +104,8 @@ void DisplayX::Main()
     * If you wish to call *any* lvgl function from other threads/tasks
     * you should lock on the very same semaphore! */
     xGuiSemaphore = xSemaphoreCreateMutex();
-    debugPrintln("starting display loop");
+    debugPrint("starting display loop: ");
+    debugPrintln((int)esp_timer_get_time()/1000 );
     lv_init();
 
     /* Initialize SPI or I2C bus used by the drivers */
@@ -204,20 +205,16 @@ void DisplayX::Main()
     long t = esp_timer_get_time() / 1000;
     
     displayLogo();
-    while (esp_timer_get_time() / 1000 - t < 1000)
+    while (!ready)  //esp_timer_get_time() / 1000 - t < 500)
     {
         lv_task_handler();
         vTaskDelay(10);
     }
-      
     displayWeight("0.0");
-    debugPrintln("Gave back xGuiSemaphore before starting main display loop");
-    // }else{
-    //   debugPrintln("Could not get xGuiSemaphore when starting main display loop");
-    // }
 
     // pageTestRoutine((long)(esp_timer_get_time() / 1000));
-
+    debugPrint("end of display init: ");
+    debugPrintln((int)esp_timer_get_time()/1000);
     while (1)
     {
         /* Delay 1 tick (assumes FreeRTOS tick is 10ms */
@@ -449,7 +446,7 @@ void DisplayX::lv_tick_task(void *arg)
 void DisplayX::resizeWeight(char *w)
 {
   static int lastLen = 0;
-  printf("resizeWeight: %d, %d\n", strlen(w), lastLen);
+  //printf("resizeWeight: %d, %d\n", strlen(w), lastLen);
 
 #ifdef CONFIG_SB_V1_HALF_ILI9341
   if (strlen(w) > 4)
@@ -529,7 +526,7 @@ void DisplayX::resizeWeight(char *w)
   }
 #endif
   lastLen = strlen(w);
-  debugPrintln("end of resizeWeight");
+  //debugPrintln("end of resizeWeight");
 }
 
 // displayWeight should be called first. This only updates the number value

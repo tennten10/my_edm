@@ -1,2 +1,2 @@
-units,idk
-kg,ff
+units,intensity,red,blue,green
+kg,6000,255,255,255

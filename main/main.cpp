@@ -132,7 +132,7 @@ void app_main() {
     esp_sleep_wakeup_cause_t cause = esp_sleep_get_wakeup_cause();
     if (cause != ESP_SLEEP_WAKEUP_ULP) {
         printf("Not ULP wakeup, initializing main prog\n");
-        vTaskDelay(150);
+        vTaskDelay(5);
         
     } else {
         printf("ULP wakeup, setting everything up...\n");
@@ -140,14 +140,13 @@ void app_main() {
     }
     
 
-    debugSetup();
+    debugSetup(); // always goes first
     _sys = new SystemX(populateStartData());
-    vTaskDelay(100);
     BLEsetup(_sys->getSN(), _sys->getVER(), _sys->getBattery(), _sys->getUnits(), _sys->getWiFiInfo());
-    vTaskDelay(400);
-    _sys->initDisplay(); // this needs to be after BLE setup for some reason
+    vTaskDelay(5);
+    _sys->init(); // this needs to be after BLE setup otherwise throws eFuse/NVS errors
 
-    vTaskDelay(1000);
+    //vTaskDelay(300);
     std::string event;
     PAGE page;
     MODE mode;
@@ -168,7 +167,8 @@ void app_main() {
     long timeout = 0;
     //_sys->weight->runTheoreticalWeight(100., 50., 50.);
 
-    
+    _sys->weight->tare();
+    _sys->display->ready = true;
     debugPrintln("Before main loop...");
     for (;;)
     {

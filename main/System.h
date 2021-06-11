@@ -22,21 +22,20 @@ public:
     SystemX(Device _device) : device{_device}
     {
         this->buttons = new ButtonsX(true);
-        //this->display = new DisplayX(); // constructor
-        
-        vTaskDelay(200);
         this->weight = new WeightX();
-        this->getSavedVals();
-        this->weight->setLocalUnits(eUnits);
-
         this->wifiInfo = getActiveWifiInfo();
         
     }
     ~SystemX(){}
     
     // temp
-    void initDisplay(){
+    void init(){
         this->display = new DisplayX(); // constructor
+        vTaskDelay(50);
+        this->getSavedVals();
+        this->weight->setLocalUnits(eUnits);
+        
+
     }
 
     void incrementUnits();
