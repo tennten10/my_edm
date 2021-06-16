@@ -42,9 +42,13 @@ void BLETask(void * parameter){
                 }  
               }
               if(uxQueueMessagesWaiting(bleWeightQueue) > 0 ){
-                  char buff[16];
-                  NimBLECharacteristic* w = pSvc->getCharacteristic("2A9E");
+                  char buff[6];
+                  strcpy(buff, "");
+                  NimBLECharacteristic* w = pSvc->getCharacteristic("0000aa67-60be-11eb-ae93-0242ac130002");
                   xQueueReceive(bleWeightQueue, &buff, (TickType_t) 10);
+                  //strcat(buff, "\n");
+                  debugPrint("BLETask / before notify: ");
+                  debugPrintln(buff);
                   if(w){
                     w->setValue(buff);
                     w->notify(true);
@@ -53,22 +57,22 @@ void BLETask(void * parameter){
               if(uxQueueMessagesWaiting(bleBatteryQueue) > 0 ){
                   int buff;
                   NimBLECharacteristic* b = pSvc->getCharacteristic("2A19");
-                  xQueueReceive(bleWeightQueue, &buff, (TickType_t) 10);
+                  xQueueReceive(bleBatteryQueue, &buff, (TickType_t) 10);
                   if(b){
                     b->setValue(std::to_string(buff));
                   }
               }
               if(uxQueueMessagesWaiting(bleStatusQueue) > 0 ){
                   int buff;
-                  NimBLECharacteristic* b = pSvc->getCharacteristic("000057a7-60be-11eb-ae93-0242ac130002");
-                  xQueueReceive(bleWeightQueue, &buff, (TickType_t) 10);
+                  NimBLECharacteristic* b = pSvc->getCharacteristic("2BBB");
+                  xQueueReceive(bleStatusQueue, &buff, (TickType_t) 10);
                   if(b){
                     b->setValue(buff);
                   }
               }
             }
         }
-        vTaskDelay(2000/portTICK_PERIOD_MS);
+        vTaskDelay(1000/portTICK_PERIOD_MS);
     }
     
     vTaskDelete(BLETask_h);
@@ -76,32 +80,55 @@ void BLETask(void * parameter){
 
 void updateBTWeight(std::string w)
 {
-  char* ch = (char*)w.c_str();
+  if(w.length() >5){
+    debugPrintln("weight string too long");
+    
+  }
+  char ch[6];
+  strcpy(ch, w.c_str());
+  char buffer [6];
   if (pServer!= NULL && pServer->getConnectedCount())
   {
+    if(uxQueueMessagesWaiting(bleWeightQueue) >2 ){
+      xQueueReceive(bleWeightQueue, &buffer, (TickType_t)10);
+    }
     xQueueSend(bleWeightQueue, &ch , (TickType_t)10);
+    debugPrint("updateBTWeight: ");
+    debugPrintln(ch);
   }
 }
 
 void updateBTUnits(Units unit){
   Units ch = unit;
+  static char buffer[16];
   if (pServer!= NULL && pServer->getConnectedCount())
   {
+    if(uxQueueMessagesWaiting(bleUnitsQueue) >4 ){
+      xQueueReceive(bleUnitsQueue, &buffer, (TickType_t)10);
+    }
     xQueueSend(bleUnitsQueue, &ch , (TickType_t)10);
   }
 }
 
 void updateBTBattery(int bat){
   int b = bat;
+  static char buffer[16];
   if (pServer!= NULL && pServer->getConnectedCount())
   {
+    if(uxQueueMessagesWaiting(bleBatteryQueue) >4 ){
+      xQueueReceive(bleBatteryQueue, &buffer, (TickType_t)10);
+    }
     xQueueSend(bleBatteryQueue, &b , (TickType_t)10);
   }
 }
 
 void updateBTStatus(int status){
   int s = status;
+  int buffer;
   if( pServer!= NULL && pServer->getConnectedCount()){
+    if(uxQueueMessagesWaiting(bleStatusQueue) >4 ){
+      xQueueReceive(bleStatusQueue, &buffer, (TickType_t)10);
+    }
     xQueueSend(bleStatusQueue, &status, (TickType_t)10);
   }
 }
@@ -252,7 +279,7 @@ class WeightCallbacks : public NimBLECharacteristicCallbacks
   {
     debugPrintln("Sending notification to clients");
     
-    pCharacteristic->setValue("10.1"); //_sys->weight->getWeightStr().c_str());
+    //pCharacteristic->setValue("10.1"); //_sys->weight->getWeightStr().c_str());
   };
 
   /** The status returned in status is defined in NimBLECharacteristic.h.
@@ -329,7 +356,7 @@ class ActionCallbacks : public NimBLECharacteristicCallbacks
     // if turning off remotely
     if (strcmp(pCharacteristic->getUUID().toString().c_str(), "000000ff-60be-11eb-ae93-0242ac130002" ) == 0)
     {
-      if(pCharacteristic->getValue().compare("yes") == 0)
+      if( stoi(pCharacteristic->getValue()) == true)  // pCharacteristic->getValue().compare("1") == 0)
       {
         _sys->goToSleep();
       }
@@ -339,7 +366,7 @@ class ActionCallbacks : public NimBLECharacteristicCallbacks
     if (strcmp(pCharacteristic->getUUID().toString().c_str(), "0000b007-60be-11eb-ae93-0242ac130002" ) == 0)
     {
       debugPrintln("Action onwrite callback. Correct UUID.");
-      if(pCharacteristic->getValue().compare("yes") == 0)
+      if(stoi(pCharacteristic->getValue()) == true)
       {
         
         debugPrintln("reboot compare is correct");
@@ -351,7 +378,7 @@ class ActionCallbacks : public NimBLECharacteristicCallbacks
     if (strcmp(pCharacteristic->getUUID().toString().c_str(), "0000007a-60be-11eb-ae93-0242ac130002" ) == 0)
     {
       debugPrintln("Action onwrite callback. Correct UUID.");
-      if(pCharacteristic->getValue().compare("yes") == 0)
+      if(stoi(pCharacteristic->getValue()) == true)
       {
         
         debugPrintln("OTA compare is correct");
@@ -405,15 +432,13 @@ class OTACallbacks : public NimBLECharacteristicCallbacks
     debugPrint(": onWrite(), value: ");
     debugPrintln(pCharacteristic->getValue().c_str());
 
-    //if OTA update is set to "yes" from bluetooth
-    //std::string s = "yes";
-    // debugPrintln(pCharacteristic->getValue().compare("yes"));
-
-    if (strcmp(pCharacteristic->getValue().c_str(), "yes") == 0)
+    //if OTA update is set to "1" from bluetooth
+    //update will start
+    if (stoi(pCharacteristic->getValue()) == true)
     {
       debugPrintln("Begin updating..........");
       vTaskDelay(20);
-      //_sys->runUpdate();
+      _sys->runUpdate();
       debugPrintln("page change");
     }
     else
@@ -510,18 +535,7 @@ void BLEsetup(std::string SN, std::string Version, int battery, Units units, WiF
   pMfgCharacteristic->setValue("SudoChef");
   pMfgCharacteristic->setCallbacks(&devCallbacks);
   debugPrintln("8");
-  // NimBLECharacteristic *pDateTimeCharacteristic = pDeviceService->createCharacteristic(
-  //     "2A11",
-  //         NIMBLE_PROPERTY::READ |
-  //         NIMBLE_PROPERTY::WRITE |
-  //         /** Require a secure connection for read and write access */
-  //         NIMBLE_PROPERTY::READ_ENC | // only allow reading if paired / encrypted
-  //         NIMBLE_PROPERTY::WRITE_ENC  // only allow writing if paired / encrypted
-  // );
-
-  // pDateTimeCharacteristic->setValue("02-08-2021");
-  // pDateTimeCharacteristic->setCallbacks(&devCallbacks);
-  debugPrintln("9");
+  
 
   /* Next Service - Battery  */
   NimBLEService *pBatteryService = pServer->createService("180F");
@@ -538,15 +552,16 @@ void BLEsetup(std::string SN, std::string Version, int battery, Units units, WiF
   NimBLEService *pWeightService = pServer->createService("181D");
 
   NimBLECharacteristic *pWeightCharacteristic = pWeightService->createCharacteristic(
-      "2A9E",
+      "0000aa67-60be-11eb-ae93-0242ac130002",
       NIMBLE_PROPERTY::READ |
-
           /** Require a secure connection for read and write access */
           //NIMBLE_PROPERTY::READ_ENC | // only allow reading if paired / encrypted
           NIMBLE_PROPERTY::NOTIFY);
 
   pWeightCharacteristic->setValue("0.0");
   pWeightCharacteristic->setCallbacks(&wgtCallbacks);
+  
+
   debugPrintln("11");
   NimBLECharacteristic *pUnitsCharacteristic = pWeightService->createCharacteristic(
       "2B46",
@@ -635,7 +650,7 @@ void BLEsetup(std::string SN, std::string Version, int battery, Units units, WiF
   debugPrintln("17");
 
   NimBLECharacteristic *pStatusCharacteristic = pActionService->createCharacteristic(
-      "000057a7-60be-11eb-ae93-0242ac130002",
+      "2BBB",
       NIMBLE_PROPERTY::READ |
           //NIMBLE_PROPERTY::WRITE //|
           //NIMBLE_PROPERTY::READ_ENC | // only allow reading if paired / encrypted
@@ -676,7 +691,7 @@ void BLEsetup(std::string SN, std::string Version, int battery, Units units, WiF
 
 
 void BLEstop(){
-  debugPrintln("after BLEstop");
+  debugPrintln("before BLEstop");
   if(size_t s = NimBLEDevice::getClientListSize() ){
     debugPrintln("inside disconnecting ble");
   std::list<NimBLEClient *> b = *NimBLEDevice::getClientList(); 
@@ -696,14 +711,10 @@ void BLEstop(){
   debugPrintln("after BLEstop1");
   pServer->stopAdvertising();
   debugPrintln("after BLEstop2");
-  // NimBLEDevice::deinit(true);
+  //NimBLEDevice::deinit(true); // never gets out when I run this. Not sure why.
   debugPrintln("after BLEsto3");
-  vTaskDelete(BLETask_h);
-  vQueueDelete( bleWeightQueue);
-  vQueueDelete(bleUnitsQueue);
-  vQueueDelete (bleBatteryQueue);
-  vQueueDelete( bleStatusQueue);
-
+  
+  vTaskSuspend(BLETask_h);
   debugPrintln("after BLEstop4");
 
 }

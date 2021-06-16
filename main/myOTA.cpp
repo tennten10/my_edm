@@ -194,7 +194,7 @@ int setupOTA() {
 
     
    
-    // BLEstop();
+    BLEstop();
 
     return 0;
 }

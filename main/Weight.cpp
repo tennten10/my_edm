@@ -172,8 +172,8 @@ std::string WeightX::getWeightStr(){
   // debugPrintln(qWaiting);
   if( qWaiting > 0 ){
     xQueueReceive(weightQueue, &temp, (TickType_t) 20);
-    debugPrint("weight from getweightstr: ");
-    debugPrintln(temp);
+    //debugPrint("weight from getweightstr: ");
+    //debugPrintln(temp);
     return std::string(temp);
   }
   return std::string("-1");
@@ -237,16 +237,16 @@ void WeightX::Main(){
         strcpy(doo, foo.c_str());
         if(isBtConnected()){
           updateBTWeight(foo);            
-          debugPrintln("Bluetooth is connected, from Weight");
+          //debugPrintln("Bluetooth is connected, from Weight");
         }
         if(uxQueueMessagesWaiting(weightQueue) > 4){
-          debugPrintln("weightqueueoverflowreceive");
+          //debugPrintln("weightqueueoverflowreceive");
           //debugPrintln((int)uxQueueMessagesWaiting(weightQueue));
           xQueueReceive(weightQueue, &dump, (TickType_t)20);
           strcpy(dump, "");
         }
-        debugPrint("weightqueuesend: ");
-        debugPrintln(doo);
+        //debugPrint("weightqueuesend: ");
+        //debugPrintln(doo);
         xQueueSend(weightQueue, &doo, (TickType_t)0);
         //debugPrintln("Doing weight stuff");
         //debugPrintln(foo);

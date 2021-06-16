@@ -147,8 +147,6 @@ void app_main() {
     _sys->init(); // this needs to be after BLE setup otherwise throws eFuse/NVS errors
     BLEsetup(_sys->getSN(), _sys->getVER(), _sys->getBattery(), _sys->getUnits(), _sys->getWiFiInfo());
     
-
-    //vTaskDelay(300);
     std::string event;
     PAGE page;
     MODE mode;
@@ -158,7 +156,7 @@ void app_main() {
 
     // battery variables
     int battery=0;
-    uint32_t reading=0;
+    uint32_t bat_reading=0;
     long batTime = esp_timer_get_time()/1000;
 
     // update progress parameter
@@ -171,6 +169,7 @@ void app_main() {
 
     _sys->weight->tare();
     _sys->display->ready = true;
+    _sys->display->displayWeight(_sys->weight->getWeightStr());
     debugPrintln("Before main loop...");
     for (;;)
     {
@@ -182,10 +181,10 @@ void app_main() {
             // Resolution of ~ 0.0008V / division
         
 
-            reading =  adc1_get_raw(batV);
+            bat_reading =  adc1_get_raw(batV);
             //voltage = esp_adc_cal_raw_to_voltage(reading, adc_chars);
 
-            battery = (int) 100 *( reading * 3.3 / 4096.0 - 2.0) /(2.8 - 2.0); //(voltage - 2.0) / (2.8 - 2.0) ;
+            battery = (int) 100 *( bat_reading * 3.3 / 4096.0 - 2.0) /(2.8 - 2.0); //(voltage - 2.0) / (2.8 - 2.0) ;
             if(battery != _sys->getBattery()){
                 _sys->setBattery(battery);
                 if(isBtConnected()){
@@ -218,7 +217,6 @@ void app_main() {
                     
                     if (event.compare(0,4,"SNNN",0,4) == 0)
                     {
-                        //TODO: TARE FUNCTION
                         _sys->weight->tare();
                     }
                     if (event.compare(0,4,"LNNN",0,4) == 0)
@@ -230,11 +228,10 @@ void app_main() {
                     if (event.compare(0,4,"NSNN", 0, 4) == 0)
                     {
                         //TODO: Units
-                        
                         _sys->setPage(UNITS);
+                        _sys->display->displayUnits(_sys->getUnits());
                         
                         timeout = esp_timer_get_time()/1000;
-                        
                     }
                     if (event.compare(0,4,"NLNN", 0, 4) == 0)
                     {
@@ -302,13 +299,13 @@ void app_main() {
                     q = 50; //getUpdatePercent(); TODO: include update amount -> delayed for later since giving weird numbers
                     if (q < 3 && q != q_last)
                     {
-                    //_sys->display->displayUpdateScreen(3);
-                    q_last = q;
+                        _sys->display->displayUpdateScreen(3);
+                        q_last = q;
                     }
                     else if (q > q_last)
                     {
-                    _sys->display->displayUpdateScreen(q);
-                    q_last = q;
+                        _sys->display->displayUpdateScreen(q);
+                        q_last = q;
                     }
                     // TODO: dynamically update percentage when downloading and inistalling updated code
                     break;

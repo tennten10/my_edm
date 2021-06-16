@@ -211,7 +211,8 @@ void DisplayX::Main()
         lv_task_handler();
         vTaskDelay(10);
     }
-    displayWeight("0.0");
+    vTaskDelay(100);
+    
 
     // pageTestRoutine((long)(esp_timer_get_time() / 1000));
     debugPrint("end of display init: ");
@@ -526,6 +527,11 @@ void DisplayX::resizeWeight(char *w)
 
 // displayWeight should be called first. This only updates the number value
 void DisplayX::updateWeight(std::string weight){
+  if(weight.compare("-1") == 0){
+    // TODO: have a way to check if the screen already has that value so it doesn't waste time doing it again.
+    debugPrintln("breaking out of updateWeight");
+    return;
+  }
   if(xSemaphoreTake(xGuiSemaphore, portMAX_DELAY)==pdTRUE){
     static char now[16];
     if(weightLabel != NULL){
@@ -621,11 +627,9 @@ void DisplayX::displayUnits(Units u)
   if(xSemaphoreTake(xGuiSemaphore, portMAX_DELAY)==pdTRUE){
     debugPrintln("got xGuiSemaphore in displayUnits");
     
-
-    //lv_obj_t *scr = lv_disp_get_scr_act(NULL);
     lv_obj_t *bkgrnd = lv_obj_create(lv_scr_act(), NULL);
     lv_obj_t *cont = lv_cont_create(bkgrnd, NULL);
-    lv_obj_t *label1 = lv_label_create(cont, NULL);
+    unitsLabel = lv_label_create(cont, NULL);
 
     lv_cont_set_fit(cont, LV_FIT_PARENT);
     lv_cont_set_layout(cont, LV_LAYOUT_CENTER);
@@ -644,16 +648,43 @@ void DisplayX::displayUnits(Units u)
     lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
   #endif
       
-    lv_label_set_text(label1, unitsToString(u).c_str());
+    lv_label_set_text(unitsLabel, unitsToString(u).c_str());
 
     lv_obj_align(cont, NULL, LV_ALIGN_CENTER, 0, 0);
     lv_obj_add_style(bkgrnd, LV_OBJ_PART_MAIN, &backgroundStyle);
     lv_obj_add_style(cont, LV_OBJ_PART_MAIN, &transpCont);
-    lv_obj_add_style(label1, LV_OBJ_PART_MAIN, &unitStyle);
+    lv_obj_add_style(unitsLabel, LV_OBJ_PART_MAIN, &unitStyle);
     xSemaphoreGive(xGuiSemaphore);
     debugPrintln("gave back xGuiSemaphore in displayUnits");
   }else{
     debugPrintln("could not get xGuiSemaphore in displayUnits");
+  }
+}
+
+void DisplayX::updateUnits(Units u){
+  if(xSemaphoreTake(xGuiSemaphore, portMAX_DELAY)==pdTRUE){
+    debugPrintln("got xGuiSemaphore in updateUnits");
+    if(unitsLabel != NULL){
+      lv_label_set_text(unitsLabel, unitsToString(u).c_str());
+    }else{
+      debugPrintln("unitsLabel not initialized. run displayUnits before this.");
+    }
+    
+
+  #ifdef CONFIG_SB_V1_HALF_ILI9341
+  #endif
+  #ifdef CONFIG_SB_V3_ST7735S
+    
+    
+  #endif
+  #ifdef CONFIG_SB_V6_FULL_ILI9341
+    
+  #endif
+      
+    xSemaphoreGive(xGuiSemaphore);
+    debugPrintln("gave back xGuiSemaphore in updateUnits");
+  }else{
+    debugPrintln("could not get xGuiSemaphore in updateUnits");
   }
 }
 
@@ -709,7 +740,6 @@ void DisplayX::displayDeviceInfo(std::string SN, std::string VER)
 
 
     lv_label_set_text_fmt(label3, "SUDOBOARD INFO\nSN: %s\n VER: %s", SN, VER); // , 5, 10); //"sn", "ver");
-    xSemaphoreGive(xGuiSemaphore);
     debugPrintln("after setting label text values");
     lv_label_set_align(label3, LV_ALIGN_CENTER);
     lv_obj_align(label3, NULL, LV_ALIGN_CENTER, 0,0);
@@ -733,7 +763,31 @@ void DisplayX::displayUpdateScreen(int pct)
   if(xSemaphoreTake(xGuiSemaphore, portMAX_DELAY)==pdTRUE){
     debugPrintln("got xGuiSemaphore in displayUpdateScreen");
   
-    debugPrintln("inside displayUpdateScreen");
+// create objects to display info
+    lv_obj_t *bkgrnd = lv_obj_create(lv_scr_act(), NULL);
+    lv_obj_t *label3 = lv_label_create(bkgrnd, NULL);
+    debugPrintln("after setting style values");
+  #ifdef CONFIG_SB_V1_HALF_ILI9341
+
+  #endif
+  #ifdef CONFIG_SB_V3_ST7735S
+
+  #endif
+  #ifdef CONFIG_SB_V6_FULL_ILI9341
+    lv_obj_set_width(bkgrnd, SB_HORIZ);
+    lv_obj_set_height(bkgrnd, SB_VERT);
+
+
+    lv_label_set_text(label3, "Updating..."); // , 5, 10); //"sn", "ver");
+    debugPrintln("after setting label text values");
+    lv_label_set_align(label3, LV_ALIGN_CENTER);
+    lv_obj_align(label3, NULL, LV_ALIGN_CENTER, 0,0);
+    debugPrintln("After setting alignment");
+
+
+  #endif
+    lv_obj_add_style(bkgrnd, LV_OBJ_PART_MAIN, &backgroundStyle);
+    lv_obj_add_style(label3, LV_OBJ_PART_MAIN, &infoStyle);
   
     xSemaphoreGive(xGuiSemaphore);
     debugPrintln("gave back xGuiSemaphore in displayUpdateScreen");

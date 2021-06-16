@@ -132,7 +132,7 @@ void SystemX::validateDataAcrossObjects(){
     if(!callbackFlag){
         return;
     }
-    debugPrintln("verify function");
+    //debugPrintln("verify function");
     /******************************************/
     // on units change
     static Units t = this->weight->getLocalUnits();
@@ -143,7 +143,6 @@ void SystemX::validateDataAcrossObjects(){
         if(isBtConnected()){
             updateBTUnits(getUnits());
         }
-            
     }
     static std::string current;
     if( WEIGHTSTREAM == this->getPage() ){
@@ -151,11 +150,14 @@ void SystemX::validateDataAcrossObjects(){
         current = this->weight->getWeightStr();
         // checking if value changes and truncation happen in weight main loop. 
         // If not, it passes -1 which doesn't change the display at all
-        debugPrint("current: ");
-        debugPrintln(current);
+        //debugPrint("current: ");
+        //debugPrintln(current);
         display->updateWeight(current);
         // bluetooth value is also updated from here
         
+    }else if( UNITS == this->getPage()){
+        debugPrintln("units update");
+        this->display->updateUnits(getUnits());
     }
     
     callbackFlag = false;

@@ -67,6 +67,7 @@ public:
     void displayWeight(std::string weight);
     void updateWeight(std::string weight);
     void displayUnits(Units u);
+    void updateUnits(Units u);
     void displaySettings();
     void displayDeviceInfo(std::string SN, std::string VER);  
     void displayUpdateScreen(int pct);
@@ -128,8 +129,8 @@ private:
     int blue = 255;
     int intensity = 8192; // max 8192
     lv_obj_t *weightLabel = NULL;
+    lv_obj_t *unitsLabel = NULL;
 
-    
 };
 
 #endif
