@@ -714,7 +714,10 @@ void BLEstop(){
   //NimBLEDevice::deinit(true); // never gets out when I run this. Not sure why.
   debugPrintln("after BLEsto3");
   
+  
   vTaskSuspend(BLETask_h);
+  esp_bt_controller_disable();
+  // esp_bt_controller_deinit();
   debugPrintln("after BLEstop4");
 
 }
