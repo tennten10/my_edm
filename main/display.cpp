@@ -88,9 +88,15 @@ LV_IMG_DECLARE(img_low_battery);
 LV_IMG_DECLARE(img_logo_black);
 LV_IMG_DECLARE(img_logo_white);
 
+LV_FONT_DECLARE(vt323_70);
+LV_FONT_DECLARE(vt323_90);
+LV_FONT_DECLARE(vt323_120);
+LV_FONT_DECLARE(vt323_130);
+LV_FONT_DECLARE(vt323_140);
 LV_FONT_DECLARE(montserrat_70);
 LV_FONT_DECLARE(montserrat_90);
 LV_FONT_DECLARE(montserrat_120);
+
 
 
 //     /* If you want to use a task to create the graphic, you NEED to create a Pinned task
@@ -289,7 +295,7 @@ void DisplayX::styleInit()
 #ifdef CONFIG_SB_V6_FULL_ILI9341
 // TODO: just copy and pasted for now... need to change things up
     
-    lv_style_set_text_font(&weightStyle, LV_STATE_DEFAULT, &montserrat_120);
+    lv_style_set_text_font(&weightStyle, LV_STATE_DEFAULT, &vt323_140);
     lv_style_set_text_color(&weightStyle, LV_STATE_DEFAULT, LV_COLOR_WHITE);
     
     // lv_style_set_text_font(&weightStyle_m, LV_STATE_DEFAULT, &lv_font_montserrat_90);
@@ -298,7 +304,7 @@ void DisplayX::styleInit()
     // lv_style_set_text_font(&weightStyle_l, LV_STATE_DEFAULT, &lv_font_montserrat_120);
     // lv_style_set_text_color(&weightStylel, LV_STATE_DEFAULT, LV_COLOR_WHITE);
 
-    lv_style_set_text_font(&unitStyle, LV_STATE_DEFAULT, &montserrat_120);
+    lv_style_set_text_font(&unitStyle, LV_STATE_DEFAULT, &vt323_140);
     lv_style_set_text_color(&unitStyle, LV_STATE_DEFAULT, LV_COLOR_WHITE);
     
 
@@ -309,7 +315,7 @@ void DisplayX::styleInit()
     lv_style_set_border_opa(&backgroundStyle, LV_STATE_DEFAULT, 0);
 
     lv_style_set_text_color(&infoStyle, LV_STATE_DEFAULT, LV_COLOR_WHITE);
-    lv_style_set_text_font(&unitStyle, LV_STATE_DEFAULT, &montserrat_120);
+    lv_style_set_text_font(&infoStyle, LV_STATE_DEFAULT, &montserrat_90);
 
     lv_style_set_bg_opa(&transpCont, LV_STATE_DEFAULT, 0);
     lv_style_set_border_opa(&transpCont, LV_STATE_DEFAULT, 0);
@@ -494,7 +500,7 @@ void DisplayX::resizeWeight(char *w)
     if(lastLen > 7){
       //lv_style_reset(&weightStyle);
       lv_style_remove_prop(&weightStyle, LV_STYLE_TEXT_FONT);
-      lv_style_set_text_font(&weightStyle, LV_STATE_DEFAULT, &montserrat_70);
+      lv_style_set_text_font(&weightStyle, LV_STATE_DEFAULT, &vt323_120); 
       //lv_style_set_text_color(&weightStyle, LV_STATE_DEFAULT, LV_COLOR_WHITE);
     }
   }
@@ -503,7 +509,7 @@ void DisplayX::resizeWeight(char *w)
     if(lastLen > 4){
       //lv_style_reset(&weightStyle);
       lv_style_remove_prop(&weightStyle, LV_STYLE_TEXT_FONT);
-      lv_style_set_text_font(&weightStyle, LV_STATE_DEFAULT, &montserrat_90);
+      lv_style_set_text_font(&weightStyle, LV_STATE_DEFAULT, &vt323_130); 
       //lv_style_set_text_color(&weightStyle, LV_STATE_DEFAULT, LV_COLOR_WHITE);
     }  
   }
@@ -512,7 +518,7 @@ void DisplayX::resizeWeight(char *w)
     if(lastLen > 0){
       //lv_style_reset(&weightStyle);
       lv_style_remove_prop(&weightStyle, LV_STYLE_TEXT_FONT);
-      lv_style_set_text_font(&weightStyle, LV_STATE_DEFAULT, &montserrat_120);
+      lv_style_set_text_font(&weightStyle, LV_STATE_DEFAULT, &vt323_140);
       //lv_style_set_text_color(&weightStyle, LV_STATE_DEFAULT, LV_COLOR_WHITE);
     } 
   }
@@ -608,7 +614,7 @@ void DisplayX::displayWeight(std::string weight)
     lv_label_set_text_fmt(weightLabel, "%s", now);
   debugPrintln("umm here 4");
 
-    lv_obj_align(cont, NULL, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_align(cont, NULL, LV_ALIGN_IN_RIGHT_MID, 0, 0);
     lv_obj_add_style(bkgrnd, LV_OBJ_PART_MAIN, &backgroundStyle);
     lv_obj_add_style(cont, LV_OBJ_PART_MAIN, &transpCont);
     lv_obj_add_style(weightLabel, LV_OBJ_PART_MAIN, &weightStyle);

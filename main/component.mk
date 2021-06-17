@@ -8,7 +8,7 @@ CFLAGS += -DLV_LVGL_H_INCLUDE_SIMPLE
 
 COMPONENT_SRCDIRS := . \
 	configs \
-	font \
+	fonts \
 	images 
 	#components
 

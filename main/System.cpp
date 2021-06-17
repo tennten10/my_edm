@@ -143,6 +143,10 @@ void SystemX::validateDataAcrossObjects(){
         if(isBtConnected()){
             updateBTUnits(getUnits());
         }
+        if(UNITS == this->getPage()){
+            this->display->updateUnits(getUnits());
+        }
+        
     }
     static std::string current;
     if( WEIGHTSTREAM == this->getPage() ){
@@ -155,9 +159,6 @@ void SystemX::validateDataAcrossObjects(){
         display->updateWeight(current);
         // bluetooth value is also updated from here
         
-    }else if( UNITS == this->getPage()){
-        debugPrintln("units update");
-        this->display->updateUnits(getUnits());
     }
     
     callbackFlag = false;

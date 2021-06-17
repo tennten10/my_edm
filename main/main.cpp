@@ -241,7 +241,6 @@ void app_main() {
                     {
                         
                         timeout = esp_timer_get_time()/1000;
-                        
                     }
                     if (event.compare(0,4,"NNLN", 0, 4) == 0)
                     {
@@ -254,45 +253,47 @@ void app_main() {
                     if(esp_timer_get_time()/1000-timeout > 4000){
                         _sys->setPage(WEIGHTSTREAM);
                         _sys->display->displayWeight(_sys->weight->getWeightStr());
-                    }
+                        debugPrintln("units screen timeout");
+                    }else{
 
-                    if (event.compare(0,4, "SNNN",0,4) == 0)
-                    {
-                        //TODO:  FUNCTION
-                        _sys->setPage(WEIGHTSTREAM);
-                        _sys->display->displayWeight(_sys->weight->getWeightStr());
-                        timeout = esp_timer_get_time()/1000;
-                    }
-                    if (event.compare(0,4, "LNNN",0,4) == 0)
-                    {
-                        debugPrintln("sleepy time");
-                        _sys->goToSleep(); 
-                    }
-                    if (event.compare(0,4,"NSNN",0,4) == 0)
-                    { 
-                        timeout = esp_timer_get_time()/1000;
-                    }
-                    if (event.compare(0,4,"NLNN", 0, 4) == 0)
-                    {
-                        timeout = esp_timer_get_time()/1000;
-                    }
-                    if (event.compare(0,4,"NNSN", 0, 4) == 0)
-                    {
-                        _sys->incrementUnits();
-                        timeout = esp_timer_get_time()/1000;
-                    }
-                    if (event.compare(0,4,"NNLN", 0, 4) == 0)
-                    {
-                        timeout = esp_timer_get_time()/1000;
-                    }
-                    if (event.compare(0,4,"NNNS", 0, 4) == 0)
-                    {
-                        _sys->decrementUnits();
-                        timeout = esp_timer_get_time()/1000;
-                    }
-                    if (event.compare(0,4,"NNNL", 0, 4) == 0)
-                    {
-                        timeout = esp_timer_get_time()/1000;
+                        if (event.compare(0,4, "SNNN",0,4) == 0)
+                        {
+                            //TODO:  FUNCTION
+                            _sys->setPage(WEIGHTSTREAM);
+                            _sys->display->displayWeight(_sys->weight->getWeightStr());
+                            timeout = esp_timer_get_time()/1000;
+                        }
+                        if (event.compare(0,4, "LNNN",0,4) == 0)
+                        {
+                            debugPrintln("sleepy time");
+                            _sys->goToSleep(); 
+                        }
+                        if (event.compare(0,4,"NSNN",0,4) == 0)
+                        { 
+                            timeout = esp_timer_get_time()/1000;
+                        }
+                        if (event.compare(0,4,"NLNN", 0, 4) == 0)
+                        {
+                            timeout = esp_timer_get_time()/1000;
+                        }
+                        if (event.compare(0,4,"NNSN", 0, 4) == 0)
+                        {
+                            _sys->incrementUnits();
+                            timeout = esp_timer_get_time()/1000;
+                        }
+                        if (event.compare(0,4,"NNLN", 0, 4) == 0)
+                        {
+                            timeout = esp_timer_get_time()/1000;
+                        }
+                        if (event.compare(0,4,"NNNS", 0, 4) == 0)
+                        {
+                            _sys->decrementUnits();
+                            timeout = esp_timer_get_time()/1000;
+                        }
+                        if (event.compare(0,4,"NNNL", 0, 4) == 0)
+                        {
+                            timeout = esp_timer_get_time()/1000;
+                        }
                     }
                 }else if(page == pUPDATE){
                     // NOT SURE IF I WANT TO DO THIS HERE OR IN A DIFFERENT LOOP. STAY TUNED.
@@ -325,28 +326,27 @@ void app_main() {
             } else if (mode == CALIBRATION)
             {
                 /*if(ePage == ){
-           * xSemaphoreGive(pageMutex);
-            if(strcmp(event,"SNNN")){
-          
+           
+                if(strcmp(event,"SNNN")){
+            
+                }
+                if(strcmp(event, "LNNN")){
+                }
+                if(strcmp(event, "NSNN")){
+                
+                }
             }
-            if(strcmp(event, "LNNN")){
-            }
-            if(strcmp(event, "NSNN")){
-              
-            }
-          }
-          else if(ePage == ){
-            if(strcmp(event,"SNNN")){
-              //TODO:  FUNCTION
-            }
-            if(strcmp(event, "LNNN")){
-              //TODO:  FUNCTION
-            }
-            if(strcmp(event, "NSNN")){
-              //TODO: Units
-              incrementUnits();
-              }
-            }*/
+            else if(ePage == ){
+                if(strcmp(event,"SNNN")){
+                //TODO:  FUNCTION
+                }
+                if(strcmp(event, "LNNN")){
+                //TODO:  FUNCTION
+                }
+                if(strcmp(event, "NSNN")){
+                //TODO: FUNCTION
+                }
+                }*/
             }
 
         }
