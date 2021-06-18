@@ -17,11 +17,13 @@
 
 void SystemX::goToSleep(){
 
-    display->displayLogo();
+    //display->displayLogo();
     saveVals();
     vTaskDelay(100);
-    display->displaySleepPrep();
+    //display->displaySleepPrep();
     weight->sleepPreparation();
+    debugPrintln("before blestop");
+    vTaskDelay(20);
     BLEstop();
     
     // These dont' reinitialize on reboot for some reason...
@@ -34,19 +36,14 @@ void SystemX::goToSleep(){
 
 void SystemX::reboot(){
 
-    display->displayLogo();
+    //display->displayLogo();
     saveVals();
     vTaskDelay(100);
-    display->displaySleepPrep();
+    //display->displaySleepPrep();
     weight->sleepPreparation();
     BLEstop();
 
-    // These dont' reinitialize on reboot for some reason...
-    // delete display;
-    // delete buttons;
-    // delete weight;
-    // vTaskDelay(1000);
-    // delete this;
+    
     esp_restart();
 }
 
@@ -112,8 +109,8 @@ void SystemX::getSavedVals(){
 
     this->setUnits(d.u);
     // note: make sure display is created before this
-    this->display->setIntensity(d.intensity);
-    this->display->setColor(d.red,d.green,d.blue);
+    // this->display->setIntensity(d.intensity);
+    // this->display->setColor(d.red,d.green,d.blue);
 
     debugPrint("Units set to: ");
     debugPrintln(unitsToString(d.u));
@@ -121,7 +118,7 @@ void SystemX::getSavedVals(){
 }
 
 void SystemX::saveVals(){
-    Data d = {getUnits(), display->getIntensity(), display->getRed(), display->getGreen(), display->getBlue()};
+    Data d = {getUnits(), 7000, 255,255,255};//display->getIntensity(), display->getRed(), display->getGreen(), display->getBlue()};
     setSaveData(d);
 
 }
@@ -144,7 +141,7 @@ void SystemX::validateDataAcrossObjects(){
             updateBTUnits(getUnits());
         }
         if(UNITS == this->getPage()){
-            this->display->updateUnits(getUnits());
+            //this->display->updateUnits(getUnits());
         }
         
     }
@@ -154,9 +151,7 @@ void SystemX::validateDataAcrossObjects(){
         current = this->weight->getWeightStr();
         // checking if value changes and truncation happen in weight main loop. 
         // If not, it passes -1 which doesn't change the display at all
-        //debugPrint("current: ");
-        //debugPrintln(current);
-        display->updateWeight(current);
+        //display->updateWeight(current);
         // bluetooth value is also updated from here
         
     }
@@ -166,9 +161,14 @@ void SystemX::validateDataAcrossObjects(){
 
 void SystemX::runUpdate(){
     setPage(pUPDATE);
-    this->display->displayUpdateScreen(0);
+    //this->display->displayUpdateScreen(0);
     saveVals();
-    if(setupOTA() == 0){
-        executeOTA();
+    int e = startOTA();
+    if(e == 0){// ready for update, everything is good. Going to disconnect.
+        updateBTStatus(SB_UPDATE_STARTED);
+        // executeOTA();
+        debugPrintln("this is where executeOTA runs");
+    }else if(e == 1){
+        // some other error handling
     }
 }

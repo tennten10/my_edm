@@ -58,15 +58,21 @@ static esp_err_t validate_image_header(esp_app_desc_t *new_app_info) // This che
 void ota_task(void *pvParameter)
 {
     debugPrintln("Starting OTA Task");
-
-        //Retrieves SSID & Password from SPIFFS filesystem
-    //Starts WiFi in STA mode    
+    updateMutex = xSemaphoreCreateMutex();
+    
+    // check server information and confirm
+   
     debugPrintln("before initWiFi");    
-    // if(!isInit()){                                                               //Run flags here to see what goes wrong
+    // if(!isInit()){                                                          
     //     initWiFi();
     // }
     // debugPrintln("after initWiFi");
-    connectWiFi(_sys->getWiFiInfo());
+    if(connectWiFi(_sys->getWiFiInfo()) == 0){
+        debugPrintln("wifi connection error handling");
+
+
+    }
+
     debugPrintln("after connect WiFi");
     if(esp_wifi_get_mode(NULL)==ESP_OK){
       // if it gets in here wifi connection is successful
@@ -84,7 +90,7 @@ void ota_task(void *pvParameter)
 
 
 
-    esp_err_t ota_finish_err = ESP_OK;
+    
     esp_http_client_config_t config = {
         .url = UPDATE_URL, // CONFIG_EXAMPLE_FIRMWARE_UPGRADE_URL,
         //.cert_pem = (char *)server_cert_pem_start,
@@ -105,15 +111,17 @@ void ota_task(void *pvParameter)
     
     esp_err_t err = esp_https_ota_begin(&ota_config, &https_ota_handle);
     // This function is in most recent esp-idf. For now commented out until progress bar is implemented.
-    // int full_size = esp_https_ota_get_image_size(https_ota_handle);
+    int full_size = esp_https_ota_get_image_size(https_ota_handle);
     
     if (err != ESP_OK) {
         debugPrintln("ESP HTTPS OTA Begin failed");
-        vTaskDelete(NULL);
+        vTaskDelete(NULL);  
     }
 
     esp_app_desc_t app_desc;
     err = esp_https_ota_get_img_desc(https_ota_handle, &app_desc);
+    esp_err_t ota_finish_err = ESP_OK;
+    
     long long int t = 0;
     int current = 0;
     int last = 0;
@@ -128,13 +136,19 @@ void ota_task(void *pvParameter)
         goto ota_end;
     }
     // debugPrintln("Made it past header verification so that should be fine");
-    // if(full_size < 1){
-    //     debugPrintln("error reading header file size, printed from ota_task");
-    //     full_size = 1;
-    // }else{
-    //     debugPrint("Full Size: ");
-    //     debugPrintln(full_size);
-    // }
+
+    BLEstop();
+
+
+    
+    
+    if(full_size < 1){
+        debugPrintln("error reading header file size, printed from ota_task");
+        full_size = 1;
+    }else{
+        debugPrint("Full Size: ");
+        debugPrintln(full_size);
+    }
 
     // Note: I'm using a linear correction to hopefully fix the load percentage... It is from collecting a few data points and plotting a graph.
     // I wasn't able to figure out the relationship between the variable t (return value of esp_https_ota_get_image_len_read) and the total size of the downlaod
@@ -147,16 +161,16 @@ void ota_task(void *pvParameter)
         // monitor the status of OTA upgrade by calling esp_https_ota_get_image_len_read, which gives length of image
         // data read so far.
         
-        t = (((esp_https_ota_get_image_len_read(https_ota_handle)-773858) / 5374) +144)/3;
+        t = esp_https_ota_get_image_len_read(https_ota_handle); //(((esp_https_ota_get_image_len_read(https_ota_handle)-773858) / 5374) +144)/3;
          
         debugPrintln(std::to_string(t));
-        // current = t / full_size;
-        // if( current > last){
+        current = t / full_size;
+        if( current > last){
         //     _sys->display->displayUpdateScreen(current);
-        //     last = current;
-        //     debugPrint("Image progress: ");
-        //     debugPrintln(last);
-        // }
+            last = current;
+            debugPrint("Image progress: ");
+            debugPrintln(last);
+        }
     }
 
     if (esp_https_ota_is_complete_data_received(https_ota_handle) != true) {
@@ -184,23 +198,17 @@ ota_end:
 
 // Make sure this is called before executeOTA()
 // This sets up the WiFi and server connection prereqs
-int setupOTA() {
-
-    updateMutex = xSemaphoreCreateMutex();
-    if(_sys->getBattery() < 30 ){
-        debugPrintln(" battery too low for update");
-        return -1;
-    }
+int startOTA() {
 
     
-   
-    BLEstop();
+    if(_sys->getBattery() < 10 ){
+        debugPrintln(" battery too low for update");
+        return SB_UPDATE_FAILED_BATTERY;
+    }
+
+    xTaskCreate(&ota_task, "ota_task", 1024 * 8, NULL, 5, NULL);
 
     return 0;
-}
-
-void executeOTA(){
-    xTaskCreate(&ota_task, "ota_task", 1024 * 8, NULL, 5, NULL);
 }
 
 

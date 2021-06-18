@@ -175,7 +175,7 @@ class ServerCallbacks : public NimBLEServerCallbacks
   void onDisconnect(NimBLEServer *pServer)
   {
     debugPrintln("Client disconnected - start advertising");
-    NimBLEDevice::startAdvertising();
+    // NimBLEDevice::startAdvertising(); // it should stay advertising because of multi-connect. Also causes weird behavior when disconnecting for OTA
   };
 
   /********************* Security handled here **********************
@@ -697,21 +697,21 @@ void BLEstop(){
   std::list<NimBLEClient *> b = *NimBLEDevice::getClientList(); 
   std::list<NimBLEClient *>::iterator it = b.begin();
 
-  for(int i = 0; i < s; i++)
-  {
-      debugPrintln("Bluetooth is connected - disconnect iterator");
+  // for(int i = 0; i < s; i++)
+  // {
+  //     debugPrintln("Bluetooth is connected - disconnect iterator");
       
-      NimBLEDevice::deleteClient(*it);
-      std::advance(it,1);
-  }
-  debugPrintln("All bluetooth connections closed");
+  //     NimBLEDevice::deleteClient(*it);
+  //     std::advance(it,1);
+  // }
+  // debugPrintln("All bluetooth connections closed");
   //return -1;
 
   }
   debugPrintln("after BLEstop1");
-  pServer->stopAdvertising();
+  //pServer->stopAdvertising();
   debugPrintln("after BLEstop2");
-  //NimBLEDevice::deinit(true); // never gets out when I run this. Not sure why.
+  NimBLEDevice::deinit(true); // never gets out when I run this. Not sure why.
   debugPrintln("after BLEsto3");
   
   

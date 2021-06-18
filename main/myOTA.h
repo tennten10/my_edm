@@ -3,7 +3,7 @@
 #ifndef MY_OTA_H
 #define MY_OTA_H
 
-int setupOTA();
+int startOTA();
 void executeOTA();
 
 int getUpdatePercent();

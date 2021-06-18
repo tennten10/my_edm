@@ -10,6 +10,7 @@
 #include "mySPIFFS.h"
 #include "display.h"
 #include "main.h"
+#include "status.h"
 
 #include "nvs.h"
 #include "nvs_flash.h"
@@ -33,7 +34,7 @@ public:
     
     // temp
     void init(){
-        this->display = new DisplayX(); // constructor
+        //this->display = new DisplayX(); // constructor
         vTaskDelay(50);
         this->getSavedVals();
         this->weight->setLocalUnits(eUnits);

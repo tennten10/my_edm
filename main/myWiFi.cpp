@@ -89,15 +89,19 @@ int initWiFi(){
         }
         ESP_ERROR_CHECK(ret);
 
+        vTaskDelay(5);
+
         
 
         ESP_ERROR_CHECK(esp_netif_init());
 
         ESP_ERROR_CHECK(esp_event_loop_create_default());
         esp_netif_create_default_wifi_sta();
+        vTaskDelay(5);
 
         cfg = WIFI_INIT_CONFIG_DEFAULT();
         ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+        vTaskDelay(5);
 
         wifi_config.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
         wifi_config.sta.pmf_cfg.capable = true;
@@ -126,7 +130,7 @@ int disconnectWiFi(){
 
 int connectWiFi(WiFiStruct ws){
     int ret = 0;
-    //if(!initFlag){
+    
         esp_err_t ret0 = nvs_flash_init();
         if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
             // 1.OTA app partition table has a smaller NVS partition size than the non-OTA
@@ -152,8 +156,7 @@ int connectWiFi(WiFiStruct ws){
         wifi_config.sta.pmf_cfg.capable = true;
         wifi_config.sta.pmf_cfg.required = false;
 
-    //    initFlag = true;
-    //}
+    
 
     s_wifi_event_group = xEventGroupCreate();
     debugPrintln("beginning of connectWiFi");
