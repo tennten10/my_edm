@@ -153,11 +153,11 @@ void updateBTBattery(int bat)
 
 void updateBTStatus(int status)
 {
-    int s = status;
+    //int s = status;
     int buffer;
-    debugPrintln(status);
-    debugPrintln((pServer != NULL));
-    debugPrintln((int)(pServer->getConnectedCount()));
+    //debugPrintln(status);
+    //debugPrintln((pServer != NULL));
+    //debugPrintln((int)(pServer->getConnectedCount()));
     if (pServer != NULL && pServer->getConnectedCount())
     {
         if (uxQueueMessagesWaiting(bleStatusQueue) > 4)
@@ -165,7 +165,8 @@ void updateBTStatus(int status)
             xQueueReceive(bleStatusQueue, &buffer, (TickType_t)10);
         }
         xQueueSend(bleStatusQueue, &status, (TickType_t)10);
-        debugPrintln("after sending status to queue");
+        debugPrint("after sending status to queue: ");
+        debugPrintln(status);
     }
     else
     {

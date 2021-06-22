@@ -215,14 +215,14 @@ public:
 
 private:
     const Device device;
-    SemaphoreHandle_t deviceMutex = xSemaphoreCreateMutex();
-    SemaphoreHandle_t pageMutex = xSemaphoreCreateMutex();
-    SemaphoreHandle_t unitsMutex = xSemaphoreCreateMutex();
-    SemaphoreHandle_t batteryMutex = xSemaphoreCreateMutex();
-    SemaphoreHandle_t modeMutex = xSemaphoreCreateMutex();
-    SemaphoreHandle_t weightMutex = xSemaphoreCreateMutex();
-    SemaphoreHandle_t upMutex = xSemaphoreCreateMutex();
-    SemaphoreHandle_t updateFlagMutex = xSemaphoreCreateMutex();
+    SemaphoreHandle_t deviceMutex = xSemaphoreCreateMutex();        // for accessing device information variables
+    SemaphoreHandle_t pageMutex = xSemaphoreCreateMutex();          // for accessing page variable
+    SemaphoreHandle_t unitsMutex = xSemaphoreCreateMutex();         // for accessing units variable
+    SemaphoreHandle_t batteryMutex = xSemaphoreCreateMutex();       //  for accessing battery variable
+    SemaphoreHandle_t modeMutex = xSemaphoreCreateMutex();          //  for accessing mode variable
+    SemaphoreHandle_t weightMutex = xSemaphoreCreateMutex();        //  for accessing local weight variable
+    SemaphoreHandle_t upMutex = xSemaphoreCreateMutex();            // so that two update signals don't run at once
+    SemaphoreHandle_t updateFlagMutex = xSemaphoreCreateMutex();    // for accessing updateFlag variable
 
     void getSavedVals(); // initialize values saved across boots from NVS
     void saveVals();

@@ -120,19 +120,22 @@ void ota_task(void *pvParameter)
         }
         
         esp_http_client_cleanup(client);
-        debugPrint(" server status: ");
+        debugPrint("http server status: ");
         debugPrintln(status);
         if(status != 200){
             queueReturn = SB_UPDATE_FAILED_SERVER;
             xQueueSend(updateErrorQueue, &queueReturn, (TickType_t)10);
             //vTaskDelete(NULL);
             vTaskDelay(100);
+        }else{
+            queueReturn = SB_UPDATE_STARTED;
+            xQueueSend(updateErrorQueue, &queueReturn, (TickType_t)10);
         }
          
     }
          
 
-
+    vTaskDelay(50);
     BLEstop(); // This was later on, but testing with this earlier
     debugPrintln("after BLEstop");
 
@@ -256,8 +259,6 @@ ota_end:
 
 // This sets up the WiFi and server connection prereqs
 int startOTA() {
-
-    
     if(_sys->getBattery() < 10 ){
         debugPrintln(" battery too low for update");
         return SB_UPDATE_FAILED_BATTERY;
@@ -269,13 +270,18 @@ int startOTA() {
         // listen for other errors to return
         if(uxQueueMessagesWaiting(updateErrorQueue) > 0){
             xQueueReceive(updateErrorQueue, &buff, (TickType_t)10);
-            return buff;
+            break;
         }
         vTaskDelay(10);
     }
     vQueueDelete(updateErrorQueue);
-    vTaskDelete(otaTask_h);
-    return 0;
+    if(buff == SB_UPDATE_STARTED){ // case where update is running and needs to run to finish
+        return buff;
+    }else {     // case where update terminates before disconnecting
+        vTaskDelete(otaTask_h);
+        return buff;
+    }
+    
 }
 
 
