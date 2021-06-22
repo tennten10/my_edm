@@ -62,9 +62,9 @@ menu "AAA SUDOBOARD menu"
             string "Firmware Upgrade URL"
             # note: use the firmware.bin file and rename as needed for each version. Overridden in a_config for predefined configurations...
             #default "https://192.168.2.106:8070/hello-world.bin"
-            default "https://storage.cloud.google.com/sb-firmware-00/proto_v1/sb_v1_0_0_1.bin" if SB_V1_HALF_ILI9341 
-            default "https://storage.cloud.google.com/sb-firmware-00/proto_v3/sb_v3_0_0_1.bin" if SB_V3_ST7735S 
-            default "https://storage.cloud.google.com/sb-firmware-00/proto_v6/sb_v6_0_0_1.bin" if SB_V6_FULL_ILI9341 
+            default "https://storage.googleapis.com/sb-firmware-00/proto_v1/sb_v1_0_0_1.bin" if SB_V1_HALF_ILI9341 
+            default "https://storage.googleapis.com/sb-firmware-00/proto_v3/sb_v3_0_0_1.bin" if SB_V3_ST7735S 
+            default "https://storage.googleapis.com/sb-firmware-00/proto_v6/firmware.bin" if SB_V6_FULL_ILI9341 
             help
                 URL of server which hosts the firmware image.
 

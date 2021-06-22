@@ -67,7 +67,8 @@ extern "C" {
 // declare width and height of the display for use later
 #define SB_HORIZ 320
 #define SB_VERT 240
-#define UPDATE_URL "https://storage.googleapis.com/sb-firmware-00/proto_v6/firmware.bin"
+#define UPDATE_URL "https://storage.googleapis.com/sb-firmware-00/firmware_v6.bin"
+#define UPDATE_URL_META "https://storage.googleapis.com/storage/v1/b/sb-firmware-00/o/firmware_v6.bin"
 #endif
 
 

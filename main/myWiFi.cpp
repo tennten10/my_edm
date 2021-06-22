@@ -30,7 +30,7 @@
    the config you want - ie #define EXAMPLE_WIFI_SSID "mywifissid"
 */
 
-static bool initFlag = false;
+//static bool initFlag = false;
 wifi_init_config_t cfg;
 wifi_config_t wifi_config = {};
 
@@ -75,86 +75,138 @@ static void event_handler(void* arg, esp_event_base_t event_base,
 
 
 
-int initWiFi(){
-    //Initialize NVS
-    if(!initFlag){
-        esp_err_t ret = nvs_flash_init();
-        if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-            // 1.OTA app partition table has a smaller NVS partition size than the non-OTA
-            // partition table. This size mismatch may cause NVS initialization to fail.
-            // 2.NVS partition contains data in new format and cannot be recognized by this version of code.
-            // If this happens, we erase NVS partition and initialize NVS again.
-            ESP_ERROR_CHECK(nvs_flash_erase());
-            ret = nvs_flash_init();
-        }
-        ESP_ERROR_CHECK(ret);
+// int initWiFi(){ // not used in connectWifi 
+//     //Initialize NVS
+//     if(!initFlag){
+//         esp_err_t ret = nvs_flash_init();
+//         if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+//             // 1.OTA app partition table has a smaller NVS partition size than the non-OTA
+//             // partition table. This size mismatch may cause NVS initialization to fail.
+//             // 2.NVS partition contains data in new format and cannot be recognized by this version of code.
+//             // If this happens, we erase NVS partition and initialize NVS again.
+//             ESP_ERROR_CHECK(nvs_flash_erase());
+//             ret = nvs_flash_init();
+//         }
+//         ESP_ERROR_CHECK(ret);
 
-        vTaskDelay(5);
+//         vTaskDelay(5);
 
         
 
-        ESP_ERROR_CHECK(esp_netif_init());
+//         ESP_ERROR_CHECK(esp_netif_init());
 
-        ESP_ERROR_CHECK(esp_event_loop_create_default());
-        esp_netif_create_default_wifi_sta();
-        vTaskDelay(5);
+//         ESP_ERROR_CHECK(esp_event_loop_create_default());
+//         esp_netif_create_default_wifi_sta();
+//         vTaskDelay(5);
 
-        cfg = WIFI_INIT_CONFIG_DEFAULT();
-        ESP_ERROR_CHECK(esp_wifi_init(&cfg));
-        vTaskDelay(5);
+//         cfg = WIFI_INIT_CONFIG_DEFAULT();
+//         ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+//         vTaskDelay(5);
 
-        wifi_config.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
-        wifi_config.sta.pmf_cfg.capable = true;
-        wifi_config.sta.pmf_cfg.required = false;
+//         wifi_config.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
+//         wifi_config.sta.pmf_cfg.capable = true;
+//         wifi_config.sta.pmf_cfg.required = false;
 
-        initFlag = true;
-    }
+//         initFlag = true;
+//     }
     
-    return 1;
-}
+//     return 1;
+// }
 
-int isInit(){
-    return initFlag;
-}
+// int isInit(){
+//     return initFlag;
+// }
 
 int stopWiFi(){
     esp_wifi_stop();
     esp_wifi_deinit();
-    initFlag = false;
+    // initFlag = false;
     return 1;
 }
+
 int disconnectWiFi(){
     ESP_ERROR_CHECK(esp_wifi_disconnect());
     return 1;
 }
 
-int connectWiFi(WiFiStruct ws){
+int connectWiFi(WiFiStruct ws){ // starts fully disconnected. Stays on after being run.
     int ret = 0;
+    uint16_t networkNum = 15; 
+    wifi_ap_record_t apRecords[networkNum];
     
-        esp_err_t ret0 = nvs_flash_init();
-        if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-            // 1.OTA app partition table has a smaller NVS partition size than the non-OTA
-            // partition table. This size mismatch may cause NVS initialization to fail.
-            // 2.NVS partition contains data in new format and cannot be recognized by this version of code.
-            // If this happens, we erase NVS partition and initialize NVS again.
-            ESP_ERROR_CHECK(nvs_flash_erase());
-            ret = nvs_flash_init();
+    esp_err_t ret0 = nvs_flash_init();
+    if (ret0 == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+        // 1.OTA app partition table has a smaller NVS partition size than the non-OTA
+        // partition table. This size mismatch may cause NVS initialization to fail.
+        // 2.NVS partition contains data in new format and cannot be recognized by this version of code.
+        // If this happens, we erase NVS partition and initialize NVS again.
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        ret0 = nvs_flash_init();
+    }
+    ESP_ERROR_CHECK(ret0);
+
+    ESP_ERROR_CHECK(esp_netif_init());
+
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
+    esp_netif_create_default_wifi_sta();
+
+    cfg = WIFI_INIT_CONFIG_DEFAULT();
+    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+    
+    // Scanning wifi to check if ssid is valid
+    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
+    ESP_ERROR_CHECK(esp_wifi_start() );
+
+    wifi_scan_config_t scan_config = {
+        .ssid = 0,
+        .bssid = 0,
+        .channel = 0,
+        .show_hidden = false
+    };
+    ESP_ERROR_CHECK(esp_wifi_scan_start(&scan_config, true));
+    esp_err_t e = esp_wifi_scan_get_ap_records(&networkNum, apRecords);
+    if( e != ESP_OK){
+        debugPrintln("error when retrieving ap records");
+        debugPrintln(e);
+        if(e == ESP_ERR_WIFI_NOT_INIT){
+            // WiFi is not initialized by esp_wifi_init
+            debugPrintln("esp_wifi_not_init");
+        }else if(e == ESP_ERR_WIFI_NOT_STARTED){ 
+            // WiFi is not started by esp_wifi_start
+            debugPrintln("esp_wifi_not_started");
+        }else if(e == ESP_ERR_INVALID_ARG){
+            // invalid argument
+            debugPrintln("esp_invalid_arg");
+        }else if(e == ESP_ERR_NO_MEM){
+            //: out of memory
+            debugPrintln("out of memory");
+        }else{
+            debugPrintln("unknown error");
         }
-        ESP_ERROR_CHECK(ret0);
+        disconnectWiFi();
+        stopWiFi();
+        return SB_WIFI_CONNECT_FAIL;
+    }
+    debugPrintln("scan complete, filling return values. Found SSIDs are: ");
+    int ssid_flag = 0;
+    for(int i =0; i < networkNum; i++){
+        if (strcmp(ws.ssid, (char*)apRecords[i].ssid) ==0 ){
+            ssid_flag++;
+        }
+        debugPrintln(std::string((char*)apRecords[i].ssid));
+    }
+    if (ssid_flag == 0 ){
+        disconnectWiFi();
+        stopWiFi();
+        return SB_INVALID_SSID;
+    }
+//
 
-        
+    // Trying to connect with password
 
-        ESP_ERROR_CHECK(esp_netif_init());
-
-        ESP_ERROR_CHECK(esp_event_loop_create_default());
-        esp_netif_create_default_wifi_sta();
-
-        cfg = WIFI_INIT_CONFIG_DEFAULT();
-        ESP_ERROR_CHECK(esp_wifi_init(&cfg));
-
-        wifi_config.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
-        wifi_config.sta.pmf_cfg.capable = true;
-        wifi_config.sta.pmf_cfg.required = false;
+    wifi_config.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
+    wifi_config.sta.pmf_cfg.capable = true;
+    wifi_config.sta.pmf_cfg.required = false;
 
     
 
@@ -180,7 +232,7 @@ int connectWiFi(WiFiStruct ws){
                                sizeof(ws.pswd));
     debugPrintln("set ssid and password");
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config) );
-    ESP_ERROR_CHECK(esp_wifi_start() );
+    ESP_ERROR_CHECK(esp_wifi_connect() );
     debugPrintln("wifi_start :)");
 
     /* Waiting until either the connection is established (WIFI_CONNECTED_BIT) or connection failed for the maximum
@@ -205,10 +257,10 @@ int connectWiFi(WiFiStruct ws){
         debugPrint(ws.ssid);
         debugPrint(" password:");
         debugPrintln(ws.pswd);
-        ret = 2;
+        ret = SB_INVALID_PSWD;
     } else {
         debugPrintln("UNEXPECTED EVENT");
-        ret = 5;
+        ret = SB_WIFI_CONNECT_FAIL;
     }
 
     /* The event will not be processed after unregister */
@@ -216,11 +268,11 @@ int connectWiFi(WiFiStruct ws){
     ESP_ERROR_CHECK(esp_event_handler_instance_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID, instance_any_id));
     vEventGroupDelete(s_wifi_event_group);
 
-    return ret;
+    return SB_WIFI_CONNECT_SUCCESS;
 }
 
 
-bool verifyWiFiInfo(WiFiStruct w){ // char& s, char& p){ //WiFiStruct wfi
+bool verifyWiFiInfo(WiFiStruct w){ // starts fully disconnected. Ends fully disconnected.
     //char _s[32];
     //char _p[64];
     //strcpy(_s, &s);
@@ -228,18 +280,8 @@ bool verifyWiFiInfo(WiFiStruct w){ // char& s, char& p){ //WiFiStruct wfi
     char s_temp[32];
     char p_temp[64];
     int ret = 0;
-
-
-    if(!isInit()){
-
-        s_wifi_event_group = xEventGroupCreate();
-        esp_event_handler_instance_t instance_any_id;
-        esp_event_handler_instance_t instance_got_ip;
-        
-    }
     
     // if already connected, disconnect 
-
     disconnectWiFi();
     
     // save previous connection info
@@ -248,7 +290,7 @@ bool verifyWiFiInfo(WiFiStruct w){ // char& s, char& p){ //WiFiStruct wfi
         strcpy(p_temp, (char*)wifi_config.sta.password);
     }
     
-    // set new ssid, password
+    // init, connect, and set set new ssid, password
     ret = connectWiFi(w);
 
 
@@ -259,7 +301,6 @@ bool verifyWiFiInfo(WiFiStruct w){ // char& s, char& p){ //WiFiStruct wfi
     }
 
     // if unsuccessful, reset old ssid, password and return false
-
     if(ret != 1){
         // successfully disconnected
         // reset to old ssid, password
@@ -276,29 +317,27 @@ bool verifyWiFiInfo(WiFiStruct w){ // char& s, char& p){ //WiFiStruct wfi
 
 
 
-void scanNetworks(uint16_t& num, std::string * ap) {
+void scanNetworks(uint16_t& num, std::string * ap) { // starts fully disconnected. Ends fully disconnected.
     uint16_t networkNum = num; 
     wifi_ap_record_t apRecords[networkNum];
     // nvs init... ? not sure if I need to re-disable this when I'm done or not
-    if(!initFlag)
-    {   
-        esp_err_t ret = nvs_flash_init();
-        if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-            // 1.OTA app partition table has a smaller NVS partition size than the non-OTA
-            // partition table. This size mismatch may cause NVS initialization to fail.
-            // 2.NVS partition contains data in new format and cannot be recognized by this version of code.
-            // If this happens, we erase NVS partition and initialize NVS again.
-            ESP_ERROR_CHECK(nvs_flash_erase());
-            ret = nvs_flash_init();
-        }
-        ESP_ERROR_CHECK(ret);
+      
+    esp_err_t ret = nvs_flash_init();
+    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+        // 1.OTA app partition table has a smaller NVS partition size than the non-OTA
+        // partition table. This size mismatch may cause NVS initialization to fail.
+        // 2.NVS partition contains data in new format and cannot be recognized by this version of code.
+        // If this happens, we erase NVS partition and initialize NVS again.
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        ret = nvs_flash_init();
     }
-    // wifi init
+    ESP_ERROR_CHECK(ret);
+
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
     // wifi scan, but without setting ssid, etc???
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA) );
-    //ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, ) );
+    
     ESP_ERROR_CHECK(esp_wifi_start() );
     wifi_scan_config_t scan_config = {
         .ssid = 0,

@@ -183,13 +183,31 @@ public:
         }
         return ret;
     }
-    
 
+    void setUpdateFlag(){
+        if(xSemaphoreTake(updateFlagMutex, (TickType_t) 10)==pdTRUE){
+            updateFlag = true;
+            xSemaphoreGive(updateFlagMutex);
+        }else{
+            debugPrintln("could not get updateFlagMutex in setUpdateFlag");
+        }
+    }
+    bool getUpdateFlag(){
+        static bool ret = false;
+        if(xSemaphoreTake(updateFlagMutex, (TickType_t) 10)==pdTRUE){
+            ret = updateFlag;
+            xSemaphoreGive(updateFlagMutex);
+        }else{
+            debugPrintln("could not get deviceMutex in getWiFiInfo");
+        }
+        return ret;
+    }
+    
     void validateDataAcrossObjects();
 
     bool callbackFlag = true;
-
-
+    bool updateFlag = false;
+    
     DisplayX *display; 
     ButtonsX *buttons; 
     WeightX *weight;
@@ -203,12 +221,14 @@ private:
     SemaphoreHandle_t batteryMutex = xSemaphoreCreateMutex();
     SemaphoreHandle_t modeMutex = xSemaphoreCreateMutex();
     SemaphoreHandle_t weightMutex = xSemaphoreCreateMutex();
+    SemaphoreHandle_t upMutex = xSemaphoreCreateMutex();
+    SemaphoreHandle_t updateFlagMutex = xSemaphoreCreateMutex();
 
     void getSavedVals(); // initialize values saved across boots from NVS
     void saveVals();
     
     Units eUnits = kg;
-    int batteryLevel;
+    int batteryLevel = 100;
 
     MODE eMode = STANDARD;
     PAGE ePage = WEIGHTSTREAM;

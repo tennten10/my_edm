@@ -12,47 +12,77 @@
 #include "freertos/task.h"
 #include "freertos/semphr.h"
 
+#include "status.h"
+
 // Data Type Definitions
- 
-typedef enum {g, kg, oz, lb, err} Units;
-typedef enum{BOOT, SHUTDOWN, CALIBRATION, sUPDATE, STANDARD } MODE; 
-typedef enum{WEIGHTSTREAM, SETTINGS, INFO, UNITS, pUPDATE} PAGE;
-typedef enum{ debugBT, debugSERIAL, debugTELNET, PRODUCTION} DEBUG;
 
-struct WiFiStruct{
-  int active; // = 0;
-  char ssid[32]; // = {""};
-  char pswd[64]; // = {""};
+typedef enum
+{
+    g,
+    kg,
+    oz,
+    lb,
+    err
+} Units;
+typedef enum
+{
+    BOOT,
+    SHUTDOWN,
+    CALIBRATION,
+    sUPDATE,
+    STANDARD
+} MODE;
+typedef enum
+{
+    WEIGHTSTREAM,
+    SETTINGS,
+    INFO,
+    UNITS,
+    pUPDATE
+} PAGE;
+typedef enum
+{
+    debugBT,
+    debugSERIAL,
+    debugTELNET,
+    PRODUCTION
+} DEBUG;
 
-  WiFiStruct() : active(0), ssid(""), pswd(""){}
-  WiFiStruct(int act, std::string ss, std::string ps ){
-    active = act;
-    strcpy(ssid, ss.c_str());
-    strcpy(pswd, ps.c_str());
-  }
-  
+struct WiFiStruct
+{
+    int active;    // = 0;
+    char ssid[32]; // = {""};
+    char pswd[64]; // = {""};
+
+    WiFiStruct() : active(0), ssid(""), pswd("") {}
+    WiFiStruct(int act, std::string ss, std::string ps)
+    {
+        active = act;
+        strcpy(ssid, ss.c_str());
+        strcpy(pswd, ps.c_str());
+    }
 };
 
-struct Device{
-  char SN[9];    // 8 digits
-  char VER[32];  // starting at 0.1  
+struct Device
+{
+    char SN[9];   // 8 digits
+    char VER[32]; // starting at 0.1
 };
 
-struct Data{
-  Units u;
-  int intensity;
-  int red;
-  int green;
-  int blue;
+struct Data
+{
+    Units u;
+    int intensity;
+    int red;
+    int green;
+    int blue;
 };
 
 Units stringToUnits(std::string v);
 std::string unitsToString(Units u);
 
-
-
 // #ifdef __cplusplus
 // }
 // #endif
 
-#endif  
+#endif

@@ -44,9 +44,7 @@
  *********************/
 #define LV_TICK_PERIOD_MS 1
 
-
 extern SystemX *_sys;
-
 
 ledc_channel_config_t b_ledc_c_config{
     .gpio_num = ledB,
@@ -97,17 +95,12 @@ LV_FONT_DECLARE(montserrat_70);
 LV_FONT_DECLARE(montserrat_90);
 LV_FONT_DECLARE(montserrat_120);
 
-
-
 //     /* If you want to use a task to create the graphic, you NEED to create a Pinned task
 //       * Otherwise there can be problem such as memory corruption and so on.
 //       * NOTE: When not using Wi-Fi nor Bluetooth you can pin the guiTask to core 0 */
 //     xTaskCreatePinnedToCore(displayTask, "display", 4096 * 2, NULL, 0, &displayHandler_TH, 1);
 
-
-
-
-//static 
+//static
 void DisplayX::Main()
 {
     /* Creates a semaphore to handle concurrent call to lvgl stuff
@@ -115,7 +108,7 @@ void DisplayX::Main()
     * you should lock on the very same semaphore! */
     xGuiSemaphore = xSemaphoreCreateMutex();
     debugPrint("starting display loop: ");
-    debugPrintln((int)esp_timer_get_time()/1000 );
+    debugPrintln((int)esp_timer_get_time() / 1000);
     lv_init();
 
     /* Initialize SPI or I2C bus used by the drivers */
@@ -135,24 +128,21 @@ void DisplayX::Main()
     };
 
     ledc_timer_config(&ledc_timer);
-    
 
 #if defined(CONFIG_SB_V1_HALF_ILI9341) || defined(CONFIG_SB_V6_FULL_ILI9341)
-  ledc_channel_config(&b_ledc_c_config);
-  ledc_fade_func_install(0);
-  
-  ledc_set_duty_and_update(b_ledc_c_config.speed_mode, b_ledc_c_config.channel, intensity, 0);
+    ledc_channel_config(&b_ledc_c_config);
+    ledc_fade_func_install(0);
+
+    ledc_set_duty_and_update(b_ledc_c_config.speed_mode, b_ledc_c_config.channel, intensity, 0);
 #endif
 #ifdef CONFIG_SB_V3_ST7735S
-  ledc_channel_config(&r_ledc_c_config);
-  ledc_channel_config(&g_ledc_c_config);
-  ledc_channel_config(&b_ledc_c_config);
-  ledc_set_duty_and_update(r_ledc_c_config.speed_mode, r_ledc_c_config.channel, 100, 0);
-  ledc_set_duty_and_update(g_ledc_c_config.speed_mode, g_ledc_c_config.channel, 100, 0);
-  ledc_set_duty_and_update(b_ledc_c_config.speed_mode, b_ledc_c_config.channel, 100, 0);
+    ledc_channel_config(&r_ledc_c_config);
+    ledc_channel_config(&g_ledc_c_config);
+    ledc_channel_config(&b_ledc_c_config);
+    ledc_set_duty_and_update(r_ledc_c_config.speed_mode, r_ledc_c_config.channel, 100, 0);
+    ledc_set_duty_and_update(g_ledc_c_config.speed_mode, g_ledc_c_config.channel, 100, 0);
+    ledc_set_duty_and_update(b_ledc_c_config.speed_mode, b_ledc_c_config.channel, 100, 0);
 #endif
-
-
 
     /* Use double buffered when not working with monochrome displays */
 #ifndef CONFIG_LV_TFT_DISPLAY_MONOCHROME
@@ -165,7 +155,6 @@ void DisplayX::Main()
     //static lv_disp_buf_t disp_buf;
 
     uint32_t size_in_px = DISP_BUF_SIZE;
-
 
     /* Initialize the working buffer depending on the selected display.
       * NOTE: buf2 == NULL when using monochrome displays. */
@@ -210,19 +199,18 @@ void DisplayX::Main()
 
     // draw my starting screen
     long t = esp_timer_get_time() / 1000;
-    
+
     displayLogo();
-    while (!ready)  //esp_timer_get_time() / 1000 - t < 500)
+    while (!ready) //esp_timer_get_time() / 1000 - t < 500)
     {
         lv_task_handler();
         vTaskDelay(10);
     }
     vTaskDelay(100);
-    
 
     // pageTestRoutine((long)(esp_timer_get_time() / 1000));
     debugPrint("end of display init: ");
-    debugPrintln((int)esp_timer_get_time()/1000);
+    debugPrintln((int)esp_timer_get_time() / 1000);
     while (1)
     {
         /* Delay 1 tick (assumes FreeRTOS tick is 10ms */
@@ -231,10 +219,12 @@ void DisplayX::Main()
         /* Try to take the semaphore, call lvgl related function on success */
         if (disp_flag && pdTRUE == xSemaphoreTake(xGuiSemaphore, portMAX_DELAY))
         {
-          lv_task_handler();
-          xSemaphoreGive(xGuiSemaphore);
-        }else{
-          debugPrintln("Could not get xGuiSemaphore in main display loop");
+            lv_task_handler();
+            xSemaphoreGive(xGuiSemaphore);
+        }
+        else
+        {
+            debugPrintln("Could not get xGuiSemaphore in main display loop");
         }
     }
 
@@ -267,10 +257,10 @@ void DisplayX::styleInit()
 
 #endif
 #ifdef CONFIG_SB_V3_ST7735S
-    
+
     // lv_style_set_text_font(&weightStyle_s, LV_STATE_DEFAULT, &lv_font_montserrat_40);
     // lv_style_set_text_color(&weightStyle_s, LV_STATE_DEFAULT, LV_COLOR_WHITE);
-    
+
     // lv_style_set_text_font(&weightStyle_m, LV_STATE_DEFAULT, &lv_font_montserrat_40);
     // lv_style_set_text_color(&weightStylem, LV_STATE_DEFAULT, LV_COLOR_WHITE);
 
@@ -279,7 +269,7 @@ void DisplayX::styleInit()
 
     lv_style_set_text_font(&unitStyle, LV_STATE_DEFAULT, &lv_font_montserrat_40);
     lv_style_set_text_color(&unitStyle, LV_STATE_DEFAULT, LV_COLOR_WHITE);
-    
+
     lv_style_set_bg_color(&logoStyle, LV_STATE_DEFAULT, LV_COLOR_BLACK);
 
     lv_style_set_bg_color(&backgroundStyle, LV_STATE_DEFAULT, LV_COLOR_BLACK);
@@ -290,14 +280,14 @@ void DisplayX::styleInit()
 
     lv_style_set_bg_opa(&transpCont, LV_STATE_DEFAULT, 0);
     lv_style_set_border_opa(&transpCont, LV_STATE_DEFAULT, 0);
-  
+
 #endif
 #ifdef CONFIG_SB_V6_FULL_ILI9341
-// TODO: just copy and pasted for now... need to change things up
-    
+    // TODO: just copy and pasted for now... need to change things up
+
     lv_style_set_text_font(&weightStyle, LV_STATE_DEFAULT, &vt323_140);
     lv_style_set_text_color(&weightStyle, LV_STATE_DEFAULT, LV_COLOR_WHITE);
-    
+
     // lv_style_set_text_font(&weightStyle_m, LV_STATE_DEFAULT, &lv_font_montserrat_90);
     // lv_style_set_text_color(&weightStylem, LV_STATE_DEFAULT, LV_COLOR_WHITE);
 
@@ -306,9 +296,7 @@ void DisplayX::styleInit()
 
     lv_style_set_text_font(&unitStyle, LV_STATE_DEFAULT, &vt323_140);
     lv_style_set_text_color(&unitStyle, LV_STATE_DEFAULT, LV_COLOR_WHITE);
-    
 
-    
     lv_style_set_bg_color(&logoStyle, LV_STATE_DEFAULT, LV_COLOR_BLACK);
 
     lv_style_set_bg_color(&backgroundStyle, LV_STATE_DEFAULT, LV_COLOR_BLACK);
@@ -319,7 +307,7 @@ void DisplayX::styleInit()
 
     lv_style_set_bg_opa(&transpCont, LV_STATE_DEFAULT, 0);
     lv_style_set_border_opa(&transpCont, LV_STATE_DEFAULT, 0);
-  
+
 #endif
 }
 
@@ -343,7 +331,6 @@ void DisplayX::pageTestRoutine(long t)
             lv_task_handler();
             xSemaphoreGive(xGuiSemaphore);
         }
-        
 
         if (esp_timer_get_time() / 1000 - t < show && flag1)
         {
@@ -435,7 +422,6 @@ void DisplayX::pageTestRoutine(long t)
     }
 }
 
-
 void DisplayX::lv_tick_task(void *arg)
 {
     (void)arg;
@@ -447,632 +433,674 @@ void DisplayX::lv_tick_task(void *arg)
 
 void DisplayX::resizeWeight(char *w)
 {
-  static int lastLen = 0;
-  //printf("resizeWeight: %d, %d\n", strlen(w), lastLen);
+    static int lastLen = 0;
+    //printf("resizeWeight: %d, %d\n", strlen(w), lastLen);
 
 #ifdef CONFIG_SB_V1_HALF_ILI9341
-  if (strlen(w) > 4)
-  {
-    //tft.setFont(3);
-  }
-  else if (strlen(w) > 3)
-  {
-    //tft.setFont(4);
-  }
-  else if (strlen(w) > 2)
-  {
-    //tft.setFont(5);
-  }
-  else
-  {
-    //tft.setFont(6);
-  }
+    if (strlen(w) > 4)
+    {
+        //tft.setFont(3);
+    }
+    else if (strlen(w) > 3)
+    {
+        //tft.setFont(4);
+    }
+    else if (strlen(w) > 2)
+    {
+        //tft.setFont(5);
+    }
+    else
+    {
+        //tft.setFont(6);
+    }
 #endif
 
 #ifdef CONFIG_SB_V3_ST7735S
-  
 
-  if (strlen(w) > 4)
-  { // TODO: Figure out proper font sizes for this resizing function
-    //style
-    debugPrintln("size 3 Font");
-  }
-  else if (strlen(w) > 3 && lastLen != 3)
-  {
-    
-    debugPrintln("size 3' Font");
-  }
-  else if (strlen(w) > 2)
-  {
-    
-    debugPrintln("size 4 Font");
-  }
-  else
-  {
-    
-    debugPrintln("size 4 default Font");
-  }
+    if (strlen(w) > 4)
+    { // TODO: Figure out proper font sizes for this resizing function
+        //style
+        debugPrintln("size 3 Font");
+    }
+    else if (strlen(w) > 3 && lastLen != 3)
+    {
+
+        debugPrintln("size 3' Font");
+    }
+    else if (strlen(w) > 2)
+    {
+
+        debugPrintln("size 4 Font");
+    }
+    else
+    {
+
+        debugPrintln("size 4 default Font");
+    }
 #endif
 
 #ifdef CONFIG_SB_V6_FULL_ILI9341
-  if (strlen(w) > 7)
-  {
-    if(lastLen > 7){
-      //lv_style_reset(&weightStyle);
-      lv_style_remove_prop(&weightStyle, LV_STYLE_TEXT_FONT);
-      lv_style_set_text_font(&weightStyle, LV_STATE_DEFAULT, &vt323_120); 
-      //lv_style_set_text_color(&weightStyle, LV_STATE_DEFAULT, LV_COLOR_WHITE);
+    if (strlen(w) > 7)
+    {
+        if (lastLen > 7)
+        {
+            //lv_style_reset(&weightStyle);
+            lv_style_remove_prop(&weightStyle, LV_STYLE_TEXT_FONT);
+            lv_style_set_text_font(&weightStyle, LV_STATE_DEFAULT, &vt323_120);
+            //lv_style_set_text_color(&weightStyle, LV_STATE_DEFAULT, LV_COLOR_WHITE);
+        }
     }
-  }
-  else if (strlen(w) > 4)
-  {
-    if(lastLen > 4){
-      //lv_style_reset(&weightStyle);
-      lv_style_remove_prop(&weightStyle, LV_STYLE_TEXT_FONT);
-      lv_style_set_text_font(&weightStyle, LV_STATE_DEFAULT, &vt323_130); 
-      //lv_style_set_text_color(&weightStyle, LV_STATE_DEFAULT, LV_COLOR_WHITE);
-    }  
-  }
-  else if (strlen(w) > 0 )
-  {
-    if(lastLen > 0){
-      //lv_style_reset(&weightStyle);
-      lv_style_remove_prop(&weightStyle, LV_STYLE_TEXT_FONT);
-      lv_style_set_text_font(&weightStyle, LV_STATE_DEFAULT, &vt323_140);
-      //lv_style_set_text_color(&weightStyle, LV_STATE_DEFAULT, LV_COLOR_WHITE);
-    } 
-  }
-  else
-  {
-    
-  }
+    else if (strlen(w) > 4)
+    {
+        if (lastLen > 4)
+        {
+            //lv_style_reset(&weightStyle);
+            lv_style_remove_prop(&weightStyle, LV_STYLE_TEXT_FONT);
+            lv_style_set_text_font(&weightStyle, LV_STATE_DEFAULT, &vt323_130);
+            //lv_style_set_text_color(&weightStyle, LV_STATE_DEFAULT, LV_COLOR_WHITE);
+        }
+    }
+    else if (strlen(w) > 0)
+    {
+        if (lastLen > 0)
+        {
+            //lv_style_reset(&weightStyle);
+            lv_style_remove_prop(&weightStyle, LV_STYLE_TEXT_FONT);
+            lv_style_set_text_font(&weightStyle, LV_STATE_DEFAULT, &vt323_140);
+            //lv_style_set_text_color(&weightStyle, LV_STATE_DEFAULT, LV_COLOR_WHITE);
+        }
+    }
+    else
+    {
+    }
 #endif
-  lastLen = strlen(w);
-  //debugPrintln("end of resizeWeight");
+    lastLen = strlen(w);
+    //debugPrintln("end of resizeWeight");
 }
 
 // displayWeight should be called first. This only updates the number value
-void DisplayX::updateWeight(std::string weight){
-  if(weight.compare("-1") == 0){
-    // TODO: have a way to check if the screen already has that value so it doesn't waste time doing it again.
-    debugPrintln("breaking out of updateWeight");
-    return;
-  }
-  if(xSemaphoreTake(xGuiSemaphore, portMAX_DELAY)==pdTRUE){
-    static char now[16];
-    if(weightLabel != NULL){
-      strcpy(now, weight.c_str());
-      debugPrintln(now);
-      resizeWeight(now);
-      lv_label_set_text_fmt(weightLabel, "%s", now);
-      //lv_obj_remove_style(weightLabel, LV_OBJ_PART_MAIN, &weightStyle);
-      //lv_obj_add_style(weightLabel, LV_OBJ_PART_MAIN, &weightStyle);
-      // lv_label_set_text(weightLabel, weight.c_str());
+void DisplayX::updateWeight(std::string weight)
+{
+    if (weight.compare("-1") == 0)
+    {
+        // TODO: have a way to check if the screen already has that value so it doesn't waste time doing it again.
+        debugPrintln("breaking out of updateWeight");
+        return;
     }
-    xSemaphoreGive(xGuiSemaphore);
-  }else{
-    debugPrintln("could not get xGuiSemaphore in updateWeight");
-  }
+    if (xSemaphoreTake(xGuiSemaphore, portMAX_DELAY) == pdTRUE)
+    {
+        static char now[16];
+        if (weightLabel != NULL)
+        {
+            strcpy(now, weight.c_str());
+            debugPrintln(now);
+            resizeWeight(now);
+            lv_label_set_text_fmt(weightLabel, "%s", now);
+            //lv_obj_remove_style(weightLabel, LV_OBJ_PART_MAIN, &weightStyle);
+            //lv_obj_add_style(weightLabel, LV_OBJ_PART_MAIN, &weightStyle);
+            // lv_label_set_text(weightLabel, weight.c_str());
+        }
+        xSemaphoreGive(xGuiSemaphore);
+    }
+    else
+    {
+        debugPrintln("could not get xGuiSemaphore in updateWeight");
+    }
 }
 
 // This one is for the first time
 void DisplayX::displayWeight(std::string weight)
 {
-  if(weight.compare("-1") == 0){
-    // TODO: have a way to check if the screen already has that value so it doesn't waste time doing it again.
-    debugPrintln("breaking out of displayWeight");
-    return;
-  }
-  debugPrintln(weight);
-  debugPrint(" gets past catching -1 value in displayWeight: ");
-  if(xSemaphoreTake(xGuiSemaphore, portMAX_DELAY)==pdTRUE){
-    debugPrintln("Got xGuiSemaphore in displayWeight");
-    
-    static char now[32];
-    strcpy(now, weight.c_str());
-    resizeWeight(now); // lv_obj_refresh_style(obj, part, property);?
-    //debugPrintln(now);
-    //debugPrintln(weight.c_str());
-    
-    debugPrintln("umm here 1");
-    lv_obj_t *bkgrnd = lv_obj_create(lv_scr_act(), NULL);
-    debugPrintln("umm here 1.1");
-    lv_obj_t *cont = lv_cont_create(bkgrnd, NULL);
-    debugPrintln("umm here 1.2");
-    weightLabel = lv_label_create(cont, NULL);
-    debugPrintln("umm here 2");
-    lv_cont_set_fit(cont, LV_FIT_PARENT);
-    lv_cont_set_layout(cont, LV_LAYOUT_CENTER);
-    debugPrintln("umm here 3");
+    if (weight.compare("-1") == 0)
+    {
+        // TODO: have a way to check if the screen already has that value so it doesn't waste time doing it again.
+        debugPrintln("breaking out of displayWeight");
+        return;
+    }
+    debugPrintln(weight);
+    debugPrint(" gets past catching -1 value in displayWeight: ");
+    if (xSemaphoreTake(xGuiSemaphore, portMAX_DELAY) == pdTRUE)
+    {
+        debugPrintln("Got xGuiSemaphore in displayWeight");
 
-  #ifdef CONFIG_SB_V1_HALF_ILI9341
-    lv_obj_set_width(bkgrnd, SB_HORIZ);
-    lv_obj_set_height(bkgrnd, SB_VERT);
-    lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
+        static char now[32];
+        strcpy(now, weight.c_str());
+        resizeWeight(now); // lv_obj_refresh_style(obj, part, property);?
+        //debugPrintln(now);
+        //debugPrintln(weight.c_str());
 
-    lv_obj_align(cont, NULL, LV_ALIGN_CENTER, 0, 0);
-    lv_obj_add_style(bkgrnd, LV_OBJ_PART_MAIN, &backgroundStyle);
-    lv_obj_add_style(cont, LV_OBJ_PART_MAIN, &transpCont);
-    lv_obj_add_style(weightLabel, LV_OBJ_PART_MAIN, &weightStyle);
-  #endif
-  #ifdef CONFIG_SB_V3_ST7735S
-    lv_obj_set_width(bkgrnd, SB_HORIZ);
-    lv_obj_set_height(bkgrnd, SB_VERT);
-    lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
+        debugPrintln("umm here 1");
+        lv_obj_t *bkgrnd = lv_obj_create(lv_scr_act(), NULL);
+        debugPrintln("umm here 1.1");
+        lv_obj_t *cont = lv_cont_create(bkgrnd, NULL);
+        debugPrintln("umm here 1.2");
+        weightLabel = lv_label_create(cont, NULL);
+        debugPrintln("umm here 2");
+        lv_cont_set_fit(cont, LV_FIT_PARENT);
+        lv_cont_set_layout(cont, LV_LAYOUT_CENTER);
+        debugPrintln("umm here 3");
 
-    lv_obj_align(cont, NULL, LV_ALIGN_CENTER, 0, 0);
-    lv_obj_add_style(bkgrnd, LV_OBJ_PART_MAIN, &backgroundStyle);
-    lv_obj_add_style(cont, LV_OBJ_PART_MAIN, &transpCont);
-    lv_obj_add_style(weightLabel, LV_OBJ_PART_MAIN, &weightStyle);
+#ifdef CONFIG_SB_V1_HALF_ILI9341
+        lv_obj_set_width(bkgrnd, SB_HORIZ);
+        lv_obj_set_height(bkgrnd, SB_VERT);
+        lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
 
-  #endif
+        lv_obj_align(cont, NULL, LV_ALIGN_CENTER, 0, 0);
+        lv_obj_add_style(bkgrnd, LV_OBJ_PART_MAIN, &backgroundStyle);
+        lv_obj_add_style(cont, LV_OBJ_PART_MAIN, &transpCont);
+        lv_obj_add_style(weightLabel, LV_OBJ_PART_MAIN, &weightStyle);
+#endif
+#ifdef CONFIG_SB_V3_ST7735S
+        lv_obj_set_width(bkgrnd, SB_HORIZ);
+        lv_obj_set_height(bkgrnd, SB_VERT);
+        lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
 
-  #ifdef CONFIG_SB_V6_FULL_ILI9341
-    lv_obj_set_width(bkgrnd, SB_HORIZ);
-    lv_obj_set_height(bkgrnd, SB_VERT);
-    lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
-    lv_label_set_text_fmt(weightLabel, "%s", now);
-  debugPrintln("umm here 4");
+        lv_obj_align(cont, NULL, LV_ALIGN_CENTER, 0, 0);
+        lv_obj_add_style(bkgrnd, LV_OBJ_PART_MAIN, &backgroundStyle);
+        lv_obj_add_style(cont, LV_OBJ_PART_MAIN, &transpCont);
+        lv_obj_add_style(weightLabel, LV_OBJ_PART_MAIN, &weightStyle);
 
-    lv_obj_align(cont, NULL, LV_ALIGN_IN_RIGHT_MID, 0, 0);
-    lv_obj_add_style(bkgrnd, LV_OBJ_PART_MAIN, &backgroundStyle);
-    lv_obj_add_style(cont, LV_OBJ_PART_MAIN, &transpCont);
-    lv_obj_add_style(weightLabel, LV_OBJ_PART_MAIN, &weightStyle);
-    debugPrintln("umm here 5");
-  #endif
-    xSemaphoreGive(xGuiSemaphore);
-    debugPrintln("gave back xGuiSemaphore in displayWeight");
-  }else{
-    debugPrintln("could not get xGuiSemaphore in displayWeight");
-  }
+#endif
+
+#ifdef CONFIG_SB_V6_FULL_ILI9341
+        lv_obj_set_width(bkgrnd, SB_HORIZ);
+        lv_obj_set_height(bkgrnd, SB_VERT);
+        lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
+        lv_label_set_text_fmt(weightLabel, "%s", now);
+        debugPrintln("umm here 4");
+
+        lv_obj_align(cont, NULL, LV_ALIGN_IN_RIGHT_MID, 0, 0);
+        lv_obj_add_style(bkgrnd, LV_OBJ_PART_MAIN, &backgroundStyle);
+        lv_obj_add_style(cont, LV_OBJ_PART_MAIN, &transpCont);
+        lv_obj_add_style(weightLabel, LV_OBJ_PART_MAIN, &weightStyle);
+        debugPrintln("umm here 5");
+#endif
+        xSemaphoreGive(xGuiSemaphore);
+        debugPrintln("gave back xGuiSemaphore in displayWeight");
+    }
+    else
+    {
+        debugPrintln("could not get xGuiSemaphore in displayWeight");
+    }
 }
 
-  // Units
+// Units
 void DisplayX::displayUnits(Units u)
 {
-  if(xSemaphoreTake(xGuiSemaphore, portMAX_DELAY)==pdTRUE){
-    debugPrintln("got xGuiSemaphore in displayUnits");
-    
-    lv_obj_t *bkgrnd = lv_obj_create(lv_scr_act(), NULL);
-    lv_obj_t *cont = lv_cont_create(bkgrnd, NULL);
-    unitsLabel = lv_label_create(cont, NULL);
+    if (xSemaphoreTake(xGuiSemaphore, portMAX_DELAY) == pdTRUE)
+    {
+        debugPrintln("got xGuiSemaphore in displayUnits");
 
-    lv_cont_set_fit(cont, LV_FIT_PARENT);
-    lv_cont_set_layout(cont, LV_LAYOUT_CENTER);
+        lv_obj_t *bkgrnd = lv_obj_create(lv_scr_act(), NULL);
+        lv_obj_t *cont = lv_cont_create(bkgrnd, NULL);
+        unitsLabel = lv_label_create(cont, NULL);
 
-  #ifdef CONFIG_SB_V1_HALF_ILI9341
-  #endif
-  #ifdef CONFIG_SB_V3_ST7735S
-    lv_obj_set_width(bkgrnd, SB_HORIZ);
-    lv_obj_set_height(bkgrnd, SB_VERT);
-    lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
-    
-  #endif
-  #ifdef CONFIG_SB_V6_FULL_ILI9341
-    lv_obj_set_width(bkgrnd, SB_HORIZ);
-    lv_obj_set_height(bkgrnd, SB_VERT);
-    lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
-  #endif
-      
-    lv_label_set_text(unitsLabel, unitsToString(u).c_str());
+        lv_cont_set_fit(cont, LV_FIT_PARENT);
+        lv_cont_set_layout(cont, LV_LAYOUT_CENTER);
 
-    lv_obj_align(cont, NULL, LV_ALIGN_CENTER, 0, 0);
-    lv_obj_add_style(bkgrnd, LV_OBJ_PART_MAIN, &backgroundStyle);
-    lv_obj_add_style(cont, LV_OBJ_PART_MAIN, &transpCont);
-    lv_obj_add_style(unitsLabel, LV_OBJ_PART_MAIN, &unitStyle);
-    xSemaphoreGive(xGuiSemaphore);
-    debugPrintln("gave back xGuiSemaphore in displayUnits");
-  }else{
-    debugPrintln("could not get xGuiSemaphore in displayUnits");
-  }
+#ifdef CONFIG_SB_V1_HALF_ILI9341
+#endif
+#ifdef CONFIG_SB_V3_ST7735S
+        lv_obj_set_width(bkgrnd, SB_HORIZ);
+        lv_obj_set_height(bkgrnd, SB_VERT);
+        lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
+
+#endif
+#ifdef CONFIG_SB_V6_FULL_ILI9341
+        lv_obj_set_width(bkgrnd, SB_HORIZ);
+        lv_obj_set_height(bkgrnd, SB_VERT);
+        lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
+#endif
+
+        lv_label_set_text(unitsLabel, unitsToString(u).c_str());
+
+        lv_obj_align(cont, NULL, LV_ALIGN_CENTER, 0, 0);
+        lv_obj_add_style(bkgrnd, LV_OBJ_PART_MAIN, &backgroundStyle);
+        lv_obj_add_style(cont, LV_OBJ_PART_MAIN, &transpCont);
+        lv_obj_add_style(unitsLabel, LV_OBJ_PART_MAIN, &unitStyle);
+        xSemaphoreGive(xGuiSemaphore);
+        debugPrintln("gave back xGuiSemaphore in displayUnits");
+    }
+    else
+    {
+        debugPrintln("could not get xGuiSemaphore in displayUnits");
+    }
 }
 
-void DisplayX::updateUnits(Units u){
-  if(xSemaphoreTake(xGuiSemaphore, portMAX_DELAY)==pdTRUE){
-    debugPrintln("got xGuiSemaphore in updateUnits");
-    if(unitsLabel != NULL){
-      lv_label_set_text(unitsLabel, unitsToString(u).c_str());
-    }else{
-      debugPrintln("unitsLabel not initialized. run displayUnits before this.");
-    }
-    
+void DisplayX::updateUnits(Units u)
+{
+    if (xSemaphoreTake(xGuiSemaphore, portMAX_DELAY) == pdTRUE)
+    {
+        debugPrintln("got xGuiSemaphore in updateUnits");
+        if (unitsLabel != NULL)
+        {
+            lv_label_set_text(unitsLabel, unitsToString(u).c_str());
+        }
+        else
+        {
+            debugPrintln("unitsLabel not initialized. run displayUnits before this.");
+        }
 
-  #ifdef CONFIG_SB_V1_HALF_ILI9341
-  #endif
-  #ifdef CONFIG_SB_V3_ST7735S
-    
-    
-  #endif
-  #ifdef CONFIG_SB_V6_FULL_ILI9341
-    
-  #endif
-      
-    xSemaphoreGive(xGuiSemaphore);
-    debugPrintln("gave back xGuiSemaphore in updateUnits");
-  }else{
-    debugPrintln("could not get xGuiSemaphore in updateUnits");
-  }
+#ifdef CONFIG_SB_V1_HALF_ILI9341
+#endif
+#ifdef CONFIG_SB_V3_ST7735S
+
+#endif
+#ifdef CONFIG_SB_V6_FULL_ILI9341
+
+#endif
+
+        xSemaphoreGive(xGuiSemaphore);
+        debugPrintln("gave back xGuiSemaphore in updateUnits");
+    }
+    else
+    {
+        debugPrintln("could not get xGuiSemaphore in updateUnits");
+    }
 }
 
 // Settings
 void DisplayX::displaySettings()
 {
-  if(xSemaphoreTake(xGuiSemaphore, portMAX_DELAY)==pdTRUE){
-    debugPrintln("got xGuiSemaphore in displaySettings");
-  // TODO: For settings menu, whenever that is implemented
+    if (xSemaphoreTake(xGuiSemaphore, portMAX_DELAY) == pdTRUE)
+    {
+        debugPrintln("got xGuiSemaphore in displaySettings");
+        // TODO: For settings menu, whenever that is implemented
 #ifdef CONFIG_SB_V1_HALF_ILI9341
 #endif
 #ifdef CONFIG_SB_V3_ST7735S
 #endif
 #ifdef CONFIG_SB_V6_FULL_ILI9341
 #endif
-    xSemaphoreGive(xGuiSemaphore);
-    debugPrintln("gave back xGuiSemaphore in displaySettings");
-  }else{
-    debugPrintln("could not get xGuiSemaphore in displaySettings");
-  }
+        xSemaphoreGive(xGuiSemaphore);
+        debugPrintln("gave back xGuiSemaphore in displaySettings");
+    }
+    else
+    {
+        debugPrintln("could not get xGuiSemaphore in displaySettings");
+    }
 }
 
 // Battery & Info
 void DisplayX::displayDeviceInfo(std::string SN, std::string VER)
 {
-  if(xSemaphoreTake(xGuiSemaphore, portMAX_DELAY)==pdTRUE){
-    debugPrintln("got xGuiSemaphore in displayDeviceInfo");
-  
-    // create objects to display info
-    lv_obj_t *bkgrnd = lv_obj_create(lv_scr_act(), NULL);
-    lv_obj_t *label3 = lv_label_create(bkgrnd, NULL);
-    debugPrintln("after setting style values");
-  #ifdef CONFIG_SB_V1_HALF_ILI9341
+    if (xSemaphoreTake(xGuiSemaphore, portMAX_DELAY) == pdTRUE)
+    {
+        debugPrintln("got xGuiSemaphore in displayDeviceInfo");
 
-  #endif
-  #ifdef CONFIG_SB_V3_ST7735S
+        // create objects to display info
+        lv_obj_t *bkgrnd = lv_obj_create(lv_scr_act(), NULL);
+        lv_obj_t *label3 = lv_label_create(bkgrnd, NULL);
+        debugPrintln("after setting style values");
+#ifdef CONFIG_SB_V1_HALF_ILI9341
 
-    lv_obj_set_width(bkgrnd, SB_HORIZ);
-    lv_obj_set_height(bkgrnd, SB_VERT);
+#endif
+#ifdef CONFIG_SB_V3_ST7735S
 
-    
-    lv_label_set_text_fmt(label3, "SUDOBOARD INFO\nSN: %s\n VER: %s", SN, VER); // , 5, 10); //"sn", "ver");
-    xSemaphoreGive(xGuiSemaphore);
-    debugPrintln("after setting label text values");
-    lv_label_set_align(label3, LV_ALIGN_CENTER);
-    lv_obj_align(label3, NULL, LV_ALIGN_CENTER, 0,0);
-    debugPrintln("After setting alignment");
+        lv_obj_set_width(bkgrnd, SB_HORIZ);
+        lv_obj_set_height(bkgrnd, SB_VERT);
 
-  #endif
-  #ifdef CONFIG_SB_V6_FULL_ILI9341
-    lv_obj_set_width(bkgrnd, SB_HORIZ);
-    lv_obj_set_height(bkgrnd, SB_VERT);
+        lv_label_set_text_fmt(label3, "SUDOBOARD INFO\nSN: %s\n VER: %s", SN, VER); // , 5, 10); //"sn", "ver");
+        xSemaphoreGive(xGuiSemaphore);
+        debugPrintln("after setting label text values");
+        lv_label_set_align(label3, LV_ALIGN_CENTER);
+        lv_obj_align(label3, NULL, LV_ALIGN_CENTER, 0, 0);
+        debugPrintln("After setting alignment");
 
+#endif
+#ifdef CONFIG_SB_V6_FULL_ILI9341
+        lv_obj_set_width(bkgrnd, SB_HORIZ);
+        lv_obj_set_height(bkgrnd, SB_VERT);
 
-    lv_label_set_text_fmt(label3, "SUDOBOARD INFO\nSN: %s\n VER: %s", SN, VER); // , 5, 10); //"sn", "ver");
-    debugPrintln("after setting label text values");
-    lv_label_set_align(label3, LV_ALIGN_CENTER);
-    lv_obj_align(label3, NULL, LV_ALIGN_CENTER, 0,0);
-    debugPrintln("After setting alignment");
+        lv_label_set_text_fmt(label3, "SUDOBOARD INFO\nSN: %s\n VER: %s", SN, VER); // , 5, 10); //"sn", "ver");
+        debugPrintln("after setting label text values");
+        lv_label_set_align(label3, LV_ALIGN_CENTER);
+        lv_obj_align(label3, NULL, LV_ALIGN_CENTER, 0, 0);
+        debugPrintln("After setting alignment");
 
+#endif
+        lv_obj_add_style(bkgrnd, LV_OBJ_PART_MAIN, &backgroundStyle);
+        lv_obj_add_style(label3, LV_OBJ_PART_MAIN, &infoStyle);
 
-  #endif
-    lv_obj_add_style(bkgrnd, LV_OBJ_PART_MAIN, &backgroundStyle);
-    lv_obj_add_style(label3, LV_OBJ_PART_MAIN, &infoStyle);
-
-    xSemaphoreGive(xGuiSemaphore);
-    debugPrintln("gave back xGuiSemaphore in displayDeviceInfo");
-  }else{
-    debugPrintln("can't get xGuiSemaphore in displayDeviceInfo");
-  }
+        xSemaphoreGive(xGuiSemaphore);
+        debugPrintln("gave back xGuiSemaphore in displayDeviceInfo");
+    }
+    else
+    {
+        debugPrintln("can't get xGuiSemaphore in displayDeviceInfo");
+    }
 }
 
 // Update
 void DisplayX::displayUpdateScreen(int pct)
 {
-  if(xSemaphoreTake(xGuiSemaphore, portMAX_DELAY)==pdTRUE){
-    debugPrintln("got xGuiSemaphore in displayUpdateScreen");
-  
-// create objects to display info
-    lv_obj_t *bkgrnd = lv_obj_create(lv_scr_act(), NULL);
-    lv_obj_t *label3 = lv_label_create(bkgrnd, NULL);
-    debugPrintln("after setting style values");
-  #ifdef CONFIG_SB_V1_HALF_ILI9341
+    if (xSemaphoreTake(xGuiSemaphore, portMAX_DELAY) == pdTRUE)
+    {
+        debugPrintln("got xGuiSemaphore in displayUpdateScreen");
 
-  #endif
-  #ifdef CONFIG_SB_V3_ST7735S
+        // create objects to display info
+        lv_obj_t *bkgrnd = lv_obj_create(lv_scr_act(), NULL);
+        lv_obj_t *label3 = lv_label_create(bkgrnd, NULL);
+        debugPrintln("after setting style values");
+#ifdef CONFIG_SB_V1_HALF_ILI9341
 
-  #endif
-  #ifdef CONFIG_SB_V6_FULL_ILI9341
-    lv_obj_set_width(bkgrnd, SB_HORIZ);
-    lv_obj_set_height(bkgrnd, SB_VERT);
+#endif
+#ifdef CONFIG_SB_V3_ST7735S
 
+#endif
+#ifdef CONFIG_SB_V6_FULL_ILI9341
+        lv_obj_set_width(bkgrnd, SB_HORIZ);
+        lv_obj_set_height(bkgrnd, SB_VERT);
 
-    lv_label_set_text(label3, "Updating..."); // , 5, 10); //"sn", "ver");
-    debugPrintln("after setting label text values");
-    lv_label_set_align(label3, LV_ALIGN_CENTER);
-    lv_obj_align(label3, NULL, LV_ALIGN_CENTER, 0,0);
-    debugPrintln("After setting alignment");
+        lv_label_set_text(label3, "Updating..."); // , 5, 10); //"sn", "ver");
+        debugPrintln("after setting label text values");
+        lv_label_set_align(label3, LV_ALIGN_CENTER);
+        lv_obj_align(label3, NULL, LV_ALIGN_CENTER, 0, 0);
+        debugPrintln("After setting alignment");
 
+#endif
+        lv_obj_add_style(bkgrnd, LV_OBJ_PART_MAIN, &backgroundStyle);
+        lv_obj_add_style(label3, LV_OBJ_PART_MAIN, &infoStyle);
 
-  #endif
-    lv_obj_add_style(bkgrnd, LV_OBJ_PART_MAIN, &backgroundStyle);
-    lv_obj_add_style(label3, LV_OBJ_PART_MAIN, &infoStyle);
-  
-    xSemaphoreGive(xGuiSemaphore);
-    debugPrintln("gave back xGuiSemaphore in displayUpdateScreen");
-  }else{
-    debugPrintln("can't get xGuiSemaphore in displayUpdateScreen");
-  }
+        xSemaphoreGive(xGuiSemaphore);
+        debugPrintln("gave back xGuiSemaphore in displayUpdateScreen");
+    }
+    else
+    {
+        debugPrintln("can't get xGuiSemaphore in displayUpdateScreen");
+    }
 }
 
 void DisplayX::displayLogo()
 {
-  if(xSemaphoreTake(xGuiSemaphore, portMAX_DELAY)==pdTRUE){
-    debugPrintln("got xGuiSemaphore in displayLogo");
-    lv_obj_t *bkgrnd = lv_obj_create(lv_scr_act(), NULL);
-    lv_obj_t *img = lv_img_create(bkgrnd, NULL);
-    
-    lv_img_set_src(img, &img_logo_white);
+    if (xSemaphoreTake(xGuiSemaphore, portMAX_DELAY) == pdTRUE)
+    {
+        debugPrintln("got xGuiSemaphore in displayLogo");
+        lv_obj_t *bkgrnd = lv_obj_create(lv_scr_act(), NULL);
+        lv_obj_t *img = lv_img_create(bkgrnd, NULL);
 
-  #ifdef CONFIG_SB_V1_HALF_ILI9341
-    lv_obj_set_width(bkgrnd, SB_HORIZ);
-    lv_obj_set_height(bkgrnd, SB_VERT);
-    lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
-    lv_img_set_zoom(img, 70);
-    lv_obj_align(img, NULL, LV_ALIGN_CENTER, 0, 0);
-  #endif
-  #ifdef CONFIG_SB_V3_ST7735S
-    lv_obj_set_width(bkgrnd, SB_HORIZ);
-    lv_obj_set_height(bkgrnd, SB_VERT);
-    lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
-    lv_img_set_zoom(img, 70);
-    lv_obj_align(img, NULL, LV_ALIGN_CENTER, 0, 0);
-  #endif
-  #ifdef CONFIG_SB_V6_FULL_ILI9341
-    lv_obj_set_width(bkgrnd, SB_HORIZ);
-    lv_obj_set_height(bkgrnd, SB_VERT);
-    lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
-    lv_img_set_zoom(img, 200);
-    lv_obj_align(img, NULL, LV_ALIGN_CENTER, 0, 0);
-  #endif
-    lv_obj_add_style(bkgrnd, LV_OBJ_PART_MAIN, &backgroundStyle);
+        lv_img_set_src(img, &img_logo_white);
 
-    xSemaphoreGive(xGuiSemaphore);
-    debugPrintln("gave back xGuiSemaphore in displayLogo");
-  }else{
-    debugPrintln("can't get xGuiSemaphore in displayLogo");
-  }
+#ifdef CONFIG_SB_V1_HALF_ILI9341
+        lv_obj_set_width(bkgrnd, SB_HORIZ);
+        lv_obj_set_height(bkgrnd, SB_VERT);
+        lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
+        lv_img_set_zoom(img, 70);
+        lv_obj_align(img, NULL, LV_ALIGN_CENTER, 0, 0);
+#endif
+#ifdef CONFIG_SB_V3_ST7735S
+        lv_obj_set_width(bkgrnd, SB_HORIZ);
+        lv_obj_set_height(bkgrnd, SB_VERT);
+        lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
+        lv_img_set_zoom(img, 70);
+        lv_obj_align(img, NULL, LV_ALIGN_CENTER, 0, 0);
+#endif
+#ifdef CONFIG_SB_V6_FULL_ILI9341
+        lv_obj_set_width(bkgrnd, SB_HORIZ);
+        lv_obj_set_height(bkgrnd, SB_VERT);
+        lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
+        lv_img_set_zoom(img, 200);
+        lv_obj_align(img, NULL, LV_ALIGN_CENTER, 0, 0);
+#endif
+        lv_obj_add_style(bkgrnd, LV_OBJ_PART_MAIN, &backgroundStyle);
+
+        xSemaphoreGive(xGuiSemaphore);
+        debugPrintln("gave back xGuiSemaphore in displayLogo");
+    }
+    else
+    {
+        debugPrintln("can't get xGuiSemaphore in displayLogo");
+    }
 }
 
 void DisplayX::displayBattery(int bat)
 {
-  if(xSemaphoreTake(xGuiSemaphore, portMAX_DELAY)==pdTRUE){
-    debugPrintln("got xGuiSemaphore in displayBattery");
-    
-    lv_obj_t *bkgrnd = lv_obj_create(lv_scr_act(), NULL);
-    lv_obj_t *img = lv_img_create(bkgrnd, NULL);
-    lv_obj_t *cont = lv_cont_create(img, NULL);
-    lv_obj_t *label = lv_label_create(cont, NULL);
-  #ifdef CONFIG_SB_V1_HALF_ILI9341
-  #endif
-  #ifdef CONFIG_SB_V3_ST7735S
-    lv_img_set_src(img, &img_battery);
-    lv_obj_set_width(bkgrnd, SB_HORIZ);
-    lv_obj_set_height(bkgrnd, SB_VERT);
-    lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
+    if (xSemaphoreTake(xGuiSemaphore, portMAX_DELAY) == pdTRUE)
+    {
+        debugPrintln("got xGuiSemaphore in displayBattery");
 
-    lv_img_set_zoom(img, 100);
-    lv_obj_align(img, NULL, LV_ALIGN_CENTER, 10, 0);
-    
-    
-    lv_cont_set_fit(cont, LV_FIT_PARENT);
-    lv_cont_set_layout(cont, LV_LAYOUT_CENTER);
+        lv_obj_t *bkgrnd = lv_obj_create(lv_scr_act(), NULL);
+        lv_obj_t *img = lv_img_create(bkgrnd, NULL);
+        lv_obj_t *cont = lv_cont_create(img, NULL);
+        lv_obj_t *label = lv_label_create(cont, NULL);
+#ifdef CONFIG_SB_V1_HALF_ILI9341
+#endif
+#ifdef CONFIG_SB_V3_ST7735S
+        lv_img_set_src(img, &img_battery);
+        lv_obj_set_width(bkgrnd, SB_HORIZ);
+        lv_obj_set_height(bkgrnd, SB_VERT);
+        lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
 
-    
-    lv_label_set_text_fmt(label, "%d%%", bat);
-    
-    lv_obj_align(cont, NULL, LV_ALIGN_CENTER, 0,0);
-  #endif
-  #ifdef CONFIG_SB_V6_FULL_ILI9341
-    lv_img_set_src(img, &img_battery);
-    lv_obj_set_width(bkgrnd, SB_HORIZ);
-    lv_obj_set_height(bkgrnd, SB_VERT);
-    lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
+        lv_img_set_zoom(img, 100);
+        lv_obj_align(img, NULL, LV_ALIGN_CENTER, 10, 0);
 
-    lv_img_set_zoom(img, 100);
-    lv_obj_align(img, NULL, LV_ALIGN_CENTER, 10, 0);
-    
-    
-    lv_cont_set_fit(cont, LV_FIT_PARENT);
-    lv_cont_set_layout(cont, LV_LAYOUT_CENTER);
+        lv_cont_set_fit(cont, LV_FIT_PARENT);
+        lv_cont_set_layout(cont, LV_LAYOUT_CENTER);
 
-    
-    lv_label_set_text_fmt(label, "%d%%", bat);
-    
-    lv_obj_align(cont, NULL, LV_ALIGN_CENTER, 0,0);
-  #endif
-  
-    lv_obj_add_style(bkgrnd, LV_OBJ_PART_MAIN, &backgroundStyle);
-    lv_obj_add_style(cont, LV_CONT_PART_MAIN, &transpCont);
-    lv_obj_add_style(label, LV_CONT_PART_MAIN, &infoStyle);
-    xSemaphoreGive(xGuiSemaphore);
-    debugPrintln("gave back xGuiSemaphore in displayBattery");
-  }else{
-    debugPrintln("Can't get xGuiSemaphore in displayBattery");
-  }
+        lv_label_set_text_fmt(label, "%d%%", bat);
+
+        lv_obj_align(cont, NULL, LV_ALIGN_CENTER, 0, 0);
+#endif
+#ifdef CONFIG_SB_V6_FULL_ILI9341
+        lv_img_set_src(img, &img_battery);
+        lv_obj_set_width(bkgrnd, SB_HORIZ);
+        lv_obj_set_height(bkgrnd, SB_VERT);
+        lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
+
+        lv_img_set_zoom(img, 100);
+        lv_obj_align(img, NULL, LV_ALIGN_CENTER, 10, 0);
+
+        lv_cont_set_fit(cont, LV_FIT_PARENT);
+        lv_cont_set_layout(cont, LV_LAYOUT_CENTER);
+
+        lv_label_set_text_fmt(label, "%d%%", bat);
+
+        lv_obj_align(cont, NULL, LV_ALIGN_CENTER, 0, 0);
+#endif
+
+        lv_obj_add_style(bkgrnd, LV_OBJ_PART_MAIN, &backgroundStyle);
+        lv_obj_add_style(cont, LV_CONT_PART_MAIN, &transpCont);
+        lv_obj_add_style(label, LV_CONT_PART_MAIN, &infoStyle);
+        xSemaphoreGive(xGuiSemaphore);
+        debugPrintln("gave back xGuiSemaphore in displayBattery");
+    }
+    else
+    {
+        debugPrintln("Can't get xGuiSemaphore in displayBattery");
+    }
 }
 
 void DisplayX::displayLowBattery()
 {
-  if(xSemaphoreTake(xGuiSemaphore, portMAX_DELAY)==pdTRUE){
-      debugPrintln("got xGuiSemaphore in displayLowBattery");
+    if (xSemaphoreTake(xGuiSemaphore, portMAX_DELAY) == pdTRUE)
+    {
+        debugPrintln("got xGuiSemaphore in displayLowBattery");
 
-    lv_obj_t *bkgrnd = lv_obj_create(lv_scr_act(), NULL);
-    lv_obj_t *img = lv_img_create(bkgrnd, NULL);
-    lv_obj_t *cont = lv_cont_create(img, NULL);
-    lv_obj_t *label = lv_label_create(cont, NULL);
-  #ifdef CONFIG_SB_V1_HALF_ILI9341
-  #endif
-  #ifdef CONFIG_SB_V3_ST7735S
-    lv_img_set_src(img, &img_low_battery);
-    lv_obj_set_width(bkgrnd, SB_HORIZ);
-    lv_obj_set_height(bkgrnd, SB_VERT);
-    lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
+        lv_obj_t *bkgrnd = lv_obj_create(lv_scr_act(), NULL);
+        lv_obj_t *img = lv_img_create(bkgrnd, NULL);
+        lv_obj_t *cont = lv_cont_create(img, NULL);
+        lv_obj_t *label = lv_label_create(cont, NULL);
+#ifdef CONFIG_SB_V1_HALF_ILI9341
+#endif
+#ifdef CONFIG_SB_V3_ST7735S
+        lv_img_set_src(img, &img_low_battery);
+        lv_obj_set_width(bkgrnd, SB_HORIZ);
+        lv_obj_set_height(bkgrnd, SB_VERT);
+        lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
 
-    lv_img_set_zoom(img, 100);
-    lv_obj_align(img, NULL, LV_ALIGN_CENTER, 10, 0);
-    
-    
-    lv_cont_set_fit(cont, LV_FIT_PARENT);
-    lv_cont_set_layout(cont, LV_LAYOUT_CENTER);
+        lv_img_set_zoom(img, 100);
+        lv_obj_align(img, NULL, LV_ALIGN_CENTER, 10, 0);
 
-    lv_label_set_text(label, "LOW");
-    lv_obj_align(cont, NULL, LV_ALIGN_CENTER, 0,0);
-  #endif
-  #ifdef CONFIG_SB_V6_FULL_ILI9341
-    lv_img_set_src(img, &img_low_battery);
-    lv_obj_set_width(bkgrnd, SB_HORIZ);
-    lv_obj_set_height(bkgrnd, SB_VERT);
-    lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
+        lv_cont_set_fit(cont, LV_FIT_PARENT);
+        lv_cont_set_layout(cont, LV_LAYOUT_CENTER);
 
-    lv_img_set_zoom(img, 100);
-    lv_obj_align(img, NULL, LV_ALIGN_CENTER, 10, 0);
-    
-    
-    lv_cont_set_fit(cont, LV_FIT_PARENT);
-    lv_cont_set_layout(cont, LV_LAYOUT_CENTER);
+        lv_label_set_text(label, "LOW");
+        lv_obj_align(cont, NULL, LV_ALIGN_CENTER, 0, 0);
+#endif
+#ifdef CONFIG_SB_V6_FULL_ILI9341
+        lv_img_set_src(img, &img_low_battery);
+        lv_obj_set_width(bkgrnd, SB_HORIZ);
+        lv_obj_set_height(bkgrnd, SB_VERT);
+        lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
 
-    lv_label_set_text(label, "LOW");
-    lv_obj_align(cont, NULL, LV_ALIGN_CENTER, 0,0);
-  #endif
-  
-    lv_obj_add_style(bkgrnd, LV_OBJ_PART_MAIN, &backgroundStyle);
-    lv_obj_add_style(cont, LV_CONT_PART_MAIN, &transpCont);
-    lv_obj_add_style(label, LV_CONT_PART_MAIN, &infoStyle);
-    xSemaphoreGive(xGuiSemaphore);
-    debugPrintln("gave back xGuiSemaphore in displayLowBattery");
-  }else{
-    debugPrintln("Can't get xGuiSemaphore in displayLowBattery");
-  }
+        lv_img_set_zoom(img, 100);
+        lv_obj_align(img, NULL, LV_ALIGN_CENTER, 10, 0);
+
+        lv_cont_set_fit(cont, LV_FIT_PARENT);
+        lv_cont_set_layout(cont, LV_LAYOUT_CENTER);
+
+        lv_label_set_text(label, "LOW");
+        lv_obj_align(cont, NULL, LV_ALIGN_CENTER, 0, 0);
+#endif
+
+        lv_obj_add_style(bkgrnd, LV_OBJ_PART_MAIN, &backgroundStyle);
+        lv_obj_add_style(cont, LV_CONT_PART_MAIN, &transpCont);
+        lv_obj_add_style(label, LV_CONT_PART_MAIN, &infoStyle);
+        xSemaphoreGive(xGuiSemaphore);
+        debugPrintln("gave back xGuiSemaphore in displayLowBattery");
+    }
+    else
+    {
+        debugPrintln("Can't get xGuiSemaphore in displayLowBattery");
+    }
 }
 
 void DisplayX::displayOff()
 {
-  if(xSemaphoreTake(xGuiSemaphore, portMAX_DELAY)==pdTRUE){
-    debugPrintln("got xGuiSemaphore in displayoff");
-    lv_obj_t *bkgrnd = lv_obj_create(lv_scr_act(), NULL);
-    lv_obj_set_width(bkgrnd, SB_HORIZ);
-    lv_obj_set_height(bkgrnd, SB_VERT);
-    lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
-    lv_obj_add_style(bkgrnd, LV_OBJ_PART_MAIN, &backgroundStyle);
-    //lv_obj_clean(lv_scr_act());
-    xSemaphoreGive(xGuiSemaphore);
-    debugPrintln("gave back xGuiSemaphore in displayOff");
-    disp_flag = false;
-    //setIntensity(0);
-  #ifdef CONFIG_SB_V1_HALF_ILI9341
-    ledc_set_duty_and_update(b_ledc_c_config.speed_mode, b_ledc_c_config.channel, 0, 0);
-  #endif
-  #ifdef CONFIG_SB_V3_ST7735S
-    green = green*intensity/255;
-    red = red*intensity/255;
-    
-    ledc_set_duty_and_update(r_ledc_c_config.speed_mode, r_ledc_c_config.channel, 0, 0);
-    ledc_set_duty_and_update(g_ledc_c_config.speed_mode, g_ledc_c_config.channel, 0, 0);
-    ledc_set_duty_and_update(b_ledc_c_config.speed_mode, b_ledc_c_config.channel, 0, 0);
-  #endif
-  #ifdef CONFIG_SB_V6_FULL_ILI9341
-    ledc_set_duty_and_update(b_ledc_c_config.speed_mode, b_ledc_c_config.channel, 0, 0);
-  #endif
-  }else{
-    debugPrintln("Can't get xGuiSemaphore in displayOff");
-  }
+    if (xSemaphoreTake(xGuiSemaphore, portMAX_DELAY) == pdTRUE)
+    {
+        debugPrintln("got xGuiSemaphore in displayoff");
+        lv_obj_t *bkgrnd = lv_obj_create(lv_scr_act(), NULL);
+        lv_obj_set_width(bkgrnd, SB_HORIZ);
+        lv_obj_set_height(bkgrnd, SB_VERT);
+        lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
+        lv_obj_add_style(bkgrnd, LV_OBJ_PART_MAIN, &backgroundStyle);
+        //lv_obj_clean(lv_scr_act());
+        xSemaphoreGive(xGuiSemaphore);
+        debugPrintln("gave back xGuiSemaphore in displayOff");
+        disp_flag = false;
+        //setIntensity(0);
+#ifdef CONFIG_SB_V1_HALF_ILI9341
+        ledc_set_duty_and_update(b_ledc_c_config.speed_mode, b_ledc_c_config.channel, 0, 0);
+#endif
+#ifdef CONFIG_SB_V3_ST7735S
+        green = green * intensity / 255;
+        red = red * intensity / 255;
+
+        ledc_set_duty_and_update(r_ledc_c_config.speed_mode, r_ledc_c_config.channel, 0, 0);
+        ledc_set_duty_and_update(g_ledc_c_config.speed_mode, g_ledc_c_config.channel, 0, 0);
+        ledc_set_duty_and_update(b_ledc_c_config.speed_mode, b_ledc_c_config.channel, 0, 0);
+#endif
+#ifdef CONFIG_SB_V6_FULL_ILI9341
+        ledc_set_duty_and_update(b_ledc_c_config.speed_mode, b_ledc_c_config.channel, 0, 0);
+#endif
+    }
+    else
+    {
+        debugPrintln("Can't get xGuiSemaphore in displayOff");
+    }
 }
 
 void DisplayX::displayOn()
 {
-  disp_flag = true;
-  setIntensity(intensity);
+    disp_flag = true;
+    setIntensity(intensity);
 }
 
-void DisplayX::displaySleepPrep(){
-  
-  displayOff();
-  // save color and intensity to nvs
-  
+void DisplayX::displaySleepPrep()
+{
+
+    displayOff();
+    // save color and intensity to nvs
 }
 
-void DisplayX::setColor(int r, int g, int b){
-  // This pretty much is only for the projector version of the display
-  #ifndef CONFIG_SB_V3_ST7735S
-  debugPrintln("This configuration isn't set up to control color. Only for V3.");
-  return;
-  #endif
+void DisplayX::setColor(int r, int g, int b)
+{
+// This pretty much is only for the projector version of the display
+#ifndef CONFIG_SB_V3_ST7735S
+    debugPrintln("This configuration isn't set up to control color. Only for V3.");
+    return;
+#endif
 
-  if(r>255){
-    r = 255;
-  }else if(r<0){
-    r = 0;
-  }
-  if(r>255){
-    g = 255;
-  }else if(r<0){
-    g = 0;
-  }
-  if(r>255){
-    b = 255;
-  }else if(r<0){
-    b = 0;
-  }
+    if (r > 255)
+    {
+        r = 255;
+    }
+    else if (r < 0)
+    {
+        r = 0;
+    }
+    if (r > 255)
+    {
+        g = 255;
+    }
+    else if (r < 0)
+    {
+        g = 0;
+    }
+    if (r > 255)
+    {
+        b = 255;
+    }
+    else if (r < 0)
+    {
+        b = 0;
+    }
 
-  red = r*intensity/255;
-  green = g*intensity/255;
-  blue = b*intensity/255;
-  #ifdef CONFIG_SB_V3_ST7735S
-  ledc_set_duty_and_update(r_ledc_c_config.speed_mode, r_ledc_c_config.channel, red, 0);
-  ledc_set_duty_and_update(g_ledc_c_config.speed_mode, g_ledc_c_config.channel, green, 0);
-  #endif
-  ledc_set_duty_and_update(b_ledc_c_config.speed_mode, b_ledc_c_config.channel, blue, 0);
+    red = r * intensity / 255;
+    green = g * intensity / 255;
+    blue = b * intensity / 255;
+#ifdef CONFIG_SB_V3_ST7735S
+    ledc_set_duty_and_update(r_ledc_c_config.speed_mode, r_ledc_c_config.channel, red, 0);
+    ledc_set_duty_and_update(g_ledc_c_config.speed_mode, g_ledc_c_config.channel, green, 0);
+#endif
+    ledc_set_duty_and_update(b_ledc_c_config.speed_mode, b_ledc_c_config.channel, blue, 0);
 }
 
-void DisplayX::setIntensity(int i){
-  if(i>8192){
-    intensity = 8192;
-  }else if(i < 0){
-    intensity = 0;
-  }else{
-    intensity = i;
-  }
+void DisplayX::setIntensity(int i)
+{
+    if (i > 8192)
+    {
+        intensity = 8192;
+    }
+    else if (i < 0)
+    {
+        intensity = 0;
+    }
+    else
+    {
+        intensity = i;
+    }
 
+    blue = blue * intensity / 255;
 
-  
-  blue = blue*intensity/255;
-  
 #ifdef CONFIG_SB_V1_HALF_ILI9341
-  ledc_set_duty_and_update(b_ledc_c_config.speed_mode, b_ledc_c_config.channel, blue, 0);
+    ledc_set_duty_and_update(b_ledc_c_config.speed_mode, b_ledc_c_config.channel, blue, 0);
 #endif
 #ifdef CONFIG_SB_V3_ST7735S
-  green = green*intensity/255;
-  red = red*intensity/255;
-  
-  ledc_set_duty_and_update(r_ledc_c_config.speed_mode, r_ledc_c_config.channel, red, 0);
-  ledc_set_duty_and_update(g_ledc_c_config.speed_mode, g_ledc_c_config.channel, green, 0);
-  ledc_set_duty_and_update(b_ledc_c_config.speed_mode, b_ledc_c_config.channel, blue, 0);
+    green = green * intensity / 255;
+    red = red * intensity / 255;
+
+    ledc_set_duty_and_update(r_ledc_c_config.speed_mode, r_ledc_c_config.channel, red, 0);
+    ledc_set_duty_and_update(g_ledc_c_config.speed_mode, g_ledc_c_config.channel, green, 0);
+    ledc_set_duty_and_update(b_ledc_c_config.speed_mode, b_ledc_c_config.channel, blue, 0);
 #endif
 #ifdef CONFIG_SB_V6_FULL_ILI9341
-  ledc_set_duty_and_update(b_ledc_c_config.speed_mode, b_ledc_c_config.channel, blue, 0);
+    ledc_set_duty_and_update(b_ledc_c_config.speed_mode, b_ledc_c_config.channel, blue, 0);
 #endif
-
 }
 
-void DisplayX::onDelete(){
-  #if defined(CONFIG_SB_V1_HALF_ILI9341) || defined(CONFIG_SB_V6_FULL_ILI9341)
-  ledc_stop(b_ledc_c_config.speed_mode, b_ledc_c_config.channel, 0); 
-  #endif
-  #ifdef CONFIG_SB_V3_ST7735S
-  ledc_stop(r_ledc_c_config.speed_mode, r_ledc_c_config.channel, 0);
-  ledc_stop(g_ledc_c_config.speed_mode, g_ledc_c_config.channel, 0);
-  
-  #endif
-  ledc_timer_pause(LEDC_LOW_SPEED_MODE , LEDC_TIMER_1); //ledc_timer
-  esp_timer_delete(periodic_timer);
-  debugPrintln("finished display onDelete");
-  
+void DisplayX::onDelete()
+{
+#if defined(CONFIG_SB_V1_HALF_ILI9341) || defined(CONFIG_SB_V6_FULL_ILI9341)
+    ledc_stop(b_ledc_c_config.speed_mode, b_ledc_c_config.channel, 0);
+#endif
+#ifdef CONFIG_SB_V3_ST7735S
+    ledc_stop(r_ledc_c_config.speed_mode, r_ledc_c_config.channel, 0);
+    ledc_stop(g_ledc_c_config.speed_mode, g_ledc_c_config.channel, 0);
+
+#endif
+    ledc_timer_pause(LEDC_LOW_SPEED_MODE, LEDC_TIMER_1); //ledc_timer
+    esp_timer_delete(periodic_timer);
+    debugPrintln("finished display onDelete");
 }

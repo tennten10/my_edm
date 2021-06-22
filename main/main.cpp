@@ -174,32 +174,34 @@ void app_main() {
     for (;;)
     {
         //battery update moved into this loop to free up some memory
-        // if(esp_timer_get_time()/1000-batTime > 5000){
-        // // Operating voltage range of 3.0-4.2V
-        //     // Gave some weird readings over 200% in the past. Add in a coulomb counting "gas gauge" in the future since Li-ion have a non-linear charge-discharge curve.
-        //     // Voltage divider with 1M & 2M, giving read voltage of 2.8 V = 4.2V, 2.0V = 3.0V
-        //     // Resolution of ~ 0.0008V / division
+        if(esp_timer_get_time()/1000-batTime > 5000){
+        // Operating voltage range of 3.0-4.2V
+            // Gave some weird readings over 200% in the past. Add in a coulomb counting "gas gauge" in the future since Li-ion have a non-linear charge-discharge curve.
+            // Voltage divider with 1M & 2M, giving read voltage of 2.8 V = 4.2V, 2.0V = 3.0V
+            // Resolution of ~ 0.0008V / division
         
 
-        //     bat_reading =  adc1_get_raw(batV);
-        //     //voltage = esp_adc_cal_raw_to_voltage(reading, adc_chars);
+            bat_reading =  adc1_get_raw(batV);
+            //voltage = esp_adc_cal_raw_to_voltage(reading, adc_chars);
 
-        //     battery = (int) 100 *( bat_reading * 3.3 / 4096.0 - 2.0) /(2.8 - 2.0); //(voltage - 2.0) / (2.8 - 2.0) ;
-        //     if(battery != _sys->getBattery()){
-        //         _sys->setBattery(battery);
-        //         if(isBtConnected()){
-        //             updateBTBattery(battery);
-        //         }
-        //     }
+            battery = (int) 100 *( bat_reading * 3.3 / 4096.0 - 2.0) /(2.8 - 2.0); //(voltage - 2.0) / (2.8 - 2.0) ;
+            if(battery != _sys->getBattery()){
+                _sys->setBattery(battery);
+                if(isBtConnected()){
+                    updateBTBattery(battery);
+                }
+                debugPrint("battery: ");
+                debugPrintln(battery);
+            }
             
             
-        //     if(battery < 2){
-        //         //_sys->goToSleep();
-        //     }
-        //     batTime = esp_timer_get_time()/1000;
-        // }
+            if(battery < 2){
+                //_sys->goToSleep();
+            }
+            batTime = esp_timer_get_time()/1000;
+        }
 
-        //_sys->validateDataAcrossObjects();
+        _sys->validateDataAcrossObjects();
 
 
         event = _sys->buttons->getEvents();
@@ -235,11 +237,13 @@ void app_main() {
                 }
                 else if (event.compare(0,4,"NLNN", 0, 4) == 0)
                 {
-                    _sys->runUpdate();
+                    // _sys->runUpdate();
+                    _sys->setUpdateFlag();
                     //timeout = esp_timer_get_time()/1000;
                 }
                 else if (event.compare(0,4,"NNSN", 0, 4) == 0)
                 {
+                    updateBTStatus( rand() % 300 + 200 );
                     //timeout = esp_timer_get_time()/1000;
                 }
                 else if (event.compare(0,4,"NNLN", 0, 4) == 0)

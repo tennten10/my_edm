@@ -4,15 +4,15 @@
 #include "globals.h"
 #include <string>
 
-int initWiFi();
-int isInit();
-int stopWiFi();
-int connectWiFi(WiFiStruct ws);
-int disconnectWiFi();
 
-bool verifyWiFiInfo(WiFiStruct w); //char& s, char& p); //WiFiStruct wfi
+// int isInit();   // for bools, checks flag I set
+int stopWiFi(); // disconnects and deinits
+int connectWiFi(WiFiStruct ws); // inits
+int disconnectWiFi(); // just disconnects
 
-void scanNetworks(uint16_t& num, std::string* ap);
+bool verifyWiFiInfo(WiFiStruct w); // inits, connects, deints, returns
+
+void scanNetworks(uint16_t& num, std::string* ap); // 
 
 
 #endif

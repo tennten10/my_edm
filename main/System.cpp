@@ -155,20 +155,32 @@ void SystemX::validateDataAcrossObjects(){
         // bluetooth value is also updated from here
         
     }
+    if(getUpdateFlag()){
+        this->runUpdate();
+        updateFlag = false;
+    }
     
     callbackFlag = false;
 }
 
 void SystemX::runUpdate(){
-    setPage(pUPDATE);
-    //this->display->displayUpdateScreen(0);
-    saveVals();
-    int e = startOTA();
-    if(e == 0){// ready for update, everything is good. Going to disconnect.
-        updateBTStatus(SB_UPDATE_STARTED);
-        // executeOTA();
-        debugPrintln("this is where executeOTA runs");
-    }else if(e == 1){
-        // some other error handling
+    if(xSemaphoreTake(upMutex, (TickType_t)10) == pdTRUE)
+    {
+        
+
+        setPage(pUPDATE);
+        //this->display->displayUpdateScreen(0);
+        saveVals();
+        int e = startOTA();
+        if(e == 0){// ready for update, everything is good. Going to disconnect.
+            updateBTStatus(SB_UPDATE_STARTED);
+            debugPrintln("this is where executeOTA runs");
+        }else{
+            // some other error handling
+            updateBTStatus(e);
+        }
+        xSemaphoreGive(upMutex);
+    }else{
+        debugPrintln("Update already running? try again later");
     }
 }

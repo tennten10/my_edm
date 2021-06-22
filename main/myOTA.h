@@ -4,7 +4,6 @@
 #define MY_OTA_H
 
 int startOTA();
-void executeOTA();
 
 int getUpdatePercent();
 
