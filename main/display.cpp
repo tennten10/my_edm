@@ -524,7 +524,7 @@ void DisplayX::updateWeight(std::string weight)
     if (weight.compare("-1") == 0)
     {
         // TODO: have a way to check if the screen already has that value so it doesn't waste time doing it again.
-        debugPrintln("breaking out of updateWeight");
+        //debugPrintln("breaking out of updateWeight");
         return;
     }
     if (xSemaphoreTake(xGuiSemaphore, portMAX_DELAY) == pdTRUE)
@@ -554,7 +554,7 @@ void DisplayX::displayWeight(std::string weight)
     if (weight.compare("-1") == 0)
     {
         // TODO: have a way to check if the screen already has that value so it doesn't waste time doing it again.
-        debugPrintln("breaking out of displayWeight");
+        //debugPrintln("breaking out of displayWeight");
         return;
     }
     debugPrintln(weight);

@@ -71,8 +71,9 @@ void BLETask(void *parameter)
                         char batt_temp[4];
                         sprintf(batt_temp, "%d%%", bBuff);
                         b->setValue(batt_temp);
+                        b->notify();
                         debugPrint("Set battery value in bluetooth: ");
-                        debugPrintln(std::to_string(bBuff));
+                        debugPrintln(batt_temp);
                     }
                 }
                 pSvc = pServer->getServiceByUUID("00005ac7-60be-11eb-ae93-0242ac130002");
@@ -194,6 +195,11 @@ class ServerCallbacks : public NimBLEServerCallbacks
         debugPrintln("Client connected");
         debugPrintln("Multi-connect support: start advertising");
         NimBLEDevice::startAdvertising();
+
+        // my function... will it run here?
+        // debugPrintln("onConnect 1");
+        // vTaskDelay(1000); // give the connecting device time to subscribe to notifiers/indicators
+        // sendOnConnect(pServer);
     };
     /** Alternative onConnect() method to extract details of the connection.
             See: src/ble_gap.h for the details of the ble_gap_conn_desc struct.
@@ -210,6 +216,12 @@ class ServerCallbacks : public NimBLEServerCallbacks
             Timeout: 10 millisecond increments, try for 5x interval time for best results.
         */
         pServer->updateConnParams(desc->conn_handle, 24, 48, 0, 120);
+
+
+        // my function... will it run here?
+        //debugPrintln("onConnect 2");
+        //vTaskDelay(50); // give the connecting device time to subscribe to notifiers/indicators
+        //sendOnConnect(pServer);
     };
 
     void onDisconnect(NimBLEServer *pServer)
@@ -296,11 +308,18 @@ class BatteryCallbacks : public NimBLECharacteristicCallbacks
     {
         debugPrint(pCharacteristic->getUUID().toString());
 
-        pCharacteristic->setValue("80"); //_sys->getBattery());
         debugPrint(": onRead(), value: ");
         debugPrintln(pCharacteristic->getValue());
         debugPrintln("getBattery received");
     };
+    void onNotify(NimBLECharacteristic *pCharacteristic)
+    {
+        debugPrintln("Sending notification to clients");
+
+    };
+    void onSubscribe(NimBLECharacteristic *pCharacteristic){
+        debugPrintln("Subscribed to Battery notifier");
+    }
 };
 
 class WeightCallbacks : public NimBLECharacteristicCallbacks
@@ -319,7 +338,6 @@ class WeightCallbacks : public NimBLECharacteristicCallbacks
     {
         debugPrintln("Sending notification to clients");
 
-        //pCharacteristic->setValue("10.1"); //_sys->weight->getWeightStr().c_str());
     };
 
     /** The status returned in status is defined in NimBLECharacteristic.h.
@@ -342,6 +360,9 @@ class WeightCallbacks : public NimBLECharacteristicCallbacks
         debugPrint(", ");
         debugPrintln(NimBLEUtils::returnCodeToString(code));
     };
+    void onSubscribe(NimBLECharacteristic *pCharacteristic){
+        debugPrintln("Subscribed to weight notifier");
+    }
 };
 
 class ActionCallbacks : public NimBLECharacteristicCallbacks
@@ -430,6 +451,11 @@ class ActionCallbacks : public NimBLECharacteristicCallbacks
     {
         debugPrintln("Sending indicate: ");
     }
+    void onSubscribe(NimBLECharacteristic *pCharacteristic){
+        if(strcmp(pCharacteristic->getUUID().toString().c_str(), "2BBB") == 0){
+            debugPrintln("Subscribed to Status indicator");
+        } 
+    }
 
     /** The status returned in status is defined in NimBLECharacteristic.h.
         The value returned in code is the NimBLE host return code.
@@ -474,10 +500,6 @@ class OTACallbacks : public NimBLECharacteristicCallbacks
         {
             debugPrintln("Begin updating..........");
             vTaskDelay(20);
-            //_sys->runUpdate();
-            debugPrintln("page change");
-            //vTaskDelay(50);
-            debugPrintln("OTA compare is correct");
             // updateBTStatus(400);
             // vTaskDelay(20);
             // updateBTStatus(200);
@@ -487,15 +509,7 @@ class OTACallbacks : public NimBLECharacteristicCallbacks
         {
             debugPrintln("OTA Command not recognized");
         }
-        // if starting OTA update
-        // if (strcmp(pCharacteristic->getUUID().toString().c_str(), "0000007a-60be-11eb-ae93-0242ac130002") == 0)
-        // {
-        //     debugPrintln("Action onwrite callback. Correct UUID.");
-        //     if (stoi(pCharacteristic->getValue()) == true)
-        //     {
-                
-        //     }
-        // }
+        
     };
 };
 
@@ -555,7 +569,7 @@ void BLEsetup(std::string SN, std::string Version, int battery, Units units, WiF
 
     debugPrintln("6");
 
-    pSerialNumCharacteristic->setValue(SN); //_sys->getSN());
+    pSerialNumCharacteristic->setValue(SN); 
 
     pSerialNumCharacteristic->setCallbacks(&devCallbacks);
 
@@ -590,7 +604,9 @@ void BLEsetup(std::string SN, std::string Version, int battery, Units units, WiF
     NimBLEService *pBatteryService = pServer->createService("180F");
     NimBLECharacteristic *pBatteryCharacteristic = pBatteryService->createCharacteristic(
         "2A19",
-        NIMBLE_PROPERTY::READ);
+        NIMBLE_PROPERTY::READ |
+        NIMBLE_PROPERTY::NOTIFY
+        );
     
     char batt_temp[4];
     sprintf(batt_temp, "%d%%", battery);
@@ -629,6 +645,7 @@ void BLEsetup(std::string SN, std::string Version, int battery, Units units, WiF
     /* Next Service - Actions performed through connection */
 
     NimBLEService *pActionService = pServer->createService("00005ac7-60be-11eb-ae93-0242ac130002");
+
     NimBLECharacteristic *pOTACharacteristic = pActionService->createCharacteristic(
         "0000007a-60be-11eb-ae93-0242ac130002",
         NIMBLE_PROPERTY::WRITE // |
@@ -699,6 +716,15 @@ void BLEsetup(std::string SN, std::string Version, int battery, Units units, WiF
     pStatusCharacteristic->setValue(std::to_string(SB_OK));
     pStatusCharacteristic->setCallbacks(&actCallbacks);
     debugPrintln("17");
+    NimBLECharacteristic *pDebugCharacteristic = pActionService->createCharacteristic(
+        "000deb06-60be-11eb-ae93-0242ac130002",
+        NIMBLE_PROPERTY::READ |
+            NIMBLE_PROPERTY::WRITE //|
+            
+            );
+
+    pDebugCharacteristic->setValue(std::to_string(SB_OK));
+    pDebugCharacteristic->setCallbacks(&actCallbacks);
 
     /** Start the services when finished creating all Characteristics and Descriptors */
     pDeviceService->start();
@@ -730,22 +756,22 @@ void BLEsetup(std::string SN, std::string Version, int battery, Units units, WiF
 void BLEstop()
 {
     debugPrintln("before BLEstop");
-    if (size_t s = NimBLEDevice::getClientListSize())
-    {
-        debugPrintln("inside disconnecting ble");
-        std::list<NimBLEClient *> b = *NimBLEDevice::getClientList();
-        std::list<NimBLEClient *>::iterator it = b.begin();
+    // if (size_t s = NimBLEDevice::getClientListSize())
+    // {
+    //     debugPrintln("inside disconnecting ble");
+    //     std::list<NimBLEClient *> b = *NimBLEDevice::getClientList();
+    //     std::list<NimBLEClient *>::iterator it = b.begin();
 
-        // for(int i = 0; i < s; i++)
-        // {
-        //     debugPrintln("Bluetooth is connected - disconnect iterator");
+    //     // for(int i = 0; i < s; i++)
+    //     // {
+    //     //     debugPrintln("Bluetooth is connected - disconnect iterator");
 
-        //     NimBLEDevice::deleteClient(*it);
-        //     std::advance(it,1);
-        // }
-        // debugPrintln("All bluetooth connections closed");
-        //return -1;
-    }
+    //     //     NimBLEDevice::deleteClient(*it);
+    //     //     std::advance(it,1);
+    //     // }
+    //     // debugPrintln("All bluetooth connections closed");
+    //     //return -1;
+    // }
     debugPrintln("after BLEstop1");
     //pServer->stopAdvertising();
     debugPrintln("after BLEstop2");
@@ -756,4 +782,15 @@ void BLEstop()
     esp_bt_controller_disable();
     // esp_bt_controller_deinit();
     debugPrintln("after BLEstop4");
+}
+
+void sendOnConnect(NimBLEServer *pServer){
+    debugPrintln("Status indicator: ");
+    pServer->getServiceByUUID("00005ac7-60be-11eb-ae93-0242ac130002")->getCharacteristic("2BBB")->indicate();
+    debugPrintln("Battery notifier: ");
+    pServer->getServiceByUUID("180F")->getCharacteristic("2A19")->notify();
+    debugPrintln("Weight notifier: ");
+    pServer->getServiceByUUID("181D")->getCharacteristic("0000aa67-60be-11eb-ae93-0242ac130002")->notify();
+    debugPrintln("Units notifier: ");
+    pServer->getServiceByUUID("181D")->getCharacteristic("2B46")->notify();
 }

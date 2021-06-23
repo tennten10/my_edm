@@ -51,9 +51,9 @@ void WeightX::readSensors()
         sg2 = ReadVoltage(SG2);
         sg3 = ReadVoltage(SG3);
         sg4 = ReadVoltage(SG4);
-        //char ch[36]={};
-        //sprintf(ch, "[%.5f,%.5f,%.5f,%.5f]", sg1,sg2,sg3,sg4);
-        //debugPrintln(ch);
+        // char ch[36]={};
+        // sprintf(ch, "[%.5f,%.5f,%.5f,%.5f]", sg1,sg2,sg3,sg4);
+        // debugPrintln(ch);
 
         //averaging filter
         sg1 = (sg1 * a) + (sg1_last * (1 - a));
@@ -66,6 +66,21 @@ void WeightX::readSensors()
         sg3_last = sg3;
         sg4_last = sg4;
         xSemaphoreGive(sgMutex);
+        if(isBtConnected()){
+            if(sg1_last < 0.04 || sg1_last > 3.0){
+            updateBTStatus(SB_STRAINGAUGE_1_ERROR);
+            }
+            if(sg2_last < 0.04 || sg2_last > 3.0){
+            updateBTStatus(SB_STRAINGAUGE_2_ERROR);
+            }
+            if(sg3_last < 0.04 || sg3_last > 3.0){
+            updateBTStatus(SB_STRAINGAUGE_3_ERROR);
+            }
+            if(sg4_last < 0.04 || sg4_last > 3.0){
+            updateBTStatus(SB_STRAINGAUGE_4_ERROR);
+            }
+        }
+        
     }
     else
     {
@@ -79,9 +94,9 @@ void WeightX::readSensors()
 
 std::string WeightX::truncateWeight(double d)
 {
-    //debugPrint("this is passed to truncate: ");
-    //debugPrintln(d);
-    //debugPrintln(unitsToString(localUnits));
+    debugPrint("this is passed to truncate: ");
+    debugPrintln(d);
+    // debugPrintln(unitsToString(localUnits));
     char str[16] = "";
     switch (localUnits)
     {
@@ -109,30 +124,6 @@ std::string WeightX::truncateWeight(double d)
 
     // on the big screen we can do maximum 5 characters? maybe, test it out
     // on the small screen we can do maximum 4 characters without changing fonts?
-}
-
-void WeightX::setUnits(Units m)
-{
-    switch (m)
-    {
-    // default system is in g
-    case g: // grams
-        conversion = 1;
-        break;
-    case kg: // kilograms
-        conversion = 0.001;
-        break;
-    case oz: // oz
-        conversion = 0.035274;
-        break;
-    case lb: // lbs
-        conversion = 0.00220462;
-        break;
-    default:
-        debugPrintln("Error: Units not set.");
-        break;
-    }
-    //conversion *= 1000;
 }
 
 double WeightX::getRawWeight()
@@ -164,7 +155,7 @@ double WeightX::getWeight()
     { // just checking that it's returning something non-zero
         if (xSemaphoreTake(sgMutex, (TickType_t)10) == pdTRUE)
         {
-            weight = (abs(rawWeight.w1 - mTareOffset(0)) + abs(rawWeight.w2 - mTareOffset(1)) + abs(rawWeight.w3 - mTareOffset(2)) + abs(rawWeight.w4 - mTareOffset(3))); //  * conversion;
+            weight = (abs(rawWeight.w1 - mTareOffset(0)) + abs(rawWeight.w2 - mTareOffset(1)) + abs(rawWeight.w3 - mTareOffset(2)) + abs(rawWeight.w4 - mTareOffset(3))) * 10*conversion;
             xSemaphoreGive(sgMutex);
         }
         else

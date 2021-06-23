@@ -167,14 +167,14 @@ void app_main() {
     long timeout = 0;
     //_sys->weight->runTheoreticalWeight(100., 50., 50.);
 
-    //_sys->weight->tare();
-    //_sys->display->ready = true;
-    //_sys->display->displayWeight(_sys->weight->getWeightStr());
+    _sys->weight->tare();
+    _sys->display->ready = true;
+    _sys->display->displayWeight(_sys->weight->getWeightStr());
     debugPrintln("Before main loop...");
     for (;;)
     {
         //battery update moved into this loop to free up some memory
-        if(esp_timer_get_time()/1000-batTime > 5000){
+        if(esp_timer_get_time()/1000-batTime > 10000){
         // Operating voltage range of 3.0-4.2V
             // Gave some weird readings over 200% in the past. Add in a coulomb counting "gas gauge" in the future since Li-ion have a non-linear charge-discharge curve.
             // Voltage divider with 1M & 2M, giving read voltage of 2.8 V = 4.2V, 2.0V = 3.0V
@@ -205,158 +205,169 @@ void app_main() {
 
 
         event = _sys->buttons->getEvents();
-        // //debugPrint("event: ");
-        // //debugPrintln(event);
-        // page = _sys->getPage();
-        // mode = _sys->getMode();
+        // debugPrint("event: ");
+        // debugPrintln(event);
+        page = _sys->getPage();
+        mode = _sys->getMode();
         
 
-        // if (mode == STANDARD)
-        // {
-        //     if (page == WEIGHTSTREAM)
-        //     {
+        if (mode == STANDARD)
+        {
+            if (page == WEIGHTSTREAM)
+            {
                 if (event.compare("") == 0) 
                 {}       
                 else if (event.compare(0,4,"SNNN",0,4) == 0)
                 {
-                    //_sys->weight->tare();
+                    _sys->weight->tare();
+                    timeout = esp_timer_get_time()/1000;
                 }
                 else if (event.compare(0,4,"LNNN",0,4) == 0)
                 {
                     //TODO: SHUTDOWN FUNCTION
                     debugPrintln("sleepy time");
-                    //_sys->goToSleep(); 
+                    timeout = esp_timer_get_time()/1000;
+                    _sys->goToSleep(); 
                 }
                 else if (event.compare(0,4,"NSNN", 0, 4) == 0)
                 {
                     //TODO: Units
-                    //_sys->setPage(UNITS);
-                    //_sys->display->displayUnits(_sys->getUnits());
+                    _sys->setPage(UNITS);
+                    _sys->display->displayUnits(_sys->getUnits());
                     
-                    //timeout = esp_timer_get_time()/1000;
+                    timeout = esp_timer_get_time()/1000;
                 }
                 else if (event.compare(0,4,"NLNN", 0, 4) == 0)
                 {
-                    // _sys->runUpdate();
                     _sys->setUpdateFlag();
-                    //timeout = esp_timer_get_time()/1000;
+                    timeout = esp_timer_get_time()/1000;
                 }
                 else if (event.compare(0,4,"NNSN", 0, 4) == 0)
                 {
                     updateBTStatus( rand() % 300 + 200 );
-                    //timeout = esp_timer_get_time()/1000;
+                    timeout = esp_timer_get_time()/1000;
                 }
                 else if (event.compare(0,4,"NNLN", 0, 4) == 0)
                 {
-                    //timeout = esp_timer_get_time()/1000;
+                    timeout = esp_timer_get_time()/1000;
                 }else{
                     debugPrintln("button press type not recognized");
+                    timeout = esp_timer_get_time()/1000;
                 }
-        //  }
-        //     else if (page == UNITS)
-        //     {
-        //         // if no button presses while on this page for a few seconds, revert back to displaying the weight
-        //         if((esp_timer_get_time()/1000) - timeout > 2000){
-        //             _sys->setPage(WEIGHTSTREAM);
-        //             //_sys->display->displayWeight(_sys->weight->getWeightStr());
-        //             debugPrintln("units screen timeout");
-        //         }else{
-        //             if (event.compare("") == 0) 
-        //             {}
-        //             else if (event.compare(0,4, "SNNN",0,4) == 0)
-        //             {
-        //                 //TODO:  FUNCTION
-        //                 _sys->setPage(WEIGHTSTREAM);
-        //                 //_sys->display->displayWeight(_sys->weight->getWeightStr());
-        //                 timeout = esp_timer_get_time()/1000;
-        //             }
-        //             else if (event.compare(0,4, "LNNN",0,4) == 0)
-        //             {
-        //                 debugPrintln("sleepy time");
-        //                 _sys->goToSleep(); 
-        //             }
-        //             else if (event.compare(0,4,"NSNN",0,4) == 0)
-        //             { 
-        //                 timeout = esp_timer_get_time()/1000;
-        //             }
-        //             else if (event.compare(0,4,"NLNN", 0, 4) == 0)
-        //             {
-        //                 timeout = esp_timer_get_time()/1000;
-        //             }
-        //             else if (event.compare(0,4,"NNSN", 0, 4) == 0)
-        //             {
-        //                 _sys->incrementUnits();
-        //                 timeout = esp_timer_get_time()/1000;
-        //             }
-        //             else if (event.compare(0,4,"NNLN", 0, 4) == 0)
-        //             {
-        //                 timeout = esp_timer_get_time()/1000;
-        //             }
-        //             else if (event.compare(0,4,"NNNS", 0, 4) == 0)
-        //             {
-        //                 _sys->decrementUnits();
-        //                 timeout = esp_timer_get_time()/1000;
-        //             }
-        //             else if (event.compare(0,4,"NNNL", 0, 4) == 0)
-        //             {
-        //                 timeout = esp_timer_get_time()/1000;
-        //             }else{
-        //                 debugPrintln("button press type not recongnized");
-        //             }
-        //         }
-        //     // }else if(page == pUPDATE){
-        //     //     // NOT SURE IF I WANT TO DO THIS HERE OR IN A DIFFERENT LOOP. STAY TUNED.
-        //     //     q = 50; //getUpdatePercent(); TODO: include update amount -> delayed for later since giving weird numbers
-        //     //     if (q < 3 && q != q_last)
-        //     //     {
-        //     //         _sys->display->displayUpdateScreen(3);
-        //     //         q_last = q;
-        //     //     }
-        //     //     else if (q > q_last)
-        //     //     {
-        //     //         _sys->display->displayUpdateScreen(q);
-        //     //         q_last = q;
-        //     //     }
-        //     //     // TODO: dynamically update percentage when downloading and inistalling updated code
-        //     //     break;
-        //     }else if(page == SETTINGS){
-        //         // something
-        //         // #ifdef CONFIG_SB_V1_HALF_ILI9341
-        //         // #endif
-        //         // #ifdef CONFIG_SB_V3_ST7735S
-        //         // #endif
-        //         // #ifdef CONFIG_SB_V6_FULL_ILI9341
-        //         // #endif
-        //     }else if(page == INFO){
-        //         // device info stuff
-        //         //_sys->display->displayDeviceInfo(_sys->getSN(), _sys->getVER());
-        //     } //else if(page == )
+            }
+            else if (page == UNITS)
+            {
+                // if no button presses while on this page for a few seconds, revert back to displaying the weight
+                if((esp_timer_get_time()/1000) - timeout > 2000){
+                    _sys->setPage(WEIGHTSTREAM);
+                    _sys->display->displayWeight(_sys->weight->getWeightStr());
+                    debugPrintln("units screen timeout");
+                }else{
+                    if (event.compare("") == 0) 
+                    {}
+                    else if (event.compare(0,4, "SNNN",0,4) == 0)
+                    {
+                        //TODO:  FUNCTION
+                        _sys->setPage(WEIGHTSTREAM);
+                        _sys->display->displayWeight(_sys->weight->getWeightStr());
+                        timeout = esp_timer_get_time()/1000;
+                    }
+                    else if (event.compare(0,4, "LNNN",0,4) == 0)
+                    {
+                        debugPrintln("sleepy time");
+                        timeout = esp_timer_get_time()/1000;
+                        _sys->goToSleep(); 
+                    }
+                    else if (event.compare(0,4,"NSNN",0,4) == 0)
+                    { 
+                        timeout = esp_timer_get_time()/1000;
+                    }
+                    else if (event.compare(0,4,"NLNN", 0, 4) == 0)
+                    {
+                        timeout = esp_timer_get_time()/1000;
+                    }
+                    else if (event.compare(0,4,"NNSN", 0, 4) == 0)
+                    {
+                        _sys->incrementUnits();
+                        timeout = esp_timer_get_time()/1000;
+                    }
+                    else if (event.compare(0,4,"NNLN", 0, 4) == 0)
+                    {
+                        timeout = esp_timer_get_time()/1000;
+                    }
+                    else if (event.compare(0,4,"NNNS", 0, 4) == 0)
+                    {
+                        _sys->decrementUnits();
+                        timeout = esp_timer_get_time()/1000;
+                    }
+                    else if (event.compare(0,4,"NNNL", 0, 4) == 0)
+                    {
+                        timeout = esp_timer_get_time()/1000;
+                    }else{
+                        debugPrintln("button press type not recongnized");
+                        timeout = esp_timer_get_time()/1000;
+                    }
+                }
+            } else if(page == pUPDATE){
+            //     // NOT SURE IF I WANT TO DO THIS HERE OR IN A DIFFERENT LOOP. STAY TUNED.
+            //     q = 50; //getUpdatePercent(); TODO: include update amount -> delayed for later since giving weird numbers
+            //     if (q < 3 && q != q_last)
+            //     {
+            //         _sys->display->displayUpdateScreen(3);
+            //         q_last = q;
+            //     }
+            //     else if (q > q_last)
+            //     {
+            //         _sys->display->displayUpdateScreen(q);
+            //         q_last = q;
+            //     }
+            //     // TODO: dynamically update percentage when downloading and inistalling updated code
+            //     break;
+            }else if(page == SETTINGS){
+                // something
+                // #ifdef CONFIG_SB_V1_HALF_ILI9341
+                // #endif
+                // #ifdef CONFIG_SB_V3_ST7735S
+                // #endif
+                // #ifdef CONFIG_SB_V6_FULL_ILI9341
+                // #endif
+            }else if(page == INFO){
+                // device info stuff
+                //_sys->display->displayDeviceInfo(_sys->getSN(), _sys->getVER());
+            } //else if(page == )
 
-        // } else if (mode == CALIBRATION)
-        // {
-        //     /*if(ePage == ){
+            // if(page != pUPDATE){
+            //     if((esp_timer_get_time()/1000) - timeout > 1200000){ // timeout after roughly 20 minutes
+            //         debugPrintln("timeout sleepy time");
+            //         _sys->goToSleep();
+            //     }
+            // }
+
+        } else if (mode == CALIBRATION)
+        {
+            /*if(ePage == ){
         
-        //     if(strcmp(event,"SNNN")){
+            if(strcmp(event,"SNNN")){
         
-        //     }
-        //     if(strcmp(event, "LNNN")){
-        //     }
-        //     if(strcmp(event, "NSNN")){
+            }
+            if(strcmp(event, "LNNN")){
+            }
+            if(strcmp(event, "NSNN")){
             
-        //     }
-        // }
-        // else if(ePage == ){
-        //     if(strcmp(event,"SNNN")){
-        //     //TODO:  FUNCTION
-        //     }
-        //     if(strcmp(event, "LNNN")){
-        //     //TODO:  FUNCTION
-        //     }
-        //     if(strcmp(event, "NSNN")){
-        //     //TODO: FUNCTION
-        //     }
-        //     }*/
-        // }
+            }
+        }
+        else if(ePage == ){
+            if(strcmp(event,"SNNN")){
+            //TODO:  FUNCTION
+            }
+            if(strcmp(event, "LNNN")){
+            //TODO:  FUNCTION
+            }
+            if(strcmp(event, "NSNN")){
+            //TODO: FUNCTION
+            }
+            }*/
+        }
 
         
         vTaskDelay(20); 

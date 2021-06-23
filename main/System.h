@@ -34,8 +34,8 @@ public:
     
     // temp
     void init(){
-        //this->display = new DisplayX(); // constructor
-        vTaskDelay(50);
+        this->display = new DisplayX(); 
+        vTaskDelay(75);
         this->getSavedVals();
         this->weight->setLocalUnits(eUnits);
         

@@ -135,7 +135,7 @@ void ota_task(void *pvParameter)
     }
          
 
-    vTaskDelay(50);
+    vTaskDelay(100);
     BLEstop(); // This was later on, but testing with this earlier
     debugPrintln("after BLEstop");
 

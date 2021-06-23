@@ -80,8 +80,8 @@ public:
         getStrainGaugeParams(mK_sg1,mK_sg2, mK_sg3, mK_sg4 );
 
         // temporary calibration values
-        mK_sg1(2,2) = 9.9099*1; // V/g
-        mK_sg2(2,2) = 9.9099*1;
+        mK_sg1(2,2) = 55.9099*1; // V/g
+        mK_sg2(2,2) = 55.9099*1;
         mK_sg3(2,2) = 55.8559*1;
         mK_sg4(2,2) = 64.8649*1;
 
@@ -119,7 +119,7 @@ public:
 private:
     SemaphoreHandle_t sgMutex; 
     QueueHandle_t weightQueue; 
-    void setUnits(Units m);
+    //void setUnits(Units m);
     double getRawWeight();
     
     double ReadVoltage(adc1_channel_t pin);
@@ -138,10 +138,10 @@ private:
                 ret = 0.001;
             break;
             case oz:
-                ret = 0.;
+                ret = 0.035274;
             break;
             case lb:
-                ret = 2.2;
+                ret = 0.0022046208235381;
             break;
             default:
                 ret = 1.0;
@@ -172,7 +172,7 @@ private:
     double sg3_last = 0.;
     double sg4_last = 0.;
 
-    float a = 0.9;
+    float a = 0.5;
 
     double conversion = 300.0;
     double getUnitPrecision(Units local){

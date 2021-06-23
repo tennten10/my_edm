@@ -1,30 +1,4 @@
 
-// uncomment one of the below. small = 11x16, large = 18x24
-//#define SMALL
-//#define LARGE
-
-//uncomment one of the below 
-//#define V1_BASE
-//#define V3_FLIP
-//#define V6_SIMPLE
-
-// Display style options:
-//  DISPLAY_320x240_SPI_FULL
-//  DISPLAY_320x240_SPI_PARTIAL
-//  DISPLAY_120x80_I2C
-/*#ifdef V1_Base
-SB_V1_HALF_ILI9341
-  #define DISPLAY_320x240_SPI_PARTIAL
-#endif
-#ifdef V3_FLIP
-SB_V3_ST7735S
-  #define DISPLAY_120x80_I2C
-#endif
-#ifdef V6_SIMPLE
-SB_V6_FULL_ILI9341
-  #define DISPLAY_320x240_SPI_FULL
-#endif*/
-
 //Uncommenting one of these will initialize the program to one of these states. 
 // TODO: Make functions to change the operations while the program is running
 //#define SERIAL_DEBUG
@@ -49,7 +23,8 @@ extern "C" {
 // declare width and height of the display for use later
 #define SB_HORIZ 320
 #define SB_VERT 240
-#define UPDATE_URL "https://storage.googleapis.com/sb-firmware-00/proto_v1/firmware.bin"
+#define UPDATE_URL "https://storage.googleapis.com/sb-firmware-00/firmware_v1.bin"
+#define UPDATE_URL_META "https://storage.googleapis.com/storage/v1/b/sb-firmware-00/o/firmware_v1.bin"
 
 #elif defined CONFIG_SB_V3_ST7735S
 #include "configs/PinDefs_V3.h"
@@ -58,8 +33,9 @@ extern "C" {
 #define SB_VERT 80
 
 // OTA update server
-#define UPDATE_URL "https://storage.googleapis.com/sb-firmware-00/proto_v3/firmware.bin"
-// https://storage.googleapis.com/sb-firmware-00/proto_v3/firmware.bin
+#define UPDATE_URL "https://storage.googleapis.com/sb-firmware-00/firmware_v3.bin"
+#define UPDATE_URL_META "https://storage.googleapis.com/storage/v1/b/sb-firmware-00/o/firmware_v3.bin"
+
 
 
 #elif defined CONFIG_SB_V6_FULL_ILI9341
