@@ -29,13 +29,11 @@ Units stringToUnits(std::string v)
     Units retVal = err;
     if (v.compare("g") == 0)
     {
-        debugPrintln("stringtoUnits g");
         retVal = g;
     }
     else if (v.compare("kg") == 0)
     {
         retVal = kg;
-        debugPrintln("stringtoUnits kg");
     }
     else if (v.compare("oz") == 0)
     {

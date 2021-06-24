@@ -71,7 +71,7 @@ public:
         debugPrint("inside weight initialization: ");
         debugPrintln((int)esp_timer_get_time()/1000);
         adc1_config_width(ADC_WIDTH_BIT_12);
-        adc1_config_channel_atten(SG1,ADC_ATTEN_DB_11); // Will need to change the attenuation when the circuit gets upgraded to auto-ranging
+        adc1_config_channel_atten(SG1,ADC_ATTEN_DB_11); // TODO: Will need to change the attenuation when the circuit gets upgraded to auto-ranging
         adc1_config_channel_atten(SG2,ADC_ATTEN_DB_11);
         adc1_config_channel_atten(SG3,ADC_ATTEN_DB_11);
         adc1_config_channel_atten(SG4,ADC_ATTEN_DB_11);

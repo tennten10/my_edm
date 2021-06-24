@@ -299,7 +299,7 @@ WiFiStruct availableWiFiInfo(){
             for(int k = 0; k < i; k++){
                 // compare to known networks
                 // TODO: double check to make sure this returns the right types to compare... 
-                // apRecords.ssid is uint8_t, which I'm assuming is just the ascii number. Will casting to char fix it?
+                // apRecords.ssid is uint8_t, which I'm assuming is just the ascii number. use memcpy instead of strcpy.
                 
                 
                 if(strcmp(apRecords[p].c_str(), wfi[k].ssid)==0){

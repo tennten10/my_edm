@@ -135,13 +135,9 @@ void ota_task(void *pvParameter)
     }
          
 
-    vTaskDelay(100);
+    vTaskDelay(200);
     BLEstop(); // This was later on, but testing with this earlier
     debugPrintln("after BLEstop");
-
-
-    
-
 
     config.url = UPDATE_URL;
     /* Ensure to disable any WiFi power save mode, this allows best throughput

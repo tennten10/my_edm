@@ -331,6 +331,21 @@ class WeightCallbacks : public NimBLECharacteristicCallbacks
         debugPrintln(pCharacteristic->getValue());
     };
 
+    void onWrite(NimBLECharacteristic *pCharacteristic){
+        if(strcmp(pCharacteristic->getUUID().toString().c_str(), "2B46") == 0){
+            debugPrintln("");
+            Units u = stringToUnits(pCharacteristic->getValue());
+            if(u != err){
+                _sys->setUnits(u);
+                debugPrintln("Set units from bluetooth");
+                updateBTStatus(SB_SET_UNIT_SUCCESS);
+            }else{
+                updateBTStatus(SB_SET_UNIT_FAILED);
+                debugPrintln("Set units from bluetooth FAILED!");
+            }
+        }
+    }
+
     /** Called before notification or indication is sent,
         the value can be changed here before sending if desired.
     */

@@ -87,7 +87,9 @@ LV_IMG_DECLARE(img_logo_black);
 LV_IMG_DECLARE(img_logo_white);
 
 LV_FONT_DECLARE(vt323_70);
+LV_FONT_DECLARE(vt323_80);
 LV_FONT_DECLARE(vt323_90);
+LV_FONT_DECLARE(vt323_100);
 LV_FONT_DECLARE(vt323_120);
 LV_FONT_DECLARE(vt323_130);
 LV_FONT_DECLARE(vt323_140);
@@ -133,15 +135,15 @@ void DisplayX::Main()
     ledc_channel_config(&b_ledc_c_config);
     ledc_fade_func_install(0);
 
-    ledc_set_duty_and_update(b_ledc_c_config.speed_mode, b_ledc_c_config.channel, intensity, 0);
+    //ledc_set_duty_and_update(b_ledc_c_config.speed_mode, b_ledc_c_config.channel, intensity, 0);
 #endif
 #ifdef CONFIG_SB_V3_ST7735S
     ledc_channel_config(&r_ledc_c_config);
     ledc_channel_config(&g_ledc_c_config);
     ledc_channel_config(&b_ledc_c_config);
-    ledc_set_duty_and_update(r_ledc_c_config.speed_mode, r_ledc_c_config.channel, 100, 0);
-    ledc_set_duty_and_update(g_ledc_c_config.speed_mode, g_ledc_c_config.channel, 100, 0);
-    ledc_set_duty_and_update(b_ledc_c_config.speed_mode, b_ledc_c_config.channel, 100, 0);
+    ledc_fade_func_install(0);
+
+    //setColor(getRed(), getGreen(), getBlue());
 #endif
 
     /* Use double buffered when not working with monochrome displays */
@@ -196,11 +198,9 @@ void DisplayX::Main()
     styleInit();
     disp_flag = true;
     debugPrintln("drawing starting screen");
-
     // draw my starting screen
-    long t = esp_timer_get_time() / 1000;
-
     displayLogo();
+    //long t = esp_timer_get_time() / 1000;
     while (!ready) //esp_timer_get_time() / 1000 - t < 500)
     {
         lv_task_handler();
@@ -248,24 +248,29 @@ void DisplayX::styleInit()
     lv_style_init(&transpCont);
 
 #ifdef CONFIG_SB_V1_HALF_ILI9341
-    lv_style_
-        lv_obj_align(label1, NULL, LV_ALIGN_CENTER, 0, 0);
 
-    lv_style_set_text_font(&style, LV_STATE_DEFAULT, &lv_font_montserrat_14);
-    lv_style_set_text_color(&style, LV_STATE_DEFAULT, LV_COLOR_WHITE);
-    lv_style_set_bg_color(&style, LV_STATE_DEFAULT, LV_COLOR_BLACK);
+    lv_style_set_text_font(&weightStyle, LV_STATE_DEFAULT, &vt323_120);
+    lv_style_set_text_color(&weightStyle, LV_STATE_DEFAULT, LV_COLOR_WHITE);
+
+    lv_style_set_text_font(&unitStyle, LV_STATE_DEFAULT, &vt323_120);
+    lv_style_set_text_color(&unitStyle, LV_STATE_DEFAULT, LV_COLOR_WHITE);
+
+    lv_style_set_bg_color(&logoStyle, LV_STATE_DEFAULT, LV_COLOR_BLACK);
+
+    lv_style_set_bg_color(&backgroundStyle, LV_STATE_DEFAULT, LV_COLOR_BLACK);
+    lv_style_set_border_opa(&backgroundStyle, LV_STATE_DEFAULT, 0);
+
+    lv_style_set_text_color(&infoStyle, LV_STATE_DEFAULT, LV_COLOR_WHITE);
+    lv_style_set_text_font(&infoStyle, LV_STATE_DEFAULT, &montserrat_90);
+
+    lv_style_set_bg_opa(&transpCont, LV_STATE_DEFAULT, 0);
+    lv_style_set_border_opa(&transpCont, LV_STATE_DEFAULT, 0);
 
 #endif
 #ifdef CONFIG_SB_V3_ST7735S
 
-    // lv_style_set_text_font(&weightStyle_s, LV_STATE_DEFAULT, &lv_font_montserrat_40);
-    // lv_style_set_text_color(&weightStyle_s, LV_STATE_DEFAULT, LV_COLOR_WHITE);
-
-    // lv_style_set_text_font(&weightStyle_m, LV_STATE_DEFAULT, &lv_font_montserrat_40);
-    // lv_style_set_text_color(&weightStylem, LV_STATE_DEFAULT, LV_COLOR_WHITE);
-
-    // lv_style_set_text_font(&weightStyle_l, LV_STATE_DEFAULT, &lv_font_montserrat_40);
-    // lv_style_set_text_color(&weightStylel, LV_STATE_DEFAULT, LV_COLOR_WHITE);
+    lv_style_set_text_font(&weightStyle, LV_STATE_DEFAULT, &montserrat_40);
+    lv_style_set_text_color(&weightStyle, LV_STATE_DEFAULT, LV_COLOR_WHITE);
 
     lv_style_set_text_font(&unitStyle, LV_STATE_DEFAULT, &lv_font_montserrat_40);
     lv_style_set_text_color(&unitStyle, LV_STATE_DEFAULT, LV_COLOR_WHITE);
@@ -283,16 +288,9 @@ void DisplayX::styleInit()
 
 #endif
 #ifdef CONFIG_SB_V6_FULL_ILI9341
-    // TODO: just copy and pasted for now... need to change things up
 
     lv_style_set_text_font(&weightStyle, LV_STATE_DEFAULT, &vt323_140);
     lv_style_set_text_color(&weightStyle, LV_STATE_DEFAULT, LV_COLOR_WHITE);
-
-    // lv_style_set_text_font(&weightStyle_m, LV_STATE_DEFAULT, &lv_font_montserrat_90);
-    // lv_style_set_text_color(&weightStylem, LV_STATE_DEFAULT, LV_COLOR_WHITE);
-
-    // lv_style_set_text_font(&weightStyle_l, LV_STATE_DEFAULT, &lv_font_montserrat_120);
-    // lv_style_set_text_color(&weightStylel, LV_STATE_DEFAULT, LV_COLOR_WHITE);
 
     lv_style_set_text_font(&unitStyle, LV_STATE_DEFAULT, &vt323_140);
     lv_style_set_text_color(&unitStyle, LV_STATE_DEFAULT, LV_COLOR_WHITE);
@@ -422,60 +420,76 @@ void DisplayX::pageTestRoutine(long t)
     }
 }
 
-void DisplayX::lv_tick_task(void *arg)
+// this needs to run for the library to work
+void DisplayX::lv_tick_task(void *arg) 
 {
     (void)arg;
 
     lv_tick_inc(LV_TICK_PERIOD_MS);
 }
 
-/***   My functions below this line   ***/
-
 void DisplayX::resizeWeight(char *w)
 {
     static int lastLen = 0;
-    //printf("resizeWeight: %d, %d\n", strlen(w), lastLen);
 
 #ifdef CONFIG_SB_V1_HALF_ILI9341
-    if (strlen(w) > 4)
+    if (strlen(w) > 7)
     {
-        //tft.setFont(3);
+        if (lastLen > 7)
+        {
+            lv_style_remove_prop(&weightStyle, LV_STYLE_TEXT_FONT);
+            lv_style_set_text_font(&weightStyle, LV_STATE_DEFAULT, &vt323_80);
+        }
     }
-    else if (strlen(w) > 3)
+    else if (strlen(w) > 4)
     {
-        //tft.setFont(4);
+        if (lastLen > 4)
+        {
+            lv_style_remove_prop(&weightStyle, LV_STYLE_TEXT_FONT);
+            lv_style_set_text_font(&weightStyle, LV_STATE_DEFAULT, &vt323_100);
+        }
     }
-    else if (strlen(w) > 2)
+    else if (strlen(w) > 0)
     {
-        //tft.setFont(5);
+        if (lastLen > 0)
+        {
+            lv_style_remove_prop(&weightStyle, LV_STYLE_TEXT_FONT);
+            lv_style_set_text_font(&weightStyle, LV_STATE_DEFAULT, &vt323_120);
+        }
     }
     else
     {
-        //tft.setFont(6);
     }
 #endif
 
 #ifdef CONFIG_SB_V3_ST7735S
 
-    if (strlen(w) > 4)
-    { // TODO: Figure out proper font sizes for this resizing function
-        //style
-        debugPrintln("size 3 Font");
-    }
-    else if (strlen(w) > 3 && lastLen != 3)
+        if (strlen(w) > 7)
     {
-
-        debugPrintln("size 3' Font");
+        if (lastLen > 7)
+        {
+            lv_style_remove_prop(&weightStyle, LV_STYLE_TEXT_FONT);
+            lv_style_set_text_font(&weightStyle, LV_STATE_DEFAULT, &lv_font_montserrat_70);
+        }
     }
-    else if (strlen(w) > 2)
+    else if (strlen(w) > 4)
     {
-
-        debugPrintln("size 4 Font");
+        if (lastLen > 4)
+        {
+            lv_style_remove_prop(&weightStyle, LV_STYLE_TEXT_FONT);
+            lv_style_set_text_font(&weightStyle, LV_STATE_DEFAULT, &montserrat_90);
+        }
+    }
+    else if (strlen(w) > 0)
+    {
+        if (lastLen > 0)
+        {
+            lv_style_remove_prop(&weightStyle, LV_STYLE_TEXT_FONT);
+            lv_style_set_text_font(&weightStyle, LV_STATE_DEFAULT, &montserrat_120);
+        }
     }
     else
     {
-
-        debugPrintln("size 4 default Font");
     }
 #endif
 
@@ -484,30 +498,24 @@ void DisplayX::resizeWeight(char *w)
     {
         if (lastLen > 7)
         {
-            //lv_style_reset(&weightStyle);
             lv_style_remove_prop(&weightStyle, LV_STYLE_TEXT_FONT);
             lv_style_set_text_font(&weightStyle, LV_STATE_DEFAULT, &vt323_120);
-            //lv_style_set_text_color(&weightStyle, LV_STATE_DEFAULT, LV_COLOR_WHITE);
         }
     }
     else if (strlen(w) > 4)
     {
         if (lastLen > 4)
         {
-            //lv_style_reset(&weightStyle);
             lv_style_remove_prop(&weightStyle, LV_STYLE_TEXT_FONT);
             lv_style_set_text_font(&weightStyle, LV_STATE_DEFAULT, &vt323_130);
-            //lv_style_set_text_color(&weightStyle, LV_STATE_DEFAULT, LV_COLOR_WHITE);
         }
     }
     else if (strlen(w) > 0)
     {
         if (lastLen > 0)
         {
-            //lv_style_reset(&weightStyle);
             lv_style_remove_prop(&weightStyle, LV_STYLE_TEXT_FONT);
             lv_style_set_text_font(&weightStyle, LV_STATE_DEFAULT, &vt323_140);
-            //lv_style_set_text_color(&weightStyle, LV_STATE_DEFAULT, LV_COLOR_WHITE);
         }
     }
     else
@@ -523,7 +531,7 @@ void DisplayX::updateWeight(std::string weight)
 {
     if (weight.compare("-1") == 0)
     {
-        // TODO: have a way to check if the screen already has that value so it doesn't waste time doing it again.
+        // Value same as last value. No need to update.
         //debugPrintln("breaking out of updateWeight");
         return;
     }
@@ -553,8 +561,8 @@ void DisplayX::displayWeight(std::string weight)
 {
     if (weight.compare("-1") == 0)
     {
-        // TODO: have a way to check if the screen already has that value so it doesn't waste time doing it again.
-        //debugPrintln("breaking out of displayWeight");
+        // Value same as last value. No need to update. But this is the initializing function, so it shouldn't be here?
+        debugPrintln("breaking out of displayWeight - probably shouldn't ever do this");
         return;
     }
     debugPrintln(weight);
@@ -585,7 +593,7 @@ void DisplayX::displayWeight(std::string weight)
         lv_obj_set_height(bkgrnd, SB_VERT);
         lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
 
-        lv_obj_align(cont, NULL, LV_ALIGN_CENTER, 0, 0);
+        lv_obj_align(cont, NULL, LV_ALIGN_IN_TOP_MID, 0, 0);
         lv_obj_add_style(bkgrnd, LV_OBJ_PART_MAIN, &backgroundStyle);
         lv_obj_add_style(cont, LV_OBJ_PART_MAIN, &transpCont);
         lv_obj_add_style(weightLabel, LV_OBJ_PART_MAIN, &weightStyle);
@@ -638,23 +646,24 @@ void DisplayX::displayUnits(Units u)
         lv_cont_set_fit(cont, LV_FIT_PARENT);
         lv_cont_set_layout(cont, LV_LAYOUT_CENTER);
 
-#ifdef CONFIG_SB_V1_HALF_ILI9341
-#endif
-#ifdef CONFIG_SB_V3_ST7735S
         lv_obj_set_width(bkgrnd, SB_HORIZ);
         lv_obj_set_height(bkgrnd, SB_VERT);
         lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
 
-#endif
-#ifdef CONFIG_SB_V6_FULL_ILI9341
-        lv_obj_set_width(bkgrnd, SB_HORIZ);
-        lv_obj_set_height(bkgrnd, SB_VERT);
-        lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
-#endif
+
 
         lv_label_set_text(unitsLabel, unitsToString(u).c_str());
 
+#ifdef CONFIG_SB_V1_HALF_ILI9341
+        lv_obj_align(cont, NULL, LV_ALIGN_IN_TOP_MID, 0, 0);
+#endif
+#ifdef CONFIG_SB_V3_ST7735S
         lv_obj_align(cont, NULL, LV_ALIGN_CENTER, 0, 0);
+#endif
+#ifdef CONFIG_SB_V6_FULL_ILI9341 
+        lv_obj_align(cont, NULL, LV_ALIGN_CENTER, 0, 0);
+#endif
+
         lv_obj_add_style(bkgrnd, LV_OBJ_PART_MAIN, &backgroundStyle);
         lv_obj_add_style(cont, LV_OBJ_PART_MAIN, &transpCont);
         lv_obj_add_style(unitsLabel, LV_OBJ_PART_MAIN, &unitStyle);
@@ -680,15 +689,6 @@ void DisplayX::updateUnits(Units u)
         {
             debugPrintln("unitsLabel not initialized. run displayUnits before this.");
         }
-
-#ifdef CONFIG_SB_V1_HALF_ILI9341
-#endif
-#ifdef CONFIG_SB_V3_ST7735S
-
-#endif
-#ifdef CONFIG_SB_V6_FULL_ILI9341
-
-#endif
 
         xSemaphoreGive(xGuiSemaphore);
         debugPrintln("gave back xGuiSemaphore in updateUnits");
@@ -733,7 +733,15 @@ void DisplayX::displayDeviceInfo(std::string SN, std::string VER)
         lv_obj_t *label3 = lv_label_create(bkgrnd, NULL);
         debugPrintln("after setting style values");
 #ifdef CONFIG_SB_V1_HALF_ILI9341
+        // TODO: Just copy and pasted from FULL version. Adjust in future.
+        lv_obj_set_width(bkgrnd, SB_HORIZ);
+        lv_obj_set_height(bkgrnd, SB_VERT);
 
+        lv_label_set_text_fmt(label3, "SUDOBOARD INFO\nSN: %s\n VER: %s", SN, VER); // , 5, 10); //"sn", "ver");
+        debugPrintln("after setting label text values");
+        lv_label_set_align(label3, LV_ALIGN_CENTER);
+        lv_obj_align(label3, NULL, LV_ALIGN_CENTER, 0, 0);
+        debugPrintln("After setting alignment");
 #endif
 #ifdef CONFIG_SB_V3_ST7735S
 
@@ -820,26 +828,24 @@ void DisplayX::displayLogo()
         lv_obj_t *img = lv_img_create(bkgrnd, NULL);
 
         lv_img_set_src(img, &img_logo_white);
-
-#ifdef CONFIG_SB_V1_HALF_ILI9341
         lv_obj_set_width(bkgrnd, SB_HORIZ);
         lv_obj_set_height(bkgrnd, SB_VERT);
+#ifdef CONFIG_SB_V1_HALF_ILI9341
+        
         lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
         lv_img_set_zoom(img, 70);
         lv_obj_align(img, NULL, LV_ALIGN_CENTER, 0, 0);
 #endif
 #ifdef CONFIG_SB_V3_ST7735S
-        lv_obj_set_width(bkgrnd, SB_HORIZ);
-        lv_obj_set_height(bkgrnd, SB_VERT);
+        
         lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
         lv_img_set_zoom(img, 70);
         lv_obj_align(img, NULL, LV_ALIGN_CENTER, 0, 0);
 #endif
 #ifdef CONFIG_SB_V6_FULL_ILI9341
-        lv_obj_set_width(bkgrnd, SB_HORIZ);
-        lv_obj_set_height(bkgrnd, SB_VERT);
+        
         lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
-        lv_img_set_zoom(img, 200);
+        lv_img_set_zoom(img, 190);
         lv_obj_align(img, NULL, LV_ALIGN_CENTER, 0, 0);
 #endif
         lv_obj_add_style(bkgrnd, LV_OBJ_PART_MAIN, &backgroundStyle);
@@ -863,13 +869,24 @@ void DisplayX::displayBattery(int bat)
         lv_obj_t *img = lv_img_create(bkgrnd, NULL);
         lv_obj_t *cont = lv_cont_create(img, NULL);
         lv_obj_t *label = lv_label_create(cont, NULL);
-#ifdef CONFIG_SB_V1_HALF_ILI9341
-#endif
-#ifdef CONFIG_SB_V3_ST7735S
+
         lv_img_set_src(img, &img_battery);
         lv_obj_set_width(bkgrnd, SB_HORIZ);
         lv_obj_set_height(bkgrnd, SB_VERT);
         lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
+
+#ifdef CONFIG_SB_V1_HALF_ILI9341
+        lv_img_set_zoom(img, 70);
+        lv_obj_align(img, NULL, LV_ALIGN_CENTER, 10, 0);
+
+        lv_cont_set_fit(cont, LV_FIT_PARENT);
+        lv_cont_set_layout(cont, LV_LAYOUT_CENTER);
+
+        lv_label_set_text_fmt(label, "%d%%", bat);
+
+        lv_obj_align(cont, NULL, LV_ALIGN_CENTER, 0, 0);
+#endif
+#ifdef CONFIG_SB_V3_ST7735S
 
         lv_img_set_zoom(img, 100);
         lv_obj_align(img, NULL, LV_ALIGN_CENTER, 10, 0);
@@ -882,10 +899,6 @@ void DisplayX::displayBattery(int bat)
         lv_obj_align(cont, NULL, LV_ALIGN_CENTER, 0, 0);
 #endif
 #ifdef CONFIG_SB_V6_FULL_ILI9341
-        lv_img_set_src(img, &img_battery);
-        lv_obj_set_width(bkgrnd, SB_HORIZ);
-        lv_obj_set_height(bkgrnd, SB_VERT);
-        lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
 
         lv_img_set_zoom(img, 100);
         lv_obj_align(img, NULL, LV_ALIGN_CENTER, 10, 0);
@@ -920,13 +933,17 @@ void DisplayX::displayLowBattery()
         lv_obj_t *img = lv_img_create(bkgrnd, NULL);
         lv_obj_t *cont = lv_cont_create(img, NULL);
         lv_obj_t *label = lv_label_create(cont, NULL);
-#ifdef CONFIG_SB_V1_HALF_ILI9341
-#endif
-#ifdef CONFIG_SB_V3_ST7735S
+
         lv_img_set_src(img, &img_low_battery);
         lv_obj_set_width(bkgrnd, SB_HORIZ);
         lv_obj_set_height(bkgrnd, SB_VERT);
         lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
+
+#ifdef CONFIG_SB_V1_HALF_ILI9341
+#endif
+#ifdef CONFIG_SB_V3_ST7735S
+        
+        
 
         lv_img_set_zoom(img, 100);
         lv_obj_align(img, NULL, LV_ALIGN_CENTER, 10, 0);
@@ -938,10 +955,6 @@ void DisplayX::displayLowBattery()
         lv_obj_align(cont, NULL, LV_ALIGN_CENTER, 0, 0);
 #endif
 #ifdef CONFIG_SB_V6_FULL_ILI9341
-        lv_img_set_src(img, &img_low_battery);
-        lv_obj_set_width(bkgrnd, SB_HORIZ);
-        lv_obj_set_height(bkgrnd, SB_VERT);
-        lv_obj_align(bkgrnd, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
 
         lv_img_set_zoom(img, 100);
         lv_obj_align(img, NULL, LV_ALIGN_CENTER, 10, 0);
@@ -1051,6 +1064,7 @@ void DisplayX::setColor(int r, int g, int b)
     green = g * intensity / 255;
     blue = b * intensity / 255;
 #ifdef CONFIG_SB_V3_ST7735S
+
     ledc_set_duty_and_update(r_ledc_c_config.speed_mode, r_ledc_c_config.channel, red, 0);
     ledc_set_duty_and_update(g_ledc_c_config.speed_mode, g_ledc_c_config.channel, green, 0);
 #endif
@@ -1090,6 +1104,8 @@ void DisplayX::setIntensity(int i)
 #endif
 }
 
+// Not using this since deleting the objects prevents proper initialization when it turns back on
+// Maybe I'll be able to figure it out at some point but it works for now
 void DisplayX::onDelete()
 {
 #if defined(CONFIG_SB_V1_HALF_ILI9341) || defined(CONFIG_SB_V6_FULL_ILI9341)

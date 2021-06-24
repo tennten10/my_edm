@@ -335,7 +335,7 @@ void scanNetworks(uint16_t& num, std::string * ap) { // starts fully disconnecte
 
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
-    // wifi scan, but without setting ssid, etc???
+    // wifi scan, but without setting ssid or other config info
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA) );
     
     ESP_ERROR_CHECK(esp_wifi_start() );
