@@ -188,7 +188,11 @@ void app_main() {
             if(battery != _sys->getBattery()){
                 _sys->setBattery(battery);
                 if(isBtConnected()){
-                    updateBTBattery(battery);
+                    if(false /*charging check*/){
+                        updateBTBattery(150);
+                    }else{
+                        updateBTBattery(battery);
+                    }
                 }
                 debugPrint("battery: ");
                 debugPrintln(battery);

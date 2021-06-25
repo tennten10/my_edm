@@ -191,7 +191,7 @@ private:
         }
     }
 
-    Units localUnits;
+    volatile Units localUnits;
     int weight_update_rate = WEIGHT_UPDATE_RATE;
 
     Eigen::Matrix2d theoreticalWeight(double g, double x, double y);

@@ -132,10 +132,20 @@ void SystemX::validateDataAcrossObjects(){
     //debugPrintln("verify function");
     /******************************************/
     // on units change
-    static Units t = this->weight->getLocalUnits();
+    Units t = this->weight->getLocalUnits();
+    Units v = getUnits();
     //debugPrint("local units: ");
     //debugPrintln(unitsToString(t));
-    if (getUnits() != t){
+    bool ummidk = !(t == v); // janky but it doesn't work in if statement otherwise
+    debugPrint("Validate compare: ");
+    debugPrint((int)v);
+    debugPrint(" (v), (t) ");
+    debugPrint((int)t);
+    debugPrint(" compare:  ");
+    debugPrintln((int)ummidk);
+    if (ummidk){
+        printf("setting units in validate: %s, %s\n", unitsToString(getUnits()).c_str(), unitsToString( weight->getLocalUnits()).c_str());
+        printf("setting units in validate: %d, %d\n", getUnits(), weight->getLocalUnits());
         weight->setLocalUnits(getUnits());
         if(isBtConnected()){
             updateBTUnits(getUnits());

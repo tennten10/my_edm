@@ -42,6 +42,9 @@ Units stringToUnits(std::string v)
     else if (v.compare("lb") == 0)
     {
         retVal = lb;
+    }else{
+        debugPrint("incorrect thing passed to stringToUnits: ");
+        debugPrintln(v);
     }
     return retVal;
     // g, kg, oz, lb

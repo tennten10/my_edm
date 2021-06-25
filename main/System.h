@@ -227,7 +227,7 @@ private:
     void getSavedVals(); // initialize values saved across boots from NVS
     void saveVals();
     
-    Units eUnits = kg;
+    volatile Units eUnits = kg;
     int batteryLevel = 100;
 
     MODE eMode = STANDARD;

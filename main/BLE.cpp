@@ -31,7 +31,7 @@ void BLETask(void *parameter)
     {
         if (pServer->getConnectedCount())
         {
-            NimBLEService *pSvc = pServer->getServiceByUUID("181D");
+            NimBLEService *pSvc = pServer->getServiceByUUID("181D"); // weight service
             if (pSvc)
             {
                 if (uxQueueMessagesWaiting(bleUnitsQueue) > 0)
@@ -41,7 +41,13 @@ void BLETask(void *parameter)
                     xQueueReceive(bleUnitsQueue, &uBuff, (TickType_t)10);
                     if (u)
                     {
-                        u->setValue(unitsToString(uBuff));
+                        debugPrint("BLE Units set before notify: ");
+                        debugPrintln(unitsToString(uBuff));
+
+                        if(u->getValue().compare(unitsToString(uBuff)) != 0){
+                            u->setValue(unitsToString(uBuff));
+                            debugPrintln("BLE Units not setting value since it is the same. Still going to notify.");
+                        }
                         u->notify(true);
                     }
                 }
@@ -52,11 +58,11 @@ void BLETask(void *parameter)
                     NimBLECharacteristic *w = pSvc->getCharacteristic("0000aa67-60be-11eb-ae93-0242ac130002");
                     xQueueReceive(bleWeightQueue, &wBuff, (TickType_t)10);
                     //strcat(buff, "\n");
-                    debugPrint("BLETask / before notify: ");
+                    debugPrint("BLETask weight before notify: ");
                     debugPrintln(wBuff);
                     if (w)
                     {
-                        w->setValue(wBuff);
+                        w->setValue(std::string(wBuff));
                         w->notify(true);
                     }
                 }
@@ -107,7 +113,7 @@ void updateBTWeight(std::string w)
     }
     char ch[6];
     strcpy(ch, w.c_str());
-    char buffer[6];
+    char buffer[6]; // for dumping extra queue items
     if (pServer != NULL && pServer->getConnectedCount())
     {
         if (uxQueueMessagesWaiting(bleWeightQueue) > 2)
@@ -115,8 +121,8 @@ void updateBTWeight(std::string w)
             xQueueReceive(bleWeightQueue, &buffer, (TickType_t)10);
         }
         xQueueSend(bleWeightQueue, &ch, (TickType_t)10);
-        debugPrint("updateBTWeight: ");
-        debugPrintln(ch);
+        // debugPrint("updateBTWeight: ");
+        // debugPrintln(ch);
     }
 }
 
@@ -128,6 +134,7 @@ void updateBTUnits(Units unit)
     {
         if (uxQueueMessagesWaiting(bleUnitsQueue) > 4)
         {
+            debugPrintln("btUnitsQueue too long");
             xQueueReceive(bleUnitsQueue, &buffer, (TickType_t)10);
         }
         xQueueSend(bleUnitsQueue, &ch, (TickType_t)10);
@@ -314,7 +321,7 @@ class BatteryCallbacks : public NimBLECharacteristicCallbacks
     };
     void onNotify(NimBLECharacteristic *pCharacteristic)
     {
-        debugPrintln("Sending notification to clients");
+        debugPrintln("Sending battery notification to clients");
 
     };
     void onSubscribe(NimBLECharacteristic *pCharacteristic){
@@ -332,9 +339,10 @@ class WeightCallbacks : public NimBLECharacteristicCallbacks
     };
 
     void onWrite(NimBLECharacteristic *pCharacteristic){
-        if(strcmp(pCharacteristic->getUUID().toString().c_str(), "2B46") == 0){
+        debugPrintln(pCharacteristic->getUUID().toString());
+        if(pCharacteristic->getUUID().toString().compare("0x2b46") == 0 ){
             debugPrintln("");
-            Units u = stringToUnits(pCharacteristic->getValue());
+            Units u = stringToUnits(pCharacteristic->getValue()); 
             if(u != err){
                 _sys->setUnits(u);
                 debugPrintln("Set units from bluetooth");
@@ -343,6 +351,13 @@ class WeightCallbacks : public NimBLECharacteristicCallbacks
                 updateBTStatus(SB_SET_UNIT_FAILED);
                 debugPrintln("Set units from bluetooth FAILED!");
             }
+        }else{
+            int i = 1;
+            if(pCharacteristic->getUUID().toString().compare("2b46") == 0 ){
+                i++;
+            }
+            debugPrintln("onWrite for units UUID compare false");
+            updateBTStatus(SB_SET_UNIT_FAILED+i);
         }
     }
 
@@ -351,8 +366,7 @@ class WeightCallbacks : public NimBLECharacteristicCallbacks
     */
     void onNotify(NimBLECharacteristic *pCharacteristic)
     {
-        debugPrintln("Sending notification to clients");
-
+        debugPrintln("Sending weight/units notification to clients");
     };
 
     /** The status returned in status is defined in NimBLECharacteristic.h.
@@ -703,7 +717,7 @@ void BLEsetup(std::string SN, std::string Version, int battery, Units units, WiF
     );
 
     //pSSIDCharacteristic->setValue((uint8_t*)w_ssid, strlen(w_ssid)+1);
-    pSSIDCharacteristic->setValue(w.ssid);
+    pSSIDCharacteristic->setValue(std::string(w.ssid));
     pSSIDCharacteristic->setCallbacks(&actCallbacks);
     debugPrintln("16");
     NimBLECharacteristic *pPASSCharacteristic = pActionService->createCharacteristic(
@@ -714,7 +728,7 @@ void BLEsetup(std::string SN, std::string Version, int battery, Units units, WiF
             //NIMBLE_PROPERTY::WRITE_ENC  // only allow writing if paired / encrypted
     );
 
-    pPASSCharacteristic->setValue(w.pswd);
+    pPASSCharacteristic->setValue(std::string(w.pswd));
     //pPASSCharacteristic->setValue("shortpass");
     pPASSCharacteristic->setCallbacks(&actCallbacks);
     debugPrintln("17");
