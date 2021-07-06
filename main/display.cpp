@@ -269,7 +269,7 @@ void DisplayX::styleInit()
 #endif
 #ifdef CONFIG_SB_V3_ST7735S
 
-    lv_style_set_text_font(&weightStyle, LV_STATE_DEFAULT, &montserrat_40);
+    lv_style_set_text_font(&weightStyle, LV_STATE_DEFAULT, &lv_font_montserrat_40);
     lv_style_set_text_color(&weightStyle, LV_STATE_DEFAULT, LV_COLOR_WHITE);
 
     lv_style_set_text_font(&unitStyle, LV_STATE_DEFAULT, &lv_font_montserrat_40);
@@ -469,7 +469,7 @@ void DisplayX::resizeWeight(char *w)
         if (lastLen > 7)
         {
             lv_style_remove_prop(&weightStyle, LV_STYLE_TEXT_FONT);
-            lv_style_set_text_font(&weightStyle, LV_STATE_DEFAULT, &lv_font_montserrat_70);
+            lv_style_set_text_font(&weightStyle, LV_STATE_DEFAULT, &montserrat_70);
         }
     }
     else if (strlen(w) > 4)
@@ -780,7 +780,7 @@ void DisplayX::displayDeviceInfo(std::string SN, std::string VER)
 }
 
 // Update
-void DisplayX::displayUpdateScreen(int pct)
+void DisplayX::displayUpdateScreen()
 {
     if (xSemaphoreTake(xGuiSemaphore, portMAX_DELAY) == pdTRUE)
     {
@@ -788,8 +788,12 @@ void DisplayX::displayUpdateScreen(int pct)
 
         // create objects to display info
         lv_obj_t *bkgrnd = lv_obj_create(lv_scr_act(), NULL);
-        lv_obj_t *label3 = lv_label_create(bkgrnd, NULL);
+        updateLabel = lv_label_create(bkgrnd, NULL);
         debugPrintln("after setting style values");
+
+        lv_obj_set_width(bkgrnd, SB_HORIZ);
+        lv_obj_set_height(bkgrnd, SB_VERT);
+
 #ifdef CONFIG_SB_V1_HALF_ILI9341
 
 #endif
@@ -797,18 +801,17 @@ void DisplayX::displayUpdateScreen(int pct)
 
 #endif
 #ifdef CONFIG_SB_V6_FULL_ILI9341
-        lv_obj_set_width(bkgrnd, SB_HORIZ);
-        lv_obj_set_height(bkgrnd, SB_VERT);
+        
 
-        lv_label_set_text(label3, "Updating..."); // , 5, 10); //"sn", "ver");
+        lv_label_set_text(updateLabel, "Updating..."); // , 5, 10); //"sn", "ver");
         debugPrintln("after setting label text values");
-        lv_label_set_align(label3, LV_ALIGN_CENTER);
-        lv_obj_align(label3, NULL, LV_ALIGN_CENTER, 0, 0);
+        lv_label_set_align(updateLabel, LV_ALIGN_CENTER);
+        lv_obj_align(updateLabel, NULL, LV_ALIGN_CENTER, 0, 0);
         debugPrintln("After setting alignment");
 
 #endif
         lv_obj_add_style(bkgrnd, LV_OBJ_PART_MAIN, &backgroundStyle);
-        lv_obj_add_style(label3, LV_OBJ_PART_MAIN, &infoStyle);
+        lv_obj_add_style(updateLabel, LV_OBJ_PART_MAIN, &infoStyle);
 
         xSemaphoreGive(xGuiSemaphore);
         debugPrintln("gave back xGuiSemaphore in displayUpdateScreen");
@@ -817,6 +820,10 @@ void DisplayX::displayUpdateScreen(int pct)
     {
         debugPrintln("can't get xGuiSemaphore in displayUpdateScreen");
     }
+}
+
+void DisplayX::setUpdateScreen(int pct){
+    lv_label_set_text(updateLabel, "f");
 }
 
 void DisplayX::displayLogo()
@@ -1024,7 +1031,7 @@ void DisplayX::displaySleepPrep()
 {
 
     displayOff();
-    // save color and intensity to nvs
+    // save color and intensity to nvs - this is done in separate function
 }
 
 void DisplayX::setColor(int r, int g, int b)

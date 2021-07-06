@@ -66,20 +66,21 @@ void WeightX::readSensors()
         sg3_last = sg3;
         sg4_last = sg4;
         xSemaphoreGive(sgMutex);
-        if(isBtConnected()){
-            if(sg1_last < 0.04 || sg1_last > 3.0){
-            updateBTStatus(SB_STRAINGAUGE_1_ERROR);
-            }
-            if(sg2_last < 0.04 || sg2_last > 3.0){
-            updateBTStatus(SB_STRAINGAUGE_2_ERROR);
-            }
-            if(sg3_last < 0.04 || sg3_last > 3.0){
-            updateBTStatus(SB_STRAINGAUGE_3_ERROR);
-            }
-            if(sg4_last < 0.04 || sg4_last > 3.0){
-            updateBTStatus(SB_STRAINGAUGE_4_ERROR);
-            }
-        }
+        // TODO: uncomment this when V3 is wired up fully. Otherwise spams the phone
+        // if(isBtConnected()){
+        //     if(sg1_last < 0.04 || sg1_last > 3.0){
+        //     updateBTStatus(SB_STRAINGAUGE_1_ERROR);
+        //     }
+        //     if(sg2_last < 0.04 || sg2_last > 3.0){
+        //     updateBTStatus(SB_STRAINGAUGE_2_ERROR);
+        //     }
+        //     if(sg3_last < 0.04 || sg3_last > 3.0){
+        //     updateBTStatus(SB_STRAINGAUGE_3_ERROR);
+        //     }
+        //     if(sg4_last < 0.04 || sg4_last > 3.0){
+        //     updateBTStatus(SB_STRAINGAUGE_4_ERROR);
+        //     }
+        // }
         
     }
     else

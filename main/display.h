@@ -69,7 +69,8 @@ public:
     void updateUnits(Units u);
     void displaySettings();
     void displayDeviceInfo(std::string SN, std::string VER);
-    void displayUpdateScreen(int pct);
+    void displayUpdateScreen();
+    void setUpdateScreen(int pct);
     void displayLogo();
     void displayBattery(int bat);
     void displayLowBattery();
@@ -132,6 +133,7 @@ private:
     int intensity = 8192; // max 8192
     lv_obj_t *weightLabel = NULL;
     lv_obj_t *unitsLabel = NULL;
+    lv_obj_t *updateLabel = NULL;
 };
 
 #endif

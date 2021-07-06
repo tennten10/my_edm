@@ -76,7 +76,7 @@ void BLETask(void *parameter)
                     {
                         char batt_temp[4];
                         sprintf(batt_temp, "%d%%", bBuff);
-                        b->setValue(batt_temp);
+                        b->setValue(std::string(batt_temp));
                         b->notify();
                         debugPrint("Set battery value in bluetooth: ");
                         debugPrintln(batt_temp);
@@ -550,7 +550,7 @@ static OTACallbacks otaCallbacks;
 
 void preBLEsetup()
 {
-    NimBLEDevice::init("SudoBoard2");
+    NimBLEDevice::init("SudoBoard");
 }
 
 void BLEsetup(std::string SN, std::string Version, int battery, Units units, WiFiStruct w)

@@ -189,7 +189,7 @@ void app_main() {
                 _sys->setBattery(battery);
                 if(isBtConnected()){
                     if(false /*charging check*/){
-                        updateBTBattery(150);
+                        updateBTBattery(150); // TODO: have a way of confirming when plugged in
                     }else{
                         updateBTBattery(battery);
                     }

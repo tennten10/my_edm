@@ -33,3 +33,5 @@ When the password is entered it verifies the ssid/pass combination and either sa
 
 Ok to complicate this further, BLE can only handle messages of 20 bytes. So any longer SSIDs and passwords need to be read/written in parts and put together later. Some people have used Notify for longer messages, but I'll just use successive writes to the same characteristic for each split. The splitting needs to be handled on the connecting device before passing it along to the board. Each message is 20 bytes long unless it is the last one. To signal that the entire message is sent, the end characters "]$" need to be at the end of the message. If they would be split into separate messages, they should be both moved into the second message. Probably should check character validity and length on both ends. Not going to implement this now since it'll be interesting to call back to the sending device whether it was accepted. 
 End sequence will be "]$" since they are not allowed in ssids and discouraged/not used in passwords... I think. 
+
+When switching versions, need to set in SUDOBOARD menu and LVGL TFT menu
