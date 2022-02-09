@@ -7,3 +7,6 @@
 [submodule "components/lvgl_esp32_drivers"]
 	path = components/lvgl_esp32_drivers
 	url = https://github.com/tennten10/lvgl_esp32_drivers.git
+[submodule "components/DendoStepper"]
+	path = components/DendoStepper
+	url = https://github.com/eldendiss/DendoStepper.git
