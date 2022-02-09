@@ -6,6 +6,7 @@
 // #endif
 #include <string>
 #include <cstring>
+#include <iostream>
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
@@ -16,14 +17,7 @@
 
 // Data Type Definitions
 
-typedef enum
-{
-    g,
-    kg,
-    oz,
-    lb,
-    err
-} Units;
+
 typedef enum
 {
     BOOT,
@@ -40,28 +34,7 @@ typedef enum
     UNITS,
     pUPDATE
 } PAGE;
-typedef enum
-{
-    debugBT,
-    debugSERIAL,
-    debugTELNET,
-    PRODUCTION
-} DEBUG;
 
-struct WiFiStruct
-{
-    int active;    // = 0;
-    char ssid[32]; // = {""};
-    char pswd[64]; // = {""};
-
-    WiFiStruct() : active(0), ssid(""), pswd("") {}
-    WiFiStruct(int act, std::string ss, std::string ps)
-    {
-        active = act;
-        strcpy(ssid, ss.c_str());
-        strcpy(pswd, ps.c_str());
-    }
-};
 
 struct Device
 {
@@ -71,15 +44,13 @@ struct Device
 
 struct Data
 {
-    Units u;
+    //Units u;
     int intensity;
     int red;
     int green;
     int blue;
 };
 
-Units stringToUnits(std::string v);
-std::string unitsToString(Units u);
 
 // #ifdef __cplusplus
 // }

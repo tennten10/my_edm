@@ -22,3 +22,12 @@
 #define SB_STRAINGAUGE_4_ERROR                  604
 #define SB_UNSTABLE_STRAIN_GAUGE_VOLTAGE_SOURCE 700
 #define SB_UNSTABLE_MAIN_VOLTAGE                701 
+
+//
+// automatic frequency adjustment (warning)
+// voltage unstable (error)
+// short detected (error)
+// change electrode (error)
+// fluid conductivity (warning)
+// system error (error)
+// end stop detected (error)

@@ -18,75 +18,8 @@ menu "AAA SUDOBOARD menu"
             bool "V1 Half ILI9341"
             select LV_SB_V1_HALF_ILI9341
         
-        config SB_V3_ST7735S
-            bool "V3 Projector ST7735S" 
-            select LV_SB_V3_ST7735S
-           
-        config SB_V6_FULL_ILI9341
-            bool "V6 Full ILI9341"
-            select LV_SB_V6_FULL_ILI9341
             
-            
-
     endchoice
-
-    choice SB_SIZE
-        prompt "Select which size variant"
-        default SB_SIZE_SMALL
-
-        config SB_SIZE_SMALL
-            bool "Small (8x13)"
-        config SB_SIZE_MEDIUM
-            bool "Medium (11x18)"
-        config SB_SIZE_LARGE
-            bool "Large (16x24)"
-    endchoice
-
-    choice SB_DEBUG
-        prompt "Select which debug communication type will be used"
-        default SB_DEBUG_NONE
-
-        config SB_DEBUG_NONE
-            bool "None (production mode)"
-        config SB_DEBUG_SERIAL
-            bool "Serial (TX/RX)"
-        config SB_DEBUG_BT
-            bool "Bluetooth Serial"
-        config SB_DEBUG_TELNET
-            bool "Telnet Stream"
-    endchoice
-
-    menu "OTA Configuration"
-
-        config EXAMPLE_FIRMWARE_UPGRADE_URL
-            string "Firmware Upgrade URL"
-            # note: use the firmware.bin file and rename as needed for each version. Overridden in a_config for predefined configurations...
-            #default "https://192.168.2.106:8070/hello-world.bin"
-            default "https://storage.googleapis.com/sb-firmware-00/proto_v1/sb_v1_0_0_1.bin" if SB_V1_HALF_ILI9341 
-            default "https://storage.googleapis.com/sb-firmware-00/proto_v3/sb_v3_0_0_1.bin" if SB_V3_ST7735S 
-            default "https://storage.googleapis.com/sb-firmware-00/proto_v6/firmware.bin" if SB_V6_FULL_ILI9341 
-            help
-                URL of server which hosts the firmware image.
-
-        config EXAMPLE_SKIP_COMMON_NAME_CHECK
-            bool "Skip server certificate CN fieldcheck"
-            default n
-            help
-                This allows you to skip the validation of OTA server certificate CN field.
-
-        config EXAMPLE_SKIP_VERSION_CHECK
-            bool "Skip firmware version check"
-            default n
-            help
-                This allows you to skip the firmware version check.
-
-        config EXAMPLE_OTA_RECV_TIMEOUT
-            int "OTA Receive Timeout"
-            default 5000
-            help
-                Maximum time for reception
-
-    endmenu
 
 endmenu
 

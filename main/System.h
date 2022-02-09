@@ -3,10 +3,8 @@
 
 #include "a_config.h"
 #include "globals.h"
-#include "debug.h"
-#include "Weight.h"
+#include "_adc.h"
 #include "Buttons.h"
-#include "BLE.h"
 #include "mySPIFFS.h"
 #include "display.h"
 #include "main.h"
@@ -14,7 +12,6 @@
 
 #include "nvs.h"
 #include "nvs_flash.h"
-#include "esp_ota_ops.h"
 
 
 class SystemX 
@@ -22,10 +19,9 @@ class SystemX
 public: 
     SystemX(Device _device) : device{_device}
     {
-        debugPrintln("inside system constructor");
+        //println("inside system constructor");
         this->buttons = new ButtonsX(true);
-        this->weight = new WeightX();
-        this->wifiInfo = getActiveWifiInfo();
+        this->adc = new ADCX();
         
     }
     ~SystemX(){
@@ -37,36 +33,36 @@ public:
         this->display = new DisplayX(); 
         vTaskDelay(75);
         this->getSavedVals();
-        this->weight->setLocalUnits(eUnits);
+        //this->adc->setLocalUnits(eUnits);
         
 
     }
 
-    void incrementUnits();
-    void decrementUnits();
+    // void incrementUnits();
+    // void decrementUnits();
 
-    Units getUnits(){
-        Units ret = err;
-        if(xSemaphoreTake(unitsMutex, (TickType_t) 20)==pdTRUE){
-            ret = eUnits;
-            xSemaphoreGive(unitsMutex);
-        }else{
-            debugPrintln("could not get unitsMutex in getUnits");
-        }
+    // Units getUnits(){
+    //     Units ret = err;
+    //     if(xSemaphoreTake(unitsMutex, (TickType_t) 20)==pdTRUE){
+    //         ret = eUnits;
+    //         xSemaphoreGive(unitsMutex);
+    //     }else{
+    //         //println("could not get unitsMutex in getUnits");
+    //     }
         
-        return ret;
-    }
+    //     return ret;
+    // }
 
-    void setUnits(Units u){
-        if(xSemaphoreTake(unitsMutex, (TickType_t) 20)==pdTRUE){
-            eUnits = u;
-            xSemaphoreGive(unitsMutex);
-            callbackFlag = true;
-        }else{
-            debugPrintln("could not get unitsMutex in setUnits");
-        }
+    // void setUnits(Units u){
+    //     if(xSemaphoreTake(unitsMutex, (TickType_t) 20)==pdTRUE){
+    //         eUnits = u;
+    //         xSemaphoreGive(unitsMutex);
+    //         callbackFlag = true;
+    //     }else{
+    //         //println("could not get unitsMutex in setUnits");
+    //     }
         
-    }
+    // }
 
     int getBattery(){
         int ret = 0;
@@ -74,31 +70,30 @@ public:
             ret = batteryLevel;
             xSemaphoreGive(batteryMutex);
         }else{
-            debugPrintln("could not get batteryMutex in getBattery");
+            //println("could not get batteryMutex in getBattery");
         }
         return ret;
     }
 
     void setBattery(int b){
         if(b > 100){
-            debugPrintln("Battery over 100% ?????? - might be charging");
+            //println("Battery over 100% ?????? - might be charging");
             b = 100;
         }else if(b < 0){
-            debugPrintln("Battery less than 0% ???????");
+            //println("Battery less than 0% ???????");
             b = 0;
         }
         if(xSemaphoreTake(batteryMutex, (TickType_t)10)==pdTRUE){
             batteryLevel = b;
             xSemaphoreGive(batteryMutex);
         }else{
-            debugPrintln("could not get batteryMutex in setBattery");
+            //println("could not get batteryMutex in setBattery");
         }
     }
 
-    void goToSleep();
     void reboot();
 
-    void runUpdate();
+    //void runUpdate();
     
     PAGE getPage(){
         PAGE ret = WEIGHTSTREAM;
@@ -106,7 +101,7 @@ public:
             ret = ePage;
             xSemaphoreGive(pageMutex);
         }else{
-            debugPrintln("could not get pageMutex in getPage");
+            //println("could not get pageMutex in getPage");
         }
         return ret;
     }
@@ -117,7 +112,7 @@ public:
             xSemaphoreGive(pageMutex);
             callbackFlag = true;
         }else{
-            debugPrintln("could not get pageMutex in setPage");
+            //println("could not get pageMutex in setPage");
         }
         
     }
@@ -128,7 +123,7 @@ public:
             ret = eMode;
             xSemaphoreGive(modeMutex);
         }else{
-            debugPrintln("could not get modeMutex in getMode");
+            //println("could not get modeMutex in getMode");
         }
         return ret;
     }
@@ -138,7 +133,7 @@ public:
             xSemaphoreGive(modeMutex);
             callbackFlag = true;
         }else{
-            debugPrintln("could not get modeMutex in setMode");
+            //println("could not get modeMutex in setMode");
         }
     }
 
@@ -148,7 +143,7 @@ public:
             ret = std::string(device.SN);
             xSemaphoreGive(deviceMutex);
         }else{
-            debugPrintln("could not get deviceMutex in getSN");
+            //println("could not get deviceMutex in getSN");
         }
         return ret;
     }
@@ -159,37 +154,37 @@ public:
             ret = std::string(this->device.VER);
             xSemaphoreGive(deviceMutex);
         }else{
-            debugPrintln("could not get deviceMutex in getVER");
+            //println("could not get deviceMutex in getVER");
         }
         return ret;
     }
 
-    void setWiFiInfo(WiFiStruct w){
-        if(xSemaphoreTake(deviceMutex, (TickType_t) 10)==pdTRUE){
-            wifiInfo = w;
-            xSemaphoreGive(deviceMutex);
-        }else{
-            debugPrintln("could not get deviceMutex in setWiFiInfo");
-        }
+    // void setWiFiInfo(WiFiStruct w){
+    //     if(xSemaphoreTake(deviceMutex, (TickType_t) 10)==pdTRUE){
+    //         wifiInfo = w;
+    //         xSemaphoreGive(deviceMutex);
+    //     }else{
+    //         //println("could not get deviceMutex in setWiFiInfo");
+    //     }
         
-    }
-    WiFiStruct getWiFiInfo(){
-        static WiFiStruct ret = WiFiStruct();
-        if(xSemaphoreTake(deviceMutex, (TickType_t) 10)==pdTRUE){
-            ret = wifiInfo;
-            xSemaphoreGive(deviceMutex);
-        }else{
-            debugPrintln("could not get deviceMutex in getWiFiInfo");
-        }
-        return ret;
-    }
+    // }
+    // WiFiStruct getWiFiInfo(){
+    //     static WiFiStruct ret = WiFiStruct();
+    //     if(xSemaphoreTake(deviceMutex, (TickType_t) 10)==pdTRUE){
+    //         ret = wifiInfo;
+    //         xSemaphoreGive(deviceMutex);
+    //     }else{
+    //         //println("could not get deviceMutex in getWiFiInfo");
+    //     }
+    //     return ret;
+    // }
 
     void setUpdateFlag(){
         if(xSemaphoreTake(updateFlagMutex, (TickType_t) 10)==pdTRUE){
             updateFlag = true;
             xSemaphoreGive(updateFlagMutex);
         }else{
-            debugPrintln("could not get updateFlagMutex in setUpdateFlag");
+            //println("could not get updateFlagMutex in setUpdateFlag");
         }
     }
     bool getUpdateFlag(){
@@ -198,7 +193,7 @@ public:
             ret = updateFlag;
             xSemaphoreGive(updateFlagMutex);
         }else{
-            debugPrintln("could not get deviceMutex in getWiFiInfo");
+            //println("could not get deviceMutex in getWiFiInfo");
         }
         return ret;
     }
@@ -210,7 +205,7 @@ public:
     
     DisplayX *display; 
     ButtonsX *buttons; 
-    WeightX *weight;
+    ADCX *adc;
     
 
 private:
@@ -220,20 +215,18 @@ private:
     SemaphoreHandle_t unitsMutex = xSemaphoreCreateMutex();         // for accessing units variable
     SemaphoreHandle_t batteryMutex = xSemaphoreCreateMutex();       //  for accessing battery variable
     SemaphoreHandle_t modeMutex = xSemaphoreCreateMutex();          //  for accessing mode variable
-    SemaphoreHandle_t weightMutex = xSemaphoreCreateMutex();        //  for accessing local weight variable
+    SemaphoreHandle_t adcMutex = xSemaphoreCreateMutex();        //  for accessing local weight variable
     SemaphoreHandle_t upMutex = xSemaphoreCreateMutex();            // so that two update signals don't run at once
     SemaphoreHandle_t updateFlagMutex = xSemaphoreCreateMutex();    // for accessing updateFlag variable
 
     void getSavedVals(); // initialize values saved across boots from NVS
     void saveVals();
     
-    volatile Units eUnits = kg;
+    //volatile Units eUnits = kg;
     int batteryLevel = 100;
 
     MODE eMode = STANDARD;
     PAGE ePage = WEIGHTSTREAM;
-    
-    WiFiStruct wifiInfo;
     
 };
 

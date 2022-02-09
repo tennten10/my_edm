@@ -7,7 +7,6 @@
 #include "globals.h"
 #include <string>
 #include "a_config.h"
-#include "debug.h"
 
 // All functions should be thread safe and have semaphore handling
 // inside each public function since pretty much everything will be
@@ -65,8 +64,8 @@ public:
 
     void displayWeight(std::string weight);
     void updateWeight(std::string weight);
-    void displayUnits(Units u);
-    void updateUnits(Units u);
+    // void displayUnits(Units u);
+    // void updateUnits(Units u);
     void displaySettings();
     void displayDeviceInfo(std::string SN, std::string VER);
     void displayUpdateScreen();

@@ -1,2 +1,2 @@
-units,intensity,red,blue,green
-kg,7000,255,255,255
+intensity,red,blue,green
+7000,255,255,255

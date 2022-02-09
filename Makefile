@@ -3,6 +3,6 @@
 # project subdirectory.
 #
 
-PROJECT_NAME := SudoBoard
+PROJECT_NAME := my_edm
 #EXTRA_COMPONENT_DIRS := $(abspath lvgl_esp32_drivers)	$(abspath lvgl) $(abspath esp-nimble-cpp) $(abspath Eigen)
 include $(IDF_PATH)/make/project.mk

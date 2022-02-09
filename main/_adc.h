@@ -63,13 +63,13 @@ private:
 };
 /*************************************/
 
-class WeightX : public ThreadXb<WeightX>
+class ADCX : public ThreadXb<ADCX>
 {
 public:
-    WeightX() : ThreadXb{5000, 1, "WeightHandler"}                               
+    ADCX() : ThreadXb{5000, 1, "adcHandler"}                               
     {
-        debugPrint("inside weight initialization: ");
-        debugPrintln((int)esp_timer_get_time()/1000);
+        //println("inside adc initialization: ");
+        //println((int)esp_timer_get_time()/1000);
         adc1_config_width(ADC_WIDTH_BIT_12);
         adc1_config_channel_atten(SG1,ADC_ATTEN_DB_11); // TODO: Will need to change the attenuation when the circuit gets upgraded to auto-ranging
         adc1_config_channel_atten(SG2,ADC_ATTEN_DB_11);
@@ -89,25 +89,18 @@ public:
         //digitalWrite(enable_165, HIGH);
 
         
-        debugPrintln("after weight initialization");
+        //println("after weight initialization");
         
     }
     
-    virtual ~WeightX(){
-        vQueueDelete(weightQueue);
+    virtual ~ADCX(){
+        vQueueDelete(adcQueue);
     }
     
     void tare();
     void sleepPreparation();
     void setWeightUpdateRate(int r); // update rate in milliseconds
     std::string getWeightStr();
-    Units getLocalUnits(){
-        return localUnits;
-    }
-    void setLocalUnits(Units u){
-        localUnits = u;
-        conversion = units2conversionfactor(u);
-    }
 
     void CalibrateParameters();
 
@@ -118,8 +111,8 @@ public:
 
 private:
     SemaphoreHandle_t sgMutex; 
-    QueueHandle_t weightQueue; 
-    //void setUnits(Units m);
+    QueueHandle_t adcQueue; 
+
     double getRawWeight();
     
     double ReadVoltage(adc1_channel_t pin);
@@ -128,27 +121,6 @@ private:
     std::string truncateWeight(double d);
     
 
-    double units2conversionfactor(Units u){
-        double ret = 0.0;
-        switch(u){
-            case g:
-                ret = 1.0;
-            break;
-            case kg:
-                ret = 0.001;
-            break;
-            case oz:
-                ret = 0.035274;
-            break;
-            case lb:
-                ret = 0.0022046208235381;
-            break;
-            default:
-                ret = 1.0;
-            break;
-        }
-        return ret;
-    }
 
     //Eigen::Array4d mRawWeight = Eigen::Array4d::Zero();
     Eigen::Array4d mTareOffset = Eigen::Array4d::Zero();
@@ -175,24 +147,9 @@ private:
     float a = 0.5;
 
     double conversion = 300.0;
-    double getUnitPrecision(Units local){
-        //make sure this is consistent with truncateWeight
-        switch(local){
-            case g:
-            return 0.1;
-            case kg:
-            return 0.001;
-            case oz:
-            return 0.1;
-            case lb:
-            return 0.01;
-            default:
-            return 0.1;
-        }
-    }
 
-    volatile Units localUnits;
-    int weight_update_rate = WEIGHT_UPDATE_RATE;
+
+    int weight_update_rate = 1; //WEIGHT_UPDATE_RATE;
 
     Eigen::Matrix2d theoreticalWeight(double g, double x, double y);
     void inverseWeight();

@@ -1,10 +1,8 @@
 #include "a_config.h"
 #include "globals.h"
 #include "System.h"
-#include "debug.h"
-#include "Weight.h"
+#include "_adc.h"
 #include "Buttons.h"
-#include "BLE.h"
 #include "display.h"
 #include "main.h"
 
@@ -21,10 +19,7 @@
  #include "soc/rtc_periph.h"
 #include "driver/rtc_io.h"
 
-#include "driver/rtc_io.h"
 
-#include "esp32/ulp.h"
-#include "ulp_main.h"
 //#include "Eigen/Dense" note: DO NOT USE in same file/namespace as any ULP library. it has naming conflicts.
 
 extern "C" {
@@ -32,74 +27,6 @@ extern "C" {
 }
 
 SystemX* _sys;
-
-
-extern const uint8_t ulp_main_bin_start[] asm("_binary_ulp_main_bin_start");
-extern const uint8_t ulp_main_bin_end[]   asm("_binary_ulp_main_bin_end");
-
-void ulp_deinit(){
-    gpio_num_t gpio_num = but1;
-    rtc_gpio_hold_dis(gpio_num);
-    rtc_gpio_deinit(gpio_num);    
-}
-
-void init_ulp_program(){
-    esp_err_t err = ulp_load_binary(0, ulp_main_bin_start,
-            (ulp_main_bin_end - ulp_main_bin_start) / sizeof(uint32_t));
-    ESP_ERROR_CHECK(err);
-
-    /* GPIO used for pulse counting. */
-    gpio_num_t gpio_num = but1;
-    int rtcio_num = rtc_io_number_get(gpio_num);
-    assert(rtc_gpio_is_valid_gpio(gpio_num) && "GPIO used for pulse counting must be an RTC IO");
-
-    /* Initialize some variables used by ULP program.
-     * Each 'ulp_xyz' variable corresponds to 'xyz' variable in the ULP program.
-     * These variables are declared in an auto generated header file,
-     * 'ulp_main.h', name of this file is defined in component.mk as ULP_APP_NAME.
-     * These variables are located in RTC_SLOW_MEM and can be accessed both by the
-     * ULP and the main CPUs.
-     *
-     * Note that the ULP reads only the lower 16 bits of these variables.
-     */
-    ulp_debounce_counter = 45;
-    ulp_debounce_max_count = 45;
-    ulp_next_edge = 0; // Constant value, but leaving the variable here 
-    ulp_io_number = rtcio_num; /* map from GPIO# to RTC_IO# */
-    //ulp_edge_count_to_wake_up = 1;
-
-    /* Initialize selected GPIO as RTC IO, enable input, disable pullup and pulldown */
-    rtc_gpio_init(gpio_num);
-    rtc_gpio_set_direction(gpio_num, RTC_GPIO_MODE_INPUT_ONLY);
-    rtc_gpio_pulldown_dis(gpio_num);
-    rtc_gpio_pullup_dis(gpio_num);
-    rtc_gpio_pullup_en(gpio_num); // I added this line, and this makes it work!
-    rtc_gpio_hold_en(gpio_num); // might try disabling this? Not sure why I'd want it to stay held. I guess this only works while it's running and not during deep sleep?
-
-    /* Disconnect GPIO12 and GPIO15 to remove current drain through
-     * pullup/pulldown resistors.
-     * GPIO12 may be pulled high to select flash voltage.
-     */
-    rtc_gpio_isolate(GPIO_NUM_12);
-    rtc_gpio_isolate(GPIO_NUM_15);
-    esp_deep_sleep_disable_rom_logging(); // suppress boot messages
-
-    /* Set ULP wake up period to T = 20ms. -> changed to 50ms
-     * Minimum pulse width has to be T * (ulp_debounce_counter + 1) = 80ms.
-     */
-    ulp_set_wakeup_period(0, 50000);
-
-    /* Start the program */
-    err = ulp_run(&ulp_entry - RTC_SLOW_MEM);
-    ESP_ERROR_CHECK(err);
-
-    ESP_ERROR_CHECK( esp_sleep_enable_ulp_wakeup() );
-
-    //go to sleep
-    esp_deep_sleep_start();
-
-}
-
 
 Device populateStartData(){
     Device ret;
@@ -112,40 +39,16 @@ Device populateStartData(){
                 NVS_READWRITE, &fctry_handle);
     nvs_get_str(fctry_handle, "serial_no", ret.SN, &buflen);
     
-
-
-    const esp_partition_t *running = esp_ota_get_running_partition();
-    esp_app_desc_t running_app_info;
-    if (esp_ota_get_partition_description(running, &running_app_info) == ESP_OK) {
-        debugPrint("Running firmware version: ");
-        debugPrintln(running_app_info.version);
-        strcpy(ret.VER, running_app_info.version);
-    }
     return ret;
 }
 
 void app_main() {
     // Setup
     
-
-    // change pin modes if it woke up from ULP vs power up
-    esp_sleep_wakeup_cause_t cause = esp_sleep_get_wakeup_cause();
-    if (cause != ESP_SLEEP_WAKEUP_ULP) {
-        printf("Not ULP wakeup, initializing main prog\n");
-        vTaskDelay(5);
-        
-    } else {
-        printf("ULP wakeup, setting everything up...\n");
-        ulp_deinit();
-    }
-    
-
-    debugSetup(); // always goes first
     _sys = new SystemX(populateStartData());
-    preBLEsetup();
+ 
     vTaskDelay(5);
     _sys->init(); // this needs to be after BLE setup otherwise throws eFuse/NVS errors
-    BLEsetup(_sys->getSN(), _sys->getVER(), _sys->getBattery(), _sys->getUnits(), _sys->getWiFiInfo());
     
     std::string event;
     PAGE page;
@@ -154,23 +57,18 @@ void app_main() {
     // To print the threads/packages that are taking a lot of memory
     //heap_caps_print_heap_info( MALLOC_CAP_DEFAULT );
 
-    // battery variables
-    int battery=0;
-    uint32_t bat_reading=0;
     long batTime = esp_timer_get_time()/1000;
 
-    // update progress parameter
-    int q = 0;
-    int q_last = 0;
+
 
     // page timeout counters
     long timeout = 0;
     //_sys->weight->runTheoreticalWeight(100., 50., 50.);
 
-    _sys->weight->tare();
+    _sys->adc->tare();
     _sys->display->ready = true;
-    _sys->display->displayWeight(_sys->weight->getWeightStr());
-    debugPrintln("Before main loop...");
+    _sys->display->displayWeight(_sys->adc->getWeightStr());
+    //println("Before main loop...");
     for (;;)
     {
         //battery update moved into this loop to free up some memory
@@ -181,27 +79,19 @@ void app_main() {
             // Resolution of ~ 0.0008V / division
         
 
-            bat_reading =  adc1_get_raw(batV);
-            //voltage = esp_adc_cal_raw_to_voltage(reading, adc_chars);
+            // bat_reading =  adc1_get_raw(batV);
+            // //voltage = esp_adc_cal_raw_to_voltage(reading, adc_chars);
 
-            battery = (int) 100 *( bat_reading * 3.3 / 4096.0 - 2.0) /(2.8 - 2.0); //(voltage - 2.0) / (2.8 - 2.0) ;
-            if(battery != _sys->getBattery()){
-                _sys->setBattery(battery);
-                if(isBtConnected()){
-                    if(false /*charging check*/){
-                        updateBTBattery(150); // TODO: have a way of confirming when plugged in
-                    }else{
-                        updateBTBattery(battery);
-                    }
-                }
-                debugPrint("battery: ");
-                debugPrintln(battery);
-            }
+            // battery = (int) 100 *( bat_reading * 3.3 / 4096.0 - 2.0) /(2.8 - 2.0); //(voltage - 2.0) / (2.8 - 2.0) ;
+            // if(battery != _sys->getBattery()){
+            //     _sys->setBattery(battery);
+                
+                //print("battery: ");
+                //println(battery);
+            //}
             
             
-            if(battery < 2){
-                //_sys->goToSleep();
-            }
+            
             batTime = esp_timer_get_time()/1000;
         }
 
@@ -209,8 +99,8 @@ void app_main() {
 
 
         event = _sys->buttons->getEvents();
-        // debugPrint("event: ");
-        // debugPrintln(event);
+        // print("event: ");
+        // println(event);
         page = _sys->getPage();
         mode = _sys->getMode();
         
@@ -223,39 +113,37 @@ void app_main() {
                 {}       
                 else if (event.compare(0,4,"SNNN",0,4) == 0)
                 {
-                    _sys->weight->tare();
+                    _sys->adc->tare();
                     timeout = esp_timer_get_time()/1000;
                 }
                 else if (event.compare(0,4,"LNNN",0,4) == 0)
                 {
                     //TODO: SHUTDOWN FUNCTION
-                    debugPrintln("sleepy time");
-                    timeout = esp_timer_get_time()/1000;
-                    _sys->goToSleep(); 
+                    //println("sleepy time");
+                    timeout = esp_timer_get_time()/1000; 
                 }
                 else if (event.compare(0,4,"NSNN", 0, 4) == 0)
                 {
                     //TODO: Units
-                    _sys->setPage(UNITS);
-                    _sys->display->displayUnits(_sys->getUnits());
+                    //_sys->setPage(UNITS);
+                    //_sys->display->displayUnits(_sys->getUnits());
                     
                     timeout = esp_timer_get_time()/1000;
                 }
                 else if (event.compare(0,4,"NLNN", 0, 4) == 0)
                 {
-                    _sys->setUpdateFlag();
+                    //_sys->setUpdateFlag();
                     timeout = esp_timer_get_time()/1000;
                 }
                 else if (event.compare(0,4,"NNSN", 0, 4) == 0)
                 {
-                    updateBTStatus( rand() % 300 + 200 );
                     timeout = esp_timer_get_time()/1000;
                 }
                 else if (event.compare(0,4,"NNLN", 0, 4) == 0)
                 {
                     timeout = esp_timer_get_time()/1000;
                 }else{
-                    debugPrintln("button press type not recognized");
+                    //println("button press type not recognized");
                     timeout = esp_timer_get_time()/1000;
                 }
             }
@@ -264,8 +152,8 @@ void app_main() {
                 // if no button presses while on this page for a few seconds, revert back to displaying the weight
                 if((esp_timer_get_time()/1000) - timeout > 2000){
                     _sys->setPage(WEIGHTSTREAM);
-                    _sys->display->displayWeight(_sys->weight->getWeightStr());
-                    debugPrintln("units screen timeout");
+                    _sys->display->displayWeight(_sys->adc->getWeightStr());
+                    //println("units screen timeout");
                 }else{
                     if (event.compare("") == 0) 
                     {}
@@ -273,14 +161,13 @@ void app_main() {
                     {
                         //TODO:  FUNCTION
                         _sys->setPage(WEIGHTSTREAM);
-                        _sys->display->displayWeight(_sys->weight->getWeightStr());
+                        _sys->display->displayWeight(_sys->adc->getWeightStr());
                         timeout = esp_timer_get_time()/1000;
                     }
                     else if (event.compare(0,4, "LNNN",0,4) == 0)
                     {
-                        debugPrintln("sleepy time");
+                        //println("sleepy time");
                         timeout = esp_timer_get_time()/1000;
-                        _sys->goToSleep(); 
                     }
                     else if (event.compare(0,4,"NSNN",0,4) == 0)
                     { 
@@ -292,7 +179,7 @@ void app_main() {
                     }
                     else if (event.compare(0,4,"NNSN", 0, 4) == 0)
                     {
-                        _sys->incrementUnits();
+                        //_sys->incrementUnits();
                         timeout = esp_timer_get_time()/1000;
                     }
                     else if (event.compare(0,4,"NNLN", 0, 4) == 0)
@@ -301,14 +188,14 @@ void app_main() {
                     }
                     else if (event.compare(0,4,"NNNS", 0, 4) == 0)
                     {
-                        _sys->decrementUnits();
+                        //_sys->decrementUnits();
                         timeout = esp_timer_get_time()/1000;
                     }
                     else if (event.compare(0,4,"NNNL", 0, 4) == 0)
                     {
                         timeout = esp_timer_get_time()/1000;
                     }else{
-                        debugPrintln("button press type not recongnized");
+                        //println("button press type not recongnized");
                         timeout = esp_timer_get_time()/1000;
                     }
                 }
@@ -328,13 +215,7 @@ void app_main() {
             //     // TODO: dynamically update percentage when downloading and inistalling updated code
             //     break;
             }else if(page == SETTINGS){
-                // something
-                // #ifdef CONFIG_SB_V1_HALF_ILI9341
-                // #endif
-                // #ifdef CONFIG_SB_V3_ST7735S
-                // #endif
-                // #ifdef CONFIG_SB_V6_FULL_ILI9341
-                // #endif
+                
             }else if(page == INFO){
                 // device info stuff
                 //_sys->display->displayDeviceInfo(_sys->getSN(), _sys->getVER());
@@ -342,7 +223,7 @@ void app_main() {
 
             // if(page != pUPDATE){
             //     if((esp_timer_get_time()/1000) - timeout > 1200000){ // timeout after roughly 20 minutes
-            //         debugPrintln("timeout sleepy time");
+            //         println("timeout sleepy time");
             //         _sys->goToSleep();
             //     }
             // }

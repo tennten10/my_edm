@@ -1,12 +1,12 @@
 #include "Buttons.h"
 #include "a_config.h"
-#include "debug.h"
 
 #include "freertos/FreeRTOS.h"
 #include "driver/gpio.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
 #include <string>
+#include <iostream>
 
 #define GPIO_INPUT_PIN_SEL ((1ULL<<but1) | (1ULL<<but2) | (1ULL<<but3) | (1ULL<<but4))
 
@@ -129,12 +129,12 @@ void ButtonsX::readButtons()
             button1.shortPress = false;
             button1.executeFlag = true;
             button1.block = true;
-            // debugPrintln("button 1 long press");
+            // println("button 1 long press");
         }
         else
         {
             button1.shortPress = true;
-            //debugPrintln("button 1 short");
+            //println("button 1 short");
         }
     }
     else if (button1.buttonStatus == false)
@@ -142,7 +142,7 @@ void ButtonsX::readButtons()
         if (button1.shortPress)
         {
             button1.executeFlag = true;
-            // debugPrintln("button 1 shorty execute");
+            // println("button 1 shorty execute");
         }
         if (button1.block)
         {
@@ -158,12 +158,12 @@ void ButtonsX::readButtons()
             button2.shortPress = false;
             button2.executeFlag = true;
             button2.block = true;
-            // debugPrintln("button 2 long press");
+            // println("button 2 long press");
         }
         else
         {
             button2.shortPress = true;
-            //debugPrintln("button 2 short");
+            //println("button 2 short");
         }
     }
     else if (button2.buttonStatus == false)
@@ -171,7 +171,7 @@ void ButtonsX::readButtons()
         if (button2.shortPress)
         {
             button2.executeFlag = true;
-            //debugPrintln("button 2 shorty execute");
+            //println("button 2 shorty execute");
         }
         if (button2.block)
         {
@@ -187,12 +187,12 @@ void ButtonsX::readButtons()
             button3.shortPress = false;
             button3.executeFlag = true;
             button3.block = true;
-            // debugPrintln("button 3 long press");
+            // println("button 3 long press");
         }
         else
         {
             button3.shortPress = true;
-            //debugPrintln("button 3 short");
+            //println("button 3 short");
         }
     }
     else if (button3.buttonStatus == false)
@@ -200,7 +200,7 @@ void ButtonsX::readButtons()
         if (button3.shortPress)
         {
             button3.executeFlag = true;
-            //debugPrintln("button 3 shorty execute");
+            //println("button 3 shorty execute");
         }
         if (button3.block)
         {
@@ -216,12 +216,12 @@ void ButtonsX::readButtons()
             button4.shortPress = false;
             button4.executeFlag = true;
             button4.block = true;
-            // debugPrintln("button 4 long press");
+            // println("button 4 long press");
         }
         else
         {
             button4.shortPress = true;
-            //debugPrintln("button 4 short");
+            //println("button 4 short");
         }
     }
     else if (button4.buttonStatus == false)
@@ -229,7 +229,7 @@ void ButtonsX::readButtons()
         if (button4.shortPress)
         {
             button4.executeFlag = true;
-            //debugPrintln("button 4 shorty execute");
+            //println("button 4 shorty execute");
         }
         if (button4.block)
         {
@@ -243,46 +243,46 @@ void ButtonsX::verifyButtons()
 {
     if (button1.executeFlag || button2.executeFlag || button3.executeFlag || button4.executeFlag)
     {
-        // debugPrintln("Building execute strings");
+        // println("Building execute strings");
         if (button1.longPress)
         {
             button1.cmd = 'L';
-            debugPrintln("B1 long");
+            //println("B1 long");
             button1.longPress = false;
             button1.executeFlag = false;
         }
         else if (button1.shortPress)
         {
             button1.cmd = 'S';
-            debugPrintln("B1 short");
+            //println("B1 short");
             button1.shortPress = false;
             button1.executeFlag = false;
         }
         if (button2.longPress)
         {
             button2.cmd = 'L';
-            debugPrintln("B2 long");
+            //println("B2 long");
             button2.longPress = false;
             button2.executeFlag = false;
         }
         else if (button2.shortPress)
         {
             button2.cmd = 'S';
-            debugPrintln("B2 short");
+            //println("B2 short");
             button2.shortPress = false;
             button2.executeFlag = false;
         }
         if (button3.longPress)
         {
             button3.cmd = 'L';
-            debugPrintln("B3 long");
+            //println("B3 long");
             button3.longPress = false;
             button3.executeFlag = false;
         }
         else if (button3.shortPress)
         {
             button3.cmd = 'S';
-            debugPrintln("B3 short");
+            //println("B3 short");
             button3.shortPress = false;
             button3.executeFlag = false;
         }
@@ -290,7 +290,7 @@ void ButtonsX::verifyButtons()
         {
             //
             button4.cmd = 'L';
-            debugPrintln("B4 long");
+            //println("B4 long");
             button4.longPress = false;
             button4.executeFlag = false;
         }
@@ -298,18 +298,18 @@ void ButtonsX::verifyButtons()
         {
             //
             button4.cmd = 'S';
-            debugPrintln("B4 short");
+            //println("B4 short");
             button4.shortPress = false;
             button4.executeFlag = false;
         }
         char doo[5] = {button1.cmd, button2.cmd, button3.cmd, button4.cmd, '\0'};
         //char doo[5];
         //sprintf(doo, "%s%s%s%s", button1.cmd, button2.cmd, button3.cmd, button4.cmd);
-        debugPrint("Button Queue messages: ");
-        debugPrintln((int)uxQueueMessagesWaiting(buttonQueue));
+        //print("Button Queue messages: ");
+        //println((int)uxQueueMessagesWaiting(buttonQueue));
         xQueueSend(buttonQueue, &doo, (TickType_t)0);
-        debugPrintln(doo);
-        debugPrintln("Buttons added to queue");
+        //println(doo);
+        //println("Buttons added to queue");
         button1.cmd = 'N';
         button2.cmd = 'N';
         button3.cmd = 'N';
@@ -319,14 +319,14 @@ void ButtonsX::verifyButtons()
 }
 
 std::string ButtonsX::getEvents(){
-    //debugPrintln("getButtons:   ... ");
+    //println("getButtons:   ... ");
     char temp[5];//={};
     std::string t ="";
     if(uxQueueMessagesWaiting(buttonQueue)){
         //vTaskDelay(5);
         xQueueReceive(buttonQueue, &temp, (TickType_t)10);
-        debugPrintln("Getting buttons from queue");
-        debugPrintln(temp);
+        //println("Getting buttons from queue");
+        //println(temp);
          
         t = std::string(temp);//, sizeof(temp+1));
         
@@ -337,7 +337,7 @@ std::string ButtonsX::getEvents(){
 void ButtonsX::sleepPreparation() 
 {
     //vDeleteTask(buttonHandler_TH){}
-    debugPrintln("button inside sleep prep");
+    //println("button inside sleep prep");
 }
 
 void ButtonsX::Main() // loop
@@ -352,11 +352,11 @@ void ButtonsX::Main() // loop
                                  ITEM_SIZE,
                                  ucQueueStorageArea,
                                  &xStaticQueue); */
-    debugPrintln("Button assert???");                             
+    //println("Button assert???");                             
     configASSERT(buttonQueue); // why is this here? don't remember, but is it throwing the assert failed error? No. It still throws the error when this is commented out. 
-    debugPrintln("Button thread created...");
+    //println("Button thread created...");
     if(debounce){
-        debugPrintln("Using Software Debounce");
+        //println("Using Software Debounce");
         debounceCount = 5;
     }else{
         debounceCount = 1;
