@@ -14,6 +14,7 @@
 #include "freertos/semphr.h"
 
 #include "status.h"
+#include "configs/a_config.h"
 
 // Data Type Definitions
 

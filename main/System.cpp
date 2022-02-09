@@ -1,8 +1,9 @@
 
 #include "globals.h"
-#include "a_config.h"
+//#include "a_config.h"
 #include "_adc.h"
 #include "Buttons.h"
+#include "Motion.h"
 #include "display.h"
 #include "System.h"
 #include "main.h"
@@ -28,12 +29,12 @@ void SystemX::reboot(){
 
 void SystemX::getSavedVals(){
     
-    Data d = getSaveData();
+    //Data d = getSaveData();
 
     //this->setUnits(d.u);
     // note: make sure display is created before this
-    this->display->setIntensity(d.intensity);
-    this->display->setColor(d.red,d.green,d.blue);
+    //this->display->setIntensity(d.intensity);
+    //this->display->setColor(d.red,d.green,d.blue);
 
     //print("Units set to: ");
     //println(unitsToString(d.u));
@@ -41,8 +42,8 @@ void SystemX::getSavedVals(){
 }
 
 void SystemX::saveVals(){
-    Data d = {display->getIntensity(), display->getRed(), display->getGreen(), display->getBlue()};
-    setSaveData(d);
+    //Data d = {display->getIntensity(), display->getRed(), display->getGreen(), display->getBlue()};
+    //setSaveData(d);
 
 }
 

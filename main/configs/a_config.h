@@ -37,6 +37,10 @@ extern "C"{
  */
 #include "sdkconfig.h"
 
+// declare width and height of the display for use later
+#define HORIZ 320
+#define VERT 240
+
 
 #define SG1 ADC1_CHANNEL_3 // 39  // also called sensor_vn
 #define SG2 ADC1_CHANNEL_6 // 34

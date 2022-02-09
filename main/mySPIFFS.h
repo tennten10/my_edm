@@ -5,8 +5,8 @@
 extern "C"{
 #endif */
 
-#include "globals.h"
-#include "Dense" //"Eigen/Dense"
+//#include "globals.h"
+//#include "Dense" //"Eigen/Dense"
 
 
 
@@ -14,11 +14,11 @@ extern "C"{
 // void setWiFiInfo(WiFiStruct wifi);
 // WiFiStruct availableWiFiInfo();
 
-bool saveStrainGaugeParams(const Eigen::Matrix3d *m0, const Eigen::Matrix3d *m1, const Eigen::Matrix3d *m2, const Eigen::Matrix3d *m3);
-bool getStrainGaugeParams(const Eigen::Matrix3d& m0, const Eigen::Matrix3d& m1, const Eigen::Matrix3d& m2,const Eigen::Matrix3d& m3);
+//bool saveStrainGaugeParams(const Eigen::Matrix3d *m0, const Eigen::Matrix3d *m1, const Eigen::Matrix3d *m2, const Eigen::Matrix3d *m3);
+//bool getStrainGaugeParams(const Eigen::Matrix3d& m0, const Eigen::Matrix3d& m1, const Eigen::Matrix3d& m2,const Eigen::Matrix3d& m3);
 
-Data getSaveData();
-bool setSaveData(Data d);
+//Data getSaveData();
+//bool setSaveData(Data d);
 
 /* #ifdef __cplusplus
 }

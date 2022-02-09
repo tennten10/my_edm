@@ -1,7 +1,7 @@
 #ifndef SYSTEM_H
 #define SYSTEM_H
 
-#include "a_config.h"
+//#include "a_config.h"
 #include "globals.h"
 #include "_adc.h"
 #include "Buttons.h"
@@ -9,6 +9,7 @@
 #include "display.h"
 #include "main.h"
 #include "status.h"
+#include "Motion.h"
 
 #include "nvs.h"
 #include "nvs_flash.h"
@@ -64,32 +65,7 @@ public:
         
     // }
 
-    int getBattery(){
-        int ret = 0;
-        if(xSemaphoreTake(batteryMutex, (TickType_t) 20)==pdTRUE){
-            ret = batteryLevel;
-            xSemaphoreGive(batteryMutex);
-        }else{
-            //println("could not get batteryMutex in getBattery");
-        }
-        return ret;
-    }
-
-    void setBattery(int b){
-        if(b > 100){
-            //println("Battery over 100% ?????? - might be charging");
-            b = 100;
-        }else if(b < 0){
-            //println("Battery less than 0% ???????");
-            b = 0;
-        }
-        if(xSemaphoreTake(batteryMutex, (TickType_t)10)==pdTRUE){
-            batteryLevel = b;
-            xSemaphoreGive(batteryMutex);
-        }else{
-            //println("could not get batteryMutex in setBattery");
-        }
-    }
+    
 
     void reboot();
 
@@ -159,29 +135,11 @@ public:
         return ret;
     }
 
-    // void setWiFiInfo(WiFiStruct w){
-    //     if(xSemaphoreTake(deviceMutex, (TickType_t) 10)==pdTRUE){
-    //         wifiInfo = w;
-    //         xSemaphoreGive(deviceMutex);
-    //     }else{
-    //         //println("could not get deviceMutex in setWiFiInfo");
-    //     }
-        
-    // }
-    // WiFiStruct getWiFiInfo(){
-    //     static WiFiStruct ret = WiFiStruct();
-    //     if(xSemaphoreTake(deviceMutex, (TickType_t) 10)==pdTRUE){
-    //         ret = wifiInfo;
-    //         xSemaphoreGive(deviceMutex);
-    //     }else{
-    //         //println("could not get deviceMutex in getWiFiInfo");
-    //     }
-    //     return ret;
-    // }
+    
 
     void setUpdateFlag(){
         if(xSemaphoreTake(updateFlagMutex, (TickType_t) 10)==pdTRUE){
-            updateFlag = true;
+            //updateFlag = true;
             xSemaphoreGive(updateFlagMutex);
         }else{
             //println("could not get updateFlagMutex in setUpdateFlag");
@@ -190,7 +148,7 @@ public:
     bool getUpdateFlag(){
         static bool ret = false;
         if(xSemaphoreTake(updateFlagMutex, (TickType_t) 10)==pdTRUE){
-            ret = updateFlag;
+            //ret = updateFlag;
             xSemaphoreGive(updateFlagMutex);
         }else{
             //println("could not get deviceMutex in getWiFiInfo");
@@ -201,11 +159,12 @@ public:
     void validateDataAcrossObjects();
 
     bool callbackFlag = true;
-    bool updateFlag = false;
+
     
     DisplayX *display; 
     ButtonsX *buttons; 
     ADCX *adc;
+    MotionX *motion;
     
 
 private:
@@ -213,7 +172,6 @@ private:
     SemaphoreHandle_t deviceMutex = xSemaphoreCreateMutex();        // for accessing device information variables
     SemaphoreHandle_t pageMutex = xSemaphoreCreateMutex();          // for accessing page variable
     SemaphoreHandle_t unitsMutex = xSemaphoreCreateMutex();         // for accessing units variable
-    SemaphoreHandle_t batteryMutex = xSemaphoreCreateMutex();       //  for accessing battery variable
     SemaphoreHandle_t modeMutex = xSemaphoreCreateMutex();          //  for accessing mode variable
     SemaphoreHandle_t adcMutex = xSemaphoreCreateMutex();        //  for accessing local weight variable
     SemaphoreHandle_t upMutex = xSemaphoreCreateMutex();            // so that two update signals don't run at once
@@ -222,8 +180,6 @@ private:
     void getSavedVals(); // initialize values saved across boots from NVS
     void saveVals();
     
-    //volatile Units eUnits = kg;
-    int batteryLevel = 100;
 
     MODE eMode = STANDARD;
     PAGE ePage = WEIGHTSTREAM;

@@ -1,5 +1,4 @@
 key,type,encoding,value
 fctryNamespace,namespace,,
 serial_no,data,string,1100112
-certificate,data,string,xxxxyyyyy
-private_key,data,string,aaaaabbbbbcccc
+steps_per_in,data,string,1505

@@ -9,7 +9,7 @@
  * CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#include "a_config.h"
+///#include "a_config.h"
 #include "globals.h"
 #include "display.h"
 #include "System.h"

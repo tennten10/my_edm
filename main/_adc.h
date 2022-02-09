@@ -1,11 +1,11 @@
-#ifndef WEIGHT_H
-#define WEIGHT_H
+#ifndef _ADC_H
+#define _ADC_H
 
 /* #ifdef __cplusplus
 extern "C"{
 #endif */
 
-#include "a_config.h"
+//#include "a_config.h"
 #include "globals.h"
 #include "Dense" //"Eigen/Dense"
 #include <string>
@@ -77,7 +77,7 @@ public:
         adc1_config_channel_atten(SG4,ADC_ATTEN_DB_11);
 
         // Retrieving calibration values from spiffs file
-        getStrainGaugeParams(mK_sg1,mK_sg2, mK_sg3, mK_sg4 );
+        //getStrainGaugeParams(mK_sg1,mK_sg2, mK_sg3, mK_sg4 );
 
         // temporary calibration values
         mK_sg1(2,2) = 55.9099*1; // V/g

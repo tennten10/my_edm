@@ -11,14 +11,7 @@ menu "AAA SUDOBOARD menu"
         help
             Select predefined SudoBoard display configuration
 
-        config SB_PREDEFINED_NONE
-            bool "None"
 
-        config SB_V1_HALF_ILI9341
-            bool "V1 Half ILI9341"
-            select LV_SB_V1_HALF_ILI9341
-        
-            
     endchoice
 
 endmenu

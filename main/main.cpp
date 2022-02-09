@@ -1,4 +1,3 @@
-#include "a_config.h"
 #include "globals.h"
 #include "System.h"
 #include "_adc.h"

@@ -1,5 +1,5 @@
-#ifndef BUTTONS_H
-#define BUTTONS_H
+#ifndef MOTION_H
+#define MOTION_H
 
 
 //#include "a_config.h"
@@ -9,16 +9,9 @@
 #include "driver/gpio.h"
 
 
-struct Button
+struct motion_config
 {
-    long buttonTimer = 0;
-    int debounceCounter = 0;
-    bool buttonStatus = false;
-    bool shortPress = false;
-    bool longPress = false;
-    bool executeFlag = false;
-    bool block = false;
-    volatile char cmd = 'N';
+    long bTimer = 0;
 };
 
 
@@ -26,16 +19,16 @@ struct Button
 // reference this website for why we're doing it this way https://fjrg76.wordpress.com/2018/05/23/objectifying-task-creation-in-freertos-ii/
 
 template <typename T>
-class ThreadX
+class ThreadXc
 {
 public:
-  ThreadX( uint16_t _stackDepth, UBaseType_t _priority, const char *_name = "")
+  ThreadXc( uint16_t _stackDepth, UBaseType_t _priority, const char *_name = "")
   {
     xTaskCreate(task, _name, _stackDepth, this, _priority, &this->taskHandle);
   }
-  virtual ~ThreadX(){
+  virtual ~ThreadXc(){
     vTaskDelete(taskHandle);
-    printf("Button task deleted");
+    printf("Motion task deleted");
   }
 
   TaskHandle_t GetHandle()
@@ -50,41 +43,32 @@ public:
 private:
   static void task(void *_params)
   {
-    ThreadX *p = static_cast<ThreadX*>(_params);
+    ThreadXc *p = static_cast<ThreadXc*>(_params);
     p->Main();
   }
 
   TaskHandle_t taskHandle;
 };
 
-class ButtonsX : public ThreadX<ButtonsX>
+class MotionX : public ThreadXc<MotionX>
 {
 public:
-  ButtonsX(bool _debounce) : ThreadX{5000, 1, "ButtonHandler"},
+  MotionX(bool _debounce) : ThreadXc{5000, 1, "MotionHandler"},
                                                 debounce{_debounce}
   {
     //Main();
   }
-  virtual ~ButtonsX(){
-    vQueueDelete(buttonQueue);
+  virtual ~MotionX(){
+    vQueueDelete(motionQueue);
   } 
   
   void sleepPreparation();
-  std::string getEvents();
   void Main();
 
 
 private:
   bool debounce = false;
-  int debounceCount = 1;
-  Button button1;
-  Button button2;
-  Button button3;
-  Button button4;
-  const int longPressTime = 2000;
-  void readButtons();
-  void verifyButtons();
-  QueueHandle_t buttonQueue;
+  QueueHandle_t motionQueue;
 };
 
 //extern "C" std::string ButX_c_getEvents(ButtonsX * b);

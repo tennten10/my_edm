@@ -5,9 +5,8 @@
 extern "C"{
 #endif
 
-
-
 #include <string>
+
 /** To more easily transfer form Arduino code to C/Cpp, Arduino String function replacements are below **/
 std::string trim(const std::string& str,
                  const std::string& whitespace = " \t")
@@ -21,6 +20,7 @@ std::string trim(const std::string& str,
 
     return str.substr(strBegin, strRange);
 }
+
 bool startsWith(std::string str, std::string condition){
     char temp_ch[32]={};
     strcpy(temp_ch, str.c_str()); 

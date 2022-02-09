@@ -6,7 +6,7 @@
 #include "lvgl.h"
 #include "globals.h"
 #include <string>
-#include "a_config.h"
+//#include "a_config.h"
 
 // All functions should be thread safe and have semaphore handling
 // inside each public function since pretty much everything will be
